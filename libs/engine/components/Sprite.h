@@ -6,7 +6,7 @@
 #include "utils.h"
 #include "engine/components/Entity2D.h"
 #include "engine/context/Updatable.h"
-#define MAX_SPRITES 32
+#define SPRITE_MAX_COUNT 32
 
 typedef struct Sprite
 {

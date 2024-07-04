@@ -3,7 +3,7 @@
 
 Updatable collider2DUpdatable = {Collider2D_Update};
 uint32_t sCollider2DCount = 0;
-Collider2D * sColliders[MAX_COLLISIONS];
+Collider2D * sColliders[COLLIDER2D_MAX_COUNT];
 
 void Collider2D_Initialize(Collider2D * col)
 {
@@ -19,7 +19,7 @@ void Collider2D_Initialize(Collider2D * col)
 
 bool Collider2D_Add(Collider2D * col)
 {
-    if(sCollider2DCount < MAX_COLLIDERS)
+    if(sCollider2DCount < COLLIDER2D_MAX_COUNT)
     {
         col->id = sCollider2DCount;
         sColliders[sCollider2DCount] = col;
@@ -36,7 +36,7 @@ bool Collider2D_Add(Collider2D * col)
 bool Collider2D_Clear()
 {
     sCollider2DCount = 0;
-    for(int i = 0; i < MAX_COLLIDERS; i++)
+    for(int i = 0; i < COLLIDER2D_MAX_COUNT; i++)
     {
         sColliders[i] = 0;
     }
@@ -76,13 +76,13 @@ void Collider2D_Update()
                     aPos.y += a->position.y;
                     bPos.x += b->position.x;
                     bPos.y += b->position.y;
-#ifdef SIMPLE_CHECK
+#ifdef COLLIDER2D_SIMPLE_CHECK
                     if( aPos.x - (aSize.x/2.0f) < bPos.x + (bSize.x/2.0f) &&
                         aPos.x + (aSize.x/2.0f) > bPos.x - (bSize.x/2.0f) &&
                         aPos.y - (aSize.y/2.0f) < bPos.y + (bSize.y/2.0f) &&
                         aPos.y + (aSize.y/2.0f) > bPos.y - (bSize.y/2.0f))
                     {
-                        if(a->collision.collisionCount < MAX_COLLISIONS && b->collision.collisionCount < MAX_COLLISIONS)
+                        if(a->collision.collisionCount < COLLIDER2D_MAX_COLLISIONS && b->collision.collisionCount < COLLIDER2D_MAX_COLLISIONS)
                         {
                             a->collision.collision[a->collision.collisionCount++] = b;
                             b->collision.collision[b->collision.collisionCount++] = a;

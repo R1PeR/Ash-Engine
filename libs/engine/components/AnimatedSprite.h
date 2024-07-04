@@ -4,12 +4,12 @@
 #include "engine/misc/Stopwatch.h"
 #include <stdint.h>
 #include <stdlib.h>
-#define MAX_ANIMATION_FRAMES 32
-#define MAX_ANIMATED_SPRITES 32
+#define ANIMATEDSPRITE_MAX_FRAMES 32
+#define ANIMATEDSPRITE_MAX_COUNT 32
 
 typedef struct AnimationData
 {
-    Texture2D * animationFrames[MAX_ANIMATION_FRAMES];
+    Texture2D * animationFrames[ANIMATEDSPRITE_MAX_FRAMES];
     uint8_t animationFrameCount;
 }AnimationData;
 
@@ -31,6 +31,8 @@ bool AnimatedSprite_Clear();
 void AnimatedSprite_Play(AnimatedSprite * animatedSprite, AnimationData * animation, bool repeat);
 void AnimatedSprite_Stop(AnimatedSprite * animatedSprite);
 void AnimatedSprite_Update();
+
+bool AnimatedSprite_SetAnimationDataFromTextureSheet(AnimationData * data, const char * textureName, uint8_t startFrame, uint8_t frameCount);
 
 uint8_t AnimatedSprite_GetCount();
 AnimatedSprite ** AnimatedSprite_GetAnimatedSprites();

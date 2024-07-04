@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include "raylib.h"
 #include "utils.h"
-#define MAX_ENTITIES 32
+#define ENTITY2D_MAX_COUNT 32
 
 typedef struct Entity2D
 {

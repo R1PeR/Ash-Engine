@@ -16,6 +16,11 @@ void Window_Init(uint16_t width, uint16_t height, const char *title)
 	rlImGuiSetup(true);
 }
 
+void Window_Deinit()
+{
+    CloseWindow();
+}
+
 Camera2D * Window_GetCamera()
 {
     return &camera;

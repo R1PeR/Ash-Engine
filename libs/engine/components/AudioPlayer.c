@@ -4,11 +4,11 @@
 #include <string.h>
 
 uint32_t sAudioPlayerCount = 0;
-AudioPlayerData sAudioPlayers[MAX_AUDIOPLAYER];
+AudioPlayerData sAudioPlayers[AUDIOPLAYER_MAX_COUNT];
 
 int32_t AudioPlayer_PlaySoundByName(const char *audioName)
 {
-    if(sAudioPlayerCount < MAX_AUDIO)
+    if(sAudioPlayerCount >= AUDIOPLAYER_MAX_COUNT)
     {
         return -1;
     }

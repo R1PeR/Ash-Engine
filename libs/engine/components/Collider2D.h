@@ -6,15 +6,15 @@
 #include "utils.h"
 #include "engine/components/Entity2D.h"
 #include "engine/context/Updatable.h"
-#define MAX_COLLIDERS 16
-#define MAX_COLLISIONS 16
-#define SIMPLE_CHECK
+#define COLLIDER2D_MAX_COUNT 16
+#define COLLIDER2D_MAX_COLLISIONS 16
+#define COLLIDER2D_SIMPLE_CHECK true
 
 typedef struct Collider2D Collider2D;
 
 typedef struct Collision2D
 {
-    Collider2D * collision[MAX_COLLIDERS];
+    Collider2D * collision[COLLIDER2D_MAX_COUNT];
     uint8_t collisionCount;
 } Collision2D;
 

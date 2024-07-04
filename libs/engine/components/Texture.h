@@ -4,13 +4,13 @@
 #include <stdlib.h>
 #include "raylib.h"
 #include "utils.h"
-#define MAX_TEXTURES 1024
-#define MAX_NAME 32
+#define TEXTURE_MAX_COUNT 1024
+#define TEXTURE_MAX_NAME 32
 
 typedef struct TextureData 
 {
     Texture2D texture;
-    char textureName[MAX_NAME];
+    char textureName[TEXTURE_MAX_NAME];
 } TextureData;
 
 bool Texture_LoadTexture(const char *fileName);

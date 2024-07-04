@@ -4,8 +4,8 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include "raylib.h"
-#define MAX_AUDIOPLAYER 128
-#define MAX_NAME 32
+#define AUDIOPLAYER_MAX_COUNT 128
+#define AUDIOPLAYER_MAX_NAME 32
 
 typedef struct AudioPlayerData 
 {

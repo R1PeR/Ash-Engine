@@ -6,6 +6,7 @@
 #include "engine/components/Sprite.h"
 #include "engine/components/Texture.h"
 #include "engine/components/AnimatedSprite.h"
+#include "engine/components/Audio.h"
 #include <stdbool.h>
 #include <stdio.h>
 #define MOUSE_BUTTON_COUNT 5
@@ -110,6 +111,20 @@ static void Debug_ShowMisc()
                     ImGui::Text("AnimatedSprite repeat: %d", AnimatedSprite_GetAnimatedSprites()[i]->repeat);
                     ImGui::Text("AnimatedSprite currentFrame: %d", AnimatedSprite_GetAnimatedSprites()[i]->currentFrame);
                     // ImGui::Image((ImTextureID)&Texture_GetTextures()[i].texture, {128, 128});
+                }
+            }
+            ImGui::TreePop();
+        }
+        if (ImGui::TreeNode("Audio"))
+        {
+            ImGui::Text("Audio count: %d", Audio_GetCount());
+            for(uint32_t i = 0; i < Audio_GetCount(); i++)
+            {
+                sprintf(buffer, "Audio %d", i);
+                if (ImGui::CollapsingHeader(buffer))
+                {
+                    ImGui::Text("Audio Id: %d", Audio_GetAudios()[i].id);
+                    ImGui::Text("Audio Name: %s", Audio_GetAudios()[i].soundName);
                 }
             }
             ImGui::TreePop();

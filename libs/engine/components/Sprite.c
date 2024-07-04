@@ -3,7 +3,7 @@
 
 Updatable spriteUpdatable = {Sprite_Update};
 uint32_t sSpriteCount = 0;
-Sprite * sSprites[MAX_SPRITES];
+Sprite * sSprites[SPRITE_MAX_COUNT];
 
 void Sprite_Initialize(Sprite * spr)
 {
@@ -19,7 +19,7 @@ void Sprite_Initialize(Sprite * spr)
 
 bool Sprite_Add(Sprite * spr)
 {
-    if(sSpriteCount < MAX_SPRITES)
+    if(sSpriteCount < SPRITE_MAX_COUNT)
     {
         spr->id = sSpriteCount;
         sSprites[sSpriteCount] = spr;
@@ -33,7 +33,7 @@ bool Sprite_Add(Sprite * spr)
 bool Sprite_Clear()
 {
     sSpriteCount = 0;
-    for(uint32_t i = 0; i < MAX_SPRITES; i++)
+    for(uint32_t i = 0; i < SPRITE_MAX_COUNT; i++)
     {
         sSprites[i] = 0;
     }

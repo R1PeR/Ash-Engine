@@ -4,5 +4,6 @@
 #include "raylib.h"
 
 void Window_Init(uint16_t width, uint16_t height, const char *title);
+void Window_Deinit();
 Camera2D * Window_GetCamera();
 #endif

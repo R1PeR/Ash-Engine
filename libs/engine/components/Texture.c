@@ -5,11 +5,11 @@
 #include <stdio.h>
 
 uint32_t sTextureCount = 0;
-TextureData sTextures[MAX_TEXTURES];
+TextureData sTextures[TEXTURE_MAX_COUNT];
 
 bool Texture_AddTexture(Texture2D texture, const char * textureName)
 {
-    if(sTextureCount+1 < MAX_TEXTURES)
+    if(sTextureCount+1 < TEXTURE_MAX_COUNT)
     {
         sTextures[sTextureCount].texture = texture;
         strcpy(sTextures[sTextureCount].textureName, textureName);
@@ -55,7 +55,7 @@ uint8_t Texture_LoadTextureSheet(const char *fileName, uint32_t textureWidth, ui
             Texture texture = LoadTextureFromImage(image);
             if(texture.id > 0)//Texture loaded correctly(?)
             {
-                char name[MAX_NAME];
+                char name[TEXTURE_MAX_NAME];
                 sprintf(name, "%s_%d", GetFileNameWithoutExt(fileName), (y * baseImage.height/textureHeight) + x);
                 if(Texture_AddTexture(texture, name))
                 {

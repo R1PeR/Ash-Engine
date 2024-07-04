@@ -39,5 +39,6 @@
 #endif
 
 void Logger_Init();
+void Logger_Deinit();
 
 #endif

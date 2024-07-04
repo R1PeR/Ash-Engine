@@ -2,7 +2,7 @@
 #include "engine/misc/Logger.h"
 
 uint32_t sEntityCount = 0;
-Entity2D * sEntities2D[MAX_ENTITIES];
+Entity2D * sEntities2D[ENTITY2D_MAX_COUNT];
 
 void Entity2D_Initialize(Entity2D * ent)
 {
@@ -15,7 +15,7 @@ void Entity2D_Initialize(Entity2D * ent)
 
 bool Entity2D_Add(Entity2D * ent)
 {
-    if(sEntityCount < MAX_ENTITIES)
+    if(sEntityCount < ENTITY2D_MAX_COUNT)
     {
         ent->id = sEntityCount;
         sEntities2D[sEntityCount] = ent;
@@ -32,7 +32,7 @@ bool Entity2D_Add(Entity2D * ent)
 bool Entity2D_Clear()
 {
     sEntityCount = 0;
-    for(int i = 0; i < MAX_ENTITIES; i++)
+    for(int i = 0; i < ENTITY2D_MAX_COUNT; i++)
     {
         sEntities2D[i] = 0;
     }

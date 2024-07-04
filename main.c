@@ -6,6 +6,7 @@
 #include "engine/components/Sprite.h"
 #include "engine/components/Collider2D.h"
 #include "engine/components/AnimatedSprite.h"
+#include "engine/components/Audio.h"
 #include "modes/MainMode.h"
 
 int main() 
@@ -14,6 +15,7 @@ int main()
     const int screenHeight = 720;
     Window_Init(screenWidth, screenHeight, "DontYouDareGoHollow");
     Logger_Init();
+    Audio_Init();
     
     Context_AddUpdatable(Debug_GetUpdatable());
     Context_AddUpdatable(Sprite_GetUpdatable());
@@ -23,6 +25,9 @@ int main()
 
     Context_SetMode(&mainMode);
     
-    CloseWindow();
+    Window_Deinit();
+    Logger_Deinit();
+    Audio_Deinit();
+
     return 0;
 }

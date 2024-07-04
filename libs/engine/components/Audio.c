@@ -4,11 +4,22 @@
 #include <stdio.h>
 
 uint32_t sAudioCount;
-AudioData sAudios[MAX_AUDIO];
+AudioData sAudios[AUDIO_MAX_COUNT];
+
+bool Audio_Init()
+{
+    InitAudioDevice();
+    return IsAudioDeviceReady();
+}
+
+void Audio_Deinit()
+{
+    CloseAudioDevice();
+}
 
 bool Audio_AddSound(Sound sound, const char * soundName)
 {
-    if(sAudioCount+1 < MAX_AUDIO)
+    if(sAudioCount+1 < AUDIO_MAX_COUNT)
     {
         sAudios[sAudioCount].sound = sound;
         sAudios[sAudioCount].id = sAudioCount;

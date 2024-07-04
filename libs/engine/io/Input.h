@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-enum{
+enum {
     INPUT_KEYCODE_NULL            = 0,        // Key: NULL, used for no key pressed
     // Alphanumeric keys
     INPUT_KEYCODE_APOSTROPHE      = 39,       // Key: '
@@ -119,6 +119,17 @@ enum{
     INPUT_KEYCODE_VOLUME_UP       = 24,       // Key: Android volume up button
     INPUT_KEYCODE_VOLUME_DOWN     = 25        // Key: Android volume down button
 };
+
+enum {
+    INPUT_MOUSE_BUTTON_LEFT    = 0,       // Mouse button left
+    INPUT_MOUSE_BUTTON_RIGHT   = 1,       // Mouse button right
+    INPUT_MOUSE_BUTTON_MIDDLE  = 2,       // Mouse button middle (pressed wheel)
+    INPUT_MOUSE_BUTTON_SIDE    = 3,       // Mouse button side (advanced mouse device)
+    INPUT_MOUSE_BUTTON_EXTRA   = 4,       // Mouse button extra (advanced mouse device)
+    INPUT_MOUSE_BUTTON_FORWARD = 5,       // Mouse button forward (advanced mouse device)
+    INPUT_MOUSE_BUTTON_BACK    = 6,       // Mouse button back (advanced mouse device)
+};
+
 
 bool Input_IsKeyPressed(uint8_t key);
 bool Input_IsKeyDown(uint8_t key);
