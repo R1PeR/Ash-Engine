@@ -1,22 +1,24 @@
+#include "engine/components/AnimatedSprite.h"
+#include "engine/components/Audio.h"
+#include "engine/components/Collider2D.h"
+#include "engine/components/Sprite.h"
 #include "engine/context/Context.h"
 #include "engine/io/Window.h"
 #include "engine/misc/Debug.h"
 #include "engine/misc/DeltaTime.h"
 #include "engine/misc/Logger.h"
-#include "engine/components/Sprite.h"
-#include "engine/components/Collider2D.h"
-#include "engine/components/AnimatedSprite.h"
-#include "engine/components/Audio.h"
 #include "modes/MainMode.h"
 
-int main() 
+#include <cstdint>
+
+int main()
 {
-    const int screenWidth = 1280;
-    const int screenHeight = 720;
+    const uint32_t screenWidth  = 1280;
+    const uint32_t screenHeight = 720;
     Window_Init(screenWidth, screenHeight, "DontYouDareGoHollow");
     Logger_Init();
     Audio_Init();
-    
+
     Context_AddUpdatable(Debug_GetUpdatable());
     Context_AddUpdatable(Sprite_GetUpdatable());
     Context_AddUpdatable(Collider2D_GetUpdatable());
@@ -24,8 +26,7 @@ int main()
     Context_AddUpdatable(AnimatedSprite_GetUpdatable());
 
     Context_SetMode(&mainMode);
-    
-    Window_Deinit();
+
     Logger_Deinit();
     Audio_Deinit();
 

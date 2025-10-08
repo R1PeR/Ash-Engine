@@ -1,4 +1,5 @@
 #include "Input.h"
+
 #include "raylib.h"
 
 bool Input_IsKeyPressed(uint8_t key)

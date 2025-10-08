@@ -1,8 +1,6 @@
 #ifndef LIBS_ENGINE_MAINMODE_H
 #define LIBS_ENGINE_MAINMODE_H
 #include "engine/context/Mode.h"
-#include "engine/components/Entity2D.h"
-#include "engine/components/Sprite.h"
 
 extern Mode mainMode;
 

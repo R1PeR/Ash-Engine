@@ -3,15 +3,15 @@
 
 typedef struct Mode
 {
-    //OnStart runs once on mode start
+    // OnStart runs once on mode start
     void (*OnStart)();
-    //OnPause runs once when mode is paused 
+    // OnPause runs once when mode is paused
     void (*OnPause)();
-    //Update runs every frame
+    // Update runs every frame
     void (*Update)();
-    //OnStop runs once when mode is stopped
+    // OnStop runs once when mode is stopped
     void (*OnStop)();
-    //OnResume runs once when mode is resumed
+    // OnResume runs once when mode is resumed
     void (*OnResume)();
 } Mode;
 #endif

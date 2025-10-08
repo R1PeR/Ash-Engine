@@ -1,9 +1,11 @@
 #include "Audio.h"
-#include "engine/misc/Logger.h"
-#include <string.h>
-#include <stdio.h>
 
-uint32_t sAudioCount;
+#include "engine/misc/Logger.h"
+
+#include <stdio.h>
+#include <string.h>
+
+uint32_t  sAudioCount;
 AudioData sAudios[AUDIO_MAX_COUNT];
 
 bool Audio_Init()
@@ -17,12 +19,12 @@ void Audio_Deinit()
     CloseAudioDevice();
 }
 
-bool Audio_AddSound(Sound sound, const char * soundName)
+bool Audio_AddSound(Sound sound, const char* soundName)
 {
-    if(sAudioCount+1 < AUDIO_MAX_COUNT)
+    if(sAudioCount + 1 < AUDIO_MAX_COUNT)
     {
         sAudios[sAudioCount].sound = sound;
-        sAudios[sAudioCount].id = sAudioCount;
+        sAudios[sAudioCount].id    = sAudioCount;
         strcpy(sAudios[sAudioCount].soundName, soundName);
         sAudioCount++;
         return true;
@@ -32,21 +34,21 @@ bool Audio_AddSound(Sound sound, const char * soundName)
 }
 
 
-bool Audio_LoadAudio(const char *fileName)
+bool Audio_LoadAudio(const char* fileName)
 {
     if(fileName == NULL)
     {
         return false;
     }
     Sound sound = LoadSound(fileName);
-    if(sound.frameCount > 0)//Texture loaded correctly(?)
+    if(sound.frameCount > 0)  // Texture loaded correctly(?)
     {
         return Audio_AddSound(sound, GetFileNameWithoutExt(fileName));
     }
     return false;
 }
 
-bool Audio_UnloadAudioByName(const char *audioName)
+bool Audio_UnloadAudioByName(const char* audioName)
 {
     if(audioName == NULL)
     {
@@ -60,9 +62,9 @@ bool Audio_UnloadAudioByName(const char *audioName)
             moveSounds = true;
             UnloadSound(sAudios[i].sound);
         }
-        if(moveSounds && i != sAudioCount-1)
+        if(moveSounds && i != sAudioCount - 1)
         {
-            sAudios[i] = sAudios[i+1];
+            sAudios[i] = sAudios[i + 1];
         }
     }
     if(moveSounds)
@@ -86,7 +88,7 @@ uint32_t Audio_GetCount()
     return sAudioCount;
 }
 
-AudioData * Audio_GetAudios()
+AudioData* Audio_GetAudios()
 {
     return sAudios;
 }

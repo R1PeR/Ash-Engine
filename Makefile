@@ -2,20 +2,22 @@
 
 PROJECT_NAME ?= game
 
-COMPILER_PATH = C:/w64devkit/bin
+COMPILER_PATH = $(W64DEVKIT_PATH)/bin
 CC = g++
 
-LIBS = -lraylib -lopengl32 -lgdi32 -lwinmm
-LIB_SRC = -Llibs/raylib/src
-INCLUDE = -Ilibs/raylib/src -Ilibs/imgui -Ilibs/rlImGui -Ilibs -I.
-SOURCE_FOLDERS = ./ modes/ libs/engine/components libs/engine/misc/ libs/engine/context/ libs/engine/io libs/rlImGui/ libs/imgui/
-SOURCE_FILES = $(shell find $(SOURCE_FOLDERS) -maxdepth 1 -type f -name "*.c" -or -name "*.cpp")
-FLAGS = -Wall -Wextra -std=c++11 -g -DSUPPORT_TRACELOG -DDEBUG -DLOG_LEVEL=LOG_LEVEL_INFO
+LIBS = $(shell scripts/read_list_file.sh "./config/libs.txt" "-l")
+LIBS_FOLDERS = $(shell scripts/read_list_file.sh "./config/lib_source.txt" "-L")
+INC_FOLDERS= $(shell scripts/read_list_file.sh "./config/lib_include.txt" "-I")
+SOURCE_INC = $(shell scripts/read_list_file.sh "./config/source_include.txt")
+SOURCE_EXC = $(shell scripts/read_list_file.sh "./config/source_exclude.txt")
+FLAGS = $(shell scripts/read_list_file.sh "./config/flags.txt")
+
+SOURCE_FILES = $(shell find $(SOURCE_INC) -maxdepth 1 -type f -name "*.c" -or -name "*.cpp")# -not -name ${SOURCE_EXCLUDE}")
 
 all: build
 
 build:
-	$(COMPILER_PATH)/$(CC) $(SOURCE_FILES) -o $(PROJECT_NAME).exe $(FLAGS) $(LIB_SRC) $(INCLUDE) $(LIBS)
+	$(COMPILER_PATH)/$(CC) $(SOURCE_FILES) -o $(PROJECT_NAME).exe $(FLAGS) $(LIBS_FOLDERS) $(INC_FOLDERS) $(LIBS)
 clean:
 	rm -f *.o
 run:

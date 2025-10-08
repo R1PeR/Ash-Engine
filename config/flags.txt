@@ -1,0 +1,8 @@
+-Wall
+-Wextra
+-Wmissing-field-initializers
+-std=c++11
+-g
+-DSUPPORT_TRACELOG
+-DDEBUG
+-DLOG_LEVEL=LOG_LEVEL_INFO

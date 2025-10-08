@@ -1,0 +1,4 @@
+opengl32
+gdi32
+winmm
+raylib

@@ -4,8 +4,8 @@
 
 typedef struct Font
 {
-    Texture * texture;
-    Vector2 charSize;
-    uint8_t asciiStart;
-}Font;
+    Texture* texture;
+    Vector2  charSize;
+    uint8_t  asciiStart;
+} Font;
 #endif

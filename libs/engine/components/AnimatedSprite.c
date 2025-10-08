@@ -1,109 +1,116 @@
 #include "AnimatedSprite.h"
-#include "engine/misc/Logger.h"
+
 #include "engine/components/Texture.h"
-#include <string.h>
+#include "engine/misc/Logger.h"
+
 #include <stdio.h>
+#include <string.h>
 
 #define DEFAULT_ANIMATION_SPEED 33
-Updatable animatedSpriteUpdatable = {AnimatedSprite_Update};
-uint32_t sAnimatedSpriteCount = 0;
-AnimatedSprite * sAnimatedSprites[ANIMATEDSPRITE_MAX_COUNT];
+Updatable       animatedSpriteUpdatable = { AnimatedSprite_Update };
+uint32_t        sAnimatedSpriteCount    = 0;
+AnimatedSprite* sAnimatedSpriteList;  //[ANIMATEDSPRITE_MAX_COUNT];
 
-void AnimatedSprite_Initialize(AnimatedSprite * animatedSprite)
+void AnimatedSprite_Initialize(AnimatedSprite* animatedSprite)
 {
-    animatedSprite->frameTime = DEFAULT_ANIMATION_SPEED;
+    animatedSprite->frameTime        = DEFAULT_ANIMATION_SPEED;
     animatedSprite->currentAnimation = NULL;
-    animatedSprite->isPlaying = false;
-    animatedSprite->repeat = false;
-    animatedSprite->currentFrame = 0;
+    animatedSprite->isPlaying        = false;
+    animatedSprite->repeat           = false;
+    animatedSprite->currentFrame     = 0;
     Sprite_Initialize(&animatedSprite->sprite);
 }
 
-bool AnimatedSprite_Add(AnimatedSprite * animatedSprite)
+bool AnimatedSprite_Add(AnimatedSprite* animatedSprite)
 {
-    if(sAnimatedSpriteCount < ANIMATEDSPRITE_MAX_COUNT)
+    if(sAnimatedSpriteCount == 0)
     {
-        if(Sprite_Add(&animatedSprite->sprite))
-        {
-            animatedSprite->id = sAnimatedSpriteCount;
-            sAnimatedSprites[sAnimatedSpriteCount] = animatedSprite;
-            sAnimatedSpriteCount++;
-            return true;
-        }
-        return false;
+        sAnimatedSpriteList          = animatedSprite;
+        sAnimatedSpriteListder->next = NULL;
     }
-    LOG_ERR("AnimatedSprite: Add() failed, not enough space");
-    return false;
+    else
+    {
+        AnimatedSprite* current = sAnimatedSpriteList;
+        while(current->next != NULL)
+        {
+            current = current->next;
+        }
+        current->next        = animatedSprite;
+        animatedSprite->next = NULL;
+    }
+    sAnimatedSpriteCount++;
+    return true;
 }
 
 bool AnimatedSprite_Clear()
 {
     sAnimatedSpriteCount = 0;
-    for(uint32_t i = 0; i < ANIMATEDSPRITE_MAX_COUNT; i++)
-    {
-        sAnimatedSprites[i] = 0;
-    }
+    sAnimatedSpriteList  = NULL;
     return true;
 }
 
-void AnimatedSprite_Play(AnimatedSprite * animatedSprite, AnimationData * animation, bool repeat)
+void AnimatedSprite_Play(AnimatedSprite* animatedSprite, AnimationData* animation, bool repeat)
 {
     animatedSprite->currentAnimation = animation;
-    animatedSprite->repeat = repeat;
-    animatedSprite->isPlaying = true;
-    animatedSprite->currentFrame = 0;
+    animatedSprite->repeat           = repeat;
+    animatedSprite->isPlaying        = true;
+    animatedSprite->currentFrame     = 0;
 }
 
-void AnimatedSprite_Stop(AnimatedSprite * animatedSprite)
+void AnimatedSprite_Stop(AnimatedSprite* animatedSprite)
 {
     animatedSprite->isPlaying = false;
 }
 
 void AnimatedSprite_Update()
 {
-    for(uint32_t i = 0; i < sAnimatedSpriteCount; i++)
+    AnimatedSprite* current = sAnimatedSpriteList;
+    while(current != NULL)
     {
-        if(sAnimatedSprites[i]->isPlaying && sAnimatedSprites[i]->currentAnimation && Stopwatch_IsZero(&sAnimatedSprites[i]->stopwatch))
+        if(current->isPlaying && current->currentAnimation && Stopwatch_IsZero(&current->stopwatch))
         {
-            sAnimatedSprites[i]->sprite.currentTexture = sAnimatedSprites[i]->currentAnimation->animationFrames[sAnimatedSprites[i]->currentFrame++];
-            if(sAnimatedSprites[i]->currentFrame >= sAnimatedSprites[i]->currentAnimation->animationFrameCount)
+            current->sprite.currentTexture = current->currentAnimation->animationFrames[current->currentFrame++];
+            if(current->currentFrame >= current->currentAnimation->animationFrameCount)
             {
-                if(sAnimatedSprites[i]->repeat)
+                if(current->repeat)
                 {
-                    sAnimatedSprites[i]->currentFrame = 0;
+                    current->currentFrame = 0;
                 }
                 else
                 {
-                    sAnimatedSprites[i]->isPlaying = false;
+                    current->isPlaying = false;
                 }
             }
-            Stopwatch_Start(&sAnimatedSprites[i]->stopwatch, sAnimatedSprites[i]->frameTime);
+            Stopwatch_Start(&current->stopwatch, current->frameTime);
         }
+        current = current->next;
     }
 }
 
-bool AnimatedSprite_SetAnimationDataFromTextureSheet(AnimationData * data, const char * textureName, uint8_t startFrame, uint8_t frameCount)
+bool AnimatedSprite_SetAnimationDataFromTextureSheet(AnimationData* data, const char* textureName, uint8_t startFrame,
+                                                     uint8_t frameCount)
 {
     char buffor[TEXTURE_MAX_NAME];
     for(uint8_t i = 0; i < frameCount; i++)
     {
-        sprintf(buffor, "%s_%d", textureName, i);
+        sprintf(buffor, "%s_%d", textureName, startFrame + i);
         data->animationFrames[i] = Texture_GetTextureByName(buffor);
     }
     data->animationFrameCount = frameCount;
+    return frameCount > 0;
 }
 
-uint8_t AnimatedSprite_GetCount()
+uint32_t AnimatedSprite_GetCount()
 {
     return sAnimatedSpriteCount;
 }
 
-AnimatedSprite ** AnimatedSprite_GetAnimatedSprites()
+AnimatedSprite* AnimatedSprite_GetAnimatedSpriteList()
 {
-    return sAnimatedSprites;
+    return sAnimatedSpriteList;
 }
 
-Updatable * AnimatedSprite_GetUpdatable()
+Updatable* AnimatedSprite_GetUpdatable()
 {
     return &animatedSpriteUpdatable;
 }

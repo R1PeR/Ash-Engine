@@ -1,0 +1,12 @@
+-DDEBUG
+-DLOG_LEVEL=5
+-xc++
+-Ilibs/raylib/include
+-Ilibs/imgui
+-Ilibs/rlImGui
+-Ilibs
+-I.
+-std=c++11
+-IC:\w64devkit\x86_64-w64-mingw32\include
+-target
+x86_64-pc-windows-gnu

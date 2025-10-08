@@ -1,46 +1,53 @@
 #include "Sprite.h"
+
 #include "engine/misc/Logger.h"
+Updatable spriteUpdatable = { Sprite_Update };
+uint32_t  sSpriteCount    = 0;
+Sprite*   sSpriteList     = NULL;
 
-Updatable spriteUpdatable = {Sprite_Update};
-uint32_t sSpriteCount = 0;
-Sprite * sSprites[SPRITE_MAX_COUNT];
-
-void Sprite_Initialize(Sprite * spr)
+void Sprite_Initialize(Sprite* spr)
 {
     spr->currentTexture = NULL;
-    spr->id = 0;
-    spr->position.x = 0;
-    spr->position.y = 0;
-    spr->isVisible = true;
-    spr->rotation = 0;
-    spr->scale = 1.0f;
-    spr->zOrder = 0;
+    spr->id             = 0;
+    spr->position.x     = 0;
+    spr->position.y     = 0;
+    spr->isVisible      = true;
+    spr->rotation       = 0;
+    spr->scale          = 1.0f;
+    spr->zOrder         = 0;
+    spr->next           = NULL;
 }
 
-bool Sprite_Add(Sprite * spr)
+bool Sprite_Add(Sprite* spr)
 {
-    if(sSpriteCount < SPRITE_MAX_COUNT)
+    if(sSpriteCount == 0)
     {
-        spr->id = sSpriteCount;
-        sSprites[sSpriteCount] = spr;
-        sSpriteCount++;
-        return true;
+        sSpriteList       = spr;
+        sSpriteList->next = NULL;
     }
-    LOG_ERR("Sprite: Add() failed, not enough space");
-    return false;
+    else
+    {
+        Sprite* current = sSpriteList;
+        while(current->next != NULL)
+        {
+            current = current->next;
+        }
+        current->next = spr;
+        spr->next     = NULL;
+    }
+    sSpriteCount++;
+    return true;
 }
 
 bool Sprite_Clear()
 {
     sSpriteCount = 0;
-    for(uint32_t i = 0; i < SPRITE_MAX_COUNT; i++)
-    {
-        sSprites[i] = 0;
-    }
+    sSpriteList  = NULL;
     return true;
 }
 
-int Sprite_CompareFunction(const void * a, const void * b) {
+int Sprite_CompareFunction(const void* a, const void* b)
+{
     Sprite spriteA = *(Sprite*)a;
     Sprite spriteB = *(Sprite*)b;
     return spriteA.zOrder - spriteB.zOrder;
@@ -48,52 +55,55 @@ int Sprite_CompareFunction(const void * a, const void * b) {
 
 void Sprite_Update()
 {
-    for(uint32_t i = 0; i < sSpriteCount; i++)
+    // for(uint32_t i = 0; i < sSpriteCount; i++)
+    // {
+    //     qsort(sSprites, sSpriteCount, sizeof(Sprite), Sprite_CompareFunction);
+    // }
+    Sprite* current = sSpriteList;
+    while(current != NULL)
     {
-        qsort(sSprites, sSpriteCount, sizeof(Sprite), Sprite_CompareFunction);
-    }   
-    for(uint32_t i = 0; i < sSpriteCount; i++)
-    {
-        if(!sSprites[i]->isVisible || !sSprites[i]->currentTexture)
+        if(!current->isVisible || !current->currentTexture)
         {
+            current = current->next;
             continue;
         }
-        Vector2 position = {0.0f,0.0f};
-        float scale = 0.0f;
-        float rotation = 0.0f;
-        if(sSprites[i]->parent)
+        Vector2 position = { 0.0f, 0.0f };
+        float   scale    = 0.0f;
+        float   rotation = 0.0f;
+        if(current->parent)
         {
-            position.x = sSprites[i]->parent->position.x;
-            position.y = sSprites[i]->parent->position.y;
-            scale = sSprites[i]->parent->scale;
-            rotation = sSprites[i]->parent->rotation;
+            position.x = current->parent->position.x;
+            position.y = current->parent->position.y;
+            scale      = current->parent->scale;
+            rotation   = current->parent->rotation;
         }
-        position.x += sSprites[i]->position.x;
-        position.y += sSprites[i]->position.y;
-        scale *= sSprites[i]->scale;
-        rotation += sSprites[i]->rotation;
-        //TODO: may have a bug here, left because I can loollolo
+        position.x += current->position.x;
+        position.y += current->position.y;
+        scale *= current->scale;
+        rotation += current->rotation;
+        // TODO: may have a bug here, left because I can loollolo
         Color color;
         color.a = 255;
         color.r = 255;
         color.g = 255;
         color.b = 255;
-        // DrawTextureV(*sSprites[i]->currentTexture, pos, color);
-        DrawTextureEx(*sSprites[i]->currentTexture, position, rotation, scale, color);
+        // DrawTextureV(*current->currentTexture, pos, color);
+        DrawTextureEx(*current->currentTexture, position, rotation, scale, color);
+        current = current->next;
     }
 }
 
-uint8_t Sprite_GetCount()
+uint32_t Sprite_GetCount()
 {
     return sSpriteCount;
 }
 
-Sprite ** Sprite_GetSprites()
+Sprite* Sprite_GetSpriteList()
 {
-    return sSprites;
+    return sSpriteList;
 }
 
-Updatable * Sprite_GetUpdatable()
+Updatable* Sprite_GetUpdatable()
 {
     return &spriteUpdatable;
 }
