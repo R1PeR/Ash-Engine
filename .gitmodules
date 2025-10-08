@@ -1,0 +1,9 @@
+[submodule "libs/imgui"]
+	path = libs/imgui
+	url = https://github.com/ocornut/imgui.git
+[submodule "libs/libccd"]
+	path = libs/libccd
+	url = https://github.com/danfis/libccd.git
+[submodule "libs/rlImGui"]
+	path = libs/rlImGui
+	url = https://github.com/raylib-extras/rlImGui.git
