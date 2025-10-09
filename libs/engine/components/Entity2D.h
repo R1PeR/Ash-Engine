@@ -1,7 +1,6 @@
 #ifndef LIBS_ENGINE_ENTITY2D_H
 #define LIBS_ENGINE_ENTITY2D_H
 #include "raylib.h"
-#include "utils.h"
 
 #include <stdint.h>
 

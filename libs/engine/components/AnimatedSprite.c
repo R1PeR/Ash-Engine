@@ -25,8 +25,8 @@ bool AnimatedSprite_Add(AnimatedSprite* animatedSprite)
 {
     if(sAnimatedSpriteCount == 0)
     {
-        sAnimatedSpriteList          = animatedSprite;
-        sAnimatedSpriteListder->next = NULL;
+        sAnimatedSpriteList       = animatedSprite;
+        sAnimatedSpriteList->next = NULL;
     }
     else
     {

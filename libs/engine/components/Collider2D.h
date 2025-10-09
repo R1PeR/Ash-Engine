@@ -3,7 +3,6 @@
 #include "engine/components/Entity2D.h"
 #include "engine/context/Updatable.h"
 #include "raylib.h"
-#include "utils.h"
 
 #include <stdbool.h>
 #include <stdint.h>

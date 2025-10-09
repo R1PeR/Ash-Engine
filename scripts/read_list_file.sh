@@ -10,5 +10,6 @@ do
     fi
     formattedLines="$currentLine $formattedLines"
 done
-formattedLines=`echo ${formattedLines} | sed 's/ *$//'`
-echo "$formattedLines"
+echo "$formattedLines" | sed "s/\r//g"
+# formattedLines=`echo ${formattedLines} | sed 's/ *$//'`
+# echo "$formattedLines"

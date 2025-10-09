@@ -2,7 +2,6 @@
 #define LIBS_ENGINE_NAVIGATIONMAP2D_H
 #include "Collider2D.h"
 #include "raylib.h"
-#include "utils.h"
 
 #include <stdbool.h>
 #include <stdint.h>

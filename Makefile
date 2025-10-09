@@ -2,7 +2,7 @@
 
 PROJECT_NAME ?= game
 
-COMPILER_PATH = $(W64DEVKIT_PATH)/bin
+COMPILER_PATH = $(COMPILER_PATH)/bin
 CC = g++
 
 LIBS = $(shell scripts/read_list_file.sh "./config/libs.txt" "-l")
@@ -17,7 +17,7 @@ SOURCE_FILES = $(shell find $(SOURCE_INC) -maxdepth 1 -type f -name "*.c" -or -n
 all: build
 
 build:
-	$(COMPILER_PATH)/$(CC) $(SOURCE_FILES) -o $(PROJECT_NAME).exe $(FLAGS) $(LIBS_FOLDERS) $(INC_FOLDERS) $(LIBS)
+	$(CC) $(SOURCE_FILES) -o $(PROJECT_NAME).exe $(FLAGS) $(LIBS_FOLDERS) $(INC_FOLDERS) $(LIBS)
 clean:
 	rm -f *.o
 run:

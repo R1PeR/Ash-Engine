@@ -1,7 +1,6 @@
 #ifndef LIBS_ENGINE_AUDIO_H
 #define LIBS_ENGINE_AUDIO_H
 #include "raylib.h"
-#include "utils.h"
 
 #include <stdint.h>
 #include <stdlib.h>
