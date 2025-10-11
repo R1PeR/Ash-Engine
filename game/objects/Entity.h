@@ -13,7 +13,7 @@ typedef struct Statistics
     uint32_t poisonResistance;
     uint32_t lightningResistance;
     uint32_t holyResistance;
-    uint32_t magicResistance; 
+    uint32_t magicResistance;
     uint32_t movementSpeed;
 } Statistics;
 
@@ -46,10 +46,10 @@ typedef struct EntityData
 {
     EntityType type;
     Statistics stats;
-    uint32_t state;
-    uint8_t team;
-    uint32_t flags;
-    Vector2 moveDest;
+    uint32_t   state;
+    uint8_t    team;
+    uint32_t   flags;
+    Vector2    moveDest;
 } EntityData;
 
 typedef struct Entity
@@ -58,10 +58,10 @@ typedef struct Entity
     EntityData data;
 } Entity;
 
-void Entity_Initialize(Entity * unit);
-void Entity_Update(Entity * unit);
-void Entity_MoveTo(Entity * unit, Vector2 destintation);
-void Entity_Attack(Entity * unit, GameObject target);
-void Entity_Gather(Entity * unit, GameObject target);
+void Entity_Initialize(Entity* unit);
+void Entity_Update(Entity* unit);
+void Entity_MoveTo(Entity* unit, Vector2 destintation);
+void Entity_Attack(Entity* unit, GameObject target);
+void Entity_Gather(Entity* unit, GameObject target);
 
 #endif

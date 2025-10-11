@@ -23,7 +23,7 @@ void AnimatedSprite_Initialize(AnimatedSprite* animatedSprite)
 
 bool AnimatedSprite_Add(AnimatedSprite* animatedSprite)
 {
-    if(sAnimatedSpriteCount == 0)
+    if (sAnimatedSpriteCount == 0)
     {
         sAnimatedSpriteList       = animatedSprite;
         sAnimatedSpriteList->next = NULL;
@@ -31,7 +31,7 @@ bool AnimatedSprite_Add(AnimatedSprite* animatedSprite)
     else
     {
         AnimatedSprite* current = sAnimatedSpriteList;
-        while(current->next != NULL)
+        while (current->next != NULL)
         {
             current = current->next;
         }
@@ -65,14 +65,14 @@ void AnimatedSprite_Stop(AnimatedSprite* animatedSprite)
 void AnimatedSprite_Update()
 {
     AnimatedSprite* current = sAnimatedSpriteList;
-    while(current != NULL)
+    while (current != NULL)
     {
-        if(current->isPlaying && current->currentAnimation && Stopwatch_IsZero(&current->stopwatch))
+        if (current->isPlaying && current->currentAnimation && Stopwatch_IsZero(&current->stopwatch))
         {
             current->sprite.currentTexture = current->currentAnimation->animationFrames[current->currentFrame++];
-            if(current->currentFrame >= current->currentAnimation->animationFrameCount)
+            if (current->currentFrame >= current->currentAnimation->animationFrameCount)
             {
-                if(current->repeat)
+                if (current->repeat)
                 {
                     current->currentFrame = 0;
                 }
@@ -91,7 +91,7 @@ bool AnimatedSprite_SetAnimationDataFromTextureSheet(AnimationData* data, const 
                                                      uint8_t frameCount)
 {
     char buffor[TEXTURE_MAX_NAME];
-    for(uint8_t i = 0; i < frameCount; i++)
+    for (uint8_t i = 0; i < frameCount; i++)
     {
         sprintf(buffor, "%s_%d", textureName, startFrame + i);
         data->animationFrames[i] = Texture_GetTextureByName(buffor);

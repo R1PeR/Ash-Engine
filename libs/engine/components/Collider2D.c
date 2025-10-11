@@ -21,7 +21,7 @@ void Collider2D_Initialize(Collider2D* col)
 
 bool Collider2D_Add(Collider2D* col)
 {
-    if(sCollider2DCount == 0)
+    if (sCollider2DCount == 0)
     {
         sCollider2DList       = col;
         sCollider2DList->next = NULL;
@@ -29,7 +29,7 @@ bool Collider2D_Add(Collider2D* col)
     else
     {
         Collider2D* current = sCollider2DList;
-        while(current->next != NULL)
+        while (current->next != NULL)
         {
             current = current->next;
         }
@@ -51,7 +51,7 @@ void Collider2D_Update()
 {
 
     Collider2D* current = sCollider2DList;
-    while(current != NULL)
+    while (current != NULL)
     {
         current->collision.collisionCount = 0;
         current                           = current->next;
@@ -59,7 +59,7 @@ void Collider2D_Update()
 
 
     Collider2D* currentA = sCollider2DList;
-    while(currentA != NULL)
+    while (currentA != NULL)
     {
 #ifdef DEBUG
         DrawRectangleLines(currentA->parent->position.x + currentA->position.x,
@@ -67,16 +67,16 @@ void Collider2D_Update()
                            YELLOW);
 #endif
         Collider2D* currentB = sCollider2DList;
-        while(currentB != NULL)
+        while (currentB != NULL)
         {
-            if(currentA != currentB)
+            if (currentA != currentB)
             {
-                if(currentA->isEnabled && currentB->isEnabled)
+                if (currentA->isEnabled && currentB->isEnabled)
                 {
-                    if(Collider2D_CheckCollider(currentA, currentB))
+                    if (Collider2D_CheckCollider(currentA, currentB))
                     {
-                        if(currentA->collision.collisionCount < COLLIDER2D_MAX_COLLISIONS
-                           && currentB->collision.collisionCount < COLLIDER2D_MAX_COLLISIONS)
+                        if (currentA->collision.collisionCount < COLLIDER2D_MAX_COLLISIONS
+                            && currentB->collision.collisionCount < COLLIDER2D_MAX_COLLISIONS)
                         {
                             currentA->collision.collision[currentA->collision.collisionCount++] = currentB;
                             currentB->collision.collision[currentB->collision.collisionCount++] = currentA;
@@ -135,16 +135,16 @@ void Collider2D_Update()
 
 bool Collider2D_Check(Collider2D* a, Collider2D* b)
 {
-    if(a == NULL || b == NULL)
+    if (a == NULL || b == NULL)
     {
         LOG_ERR("Collider2D: CheckCollision(), collider A or B is nullptr");
         return false;
     }
-    if(a->collision.collisionCount > 0)
+    if (a->collision.collisionCount > 0)
     {
-        for(uint32_t i = 0; i < a->collision.collisionCount; i++)
+        for (uint32_t i = 0; i < a->collision.collisionCount; i++)
         {
-            if(a->collision.collision[i] == b)
+            if (a->collision.collision[i] == b)
             {
                 return true;
             }
@@ -160,11 +160,11 @@ bool Collider2D_CheckCollider(Collider2D* a, Collider2D* b)
     Vector2 bPos  = { 0, 0 };
     Vector2 aSize = a->size;
     Vector2 bSize = b->size;
-    if(a->parent)
+    if (a->parent)
     {
         aPos = a->parent->position;
     }
-    if(b->parent)
+    if (b->parent)
     {
         bPos = b->parent->position;
     }
@@ -172,7 +172,8 @@ bool Collider2D_CheckCollider(Collider2D* a, Collider2D* b)
     aPos.y += a->position.y;
     bPos.x += b->position.x;
     bPos.y += b->position.y;
-    if(aPos.x < bPos.x + bSize.x && aPos.x + aSize.x > bPos.x && aPos.y < bPos.y + bSize.y && aPos.y + aSize.y > bPos.y)
+    if (aPos.x < bPos.x + bSize.x && aPos.x + aSize.x > bPos.x && aPos.y < bPos.y + bSize.y
+        && aPos.y + aSize.y > bPos.y)
     {
         return true;
     }
@@ -183,13 +184,13 @@ bool Collider2D_CheckPoint(Collider2D* a, Vector2 b)
 {
     Vector2 aPos  = { 0, 0 };
     Vector2 aSize = a->size;
-    if(a->parent)
+    if (a->parent)
     {
         aPos = a->parent->position;
     }
     aPos.x += a->position.x;
     aPos.y += a->position.y;
-    if(aPos.x < b.x && aPos.x + aSize.x > b.x && aPos.y < b.y && aPos.y + aSize.y > b.y)
+    if (aPos.x < b.x && aPos.x + aSize.x > b.x && aPos.y < b.y && aPos.y + aSize.y > b.y)
     {
         return true;
     }
@@ -202,13 +203,14 @@ bool Collider2D_CheckRect(Collider2D* a, Rectangle b)
     Vector2 bPos  = { b.x, b.y };
     Vector2 aSize = a->size;
     Vector2 bSize = { b.width, b.height };
-    if(a->parent)
+    if (a->parent)
     {
         aPos = a->parent->position;
     }
     aPos.x += a->position.x;
     aPos.y += a->position.y;
-    if(aPos.x < bPos.x + bSize.x && aPos.x + aSize.x > bPos.x && aPos.y < bPos.y + bSize.y && aPos.y + aSize.y > bPos.y)
+    if (aPos.x < bPos.x + bSize.x && aPos.x + aSize.x > bPos.x && aPos.y < bPos.y + bSize.y
+        && aPos.y + aSize.y > bPos.y)
     {
         return true;
     }

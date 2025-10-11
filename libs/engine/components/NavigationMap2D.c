@@ -6,9 +6,9 @@
 
 void NavigationMap2D_Initialize(NavigationMap2D* map, float squareSize)
 {
-    for(uint8_t y = 0; y < NAVIGATIONMAP2D_MAX_SIZE; y++)
+    for (uint8_t y = 0; y < NAVIGATIONMAP2D_MAX_SIZE; y++)
     {
-        for(uint8_t x = 0; x < NAVIGATIONMAP2D_MAX_SIZE; x++)
+        for (uint8_t x = 0; x < NAVIGATIONMAP2D_MAX_SIZE; x++)
         {
             NavigationMap2D_SetPosition(map, x, y, UINT32_MAX);
         }
@@ -18,7 +18,7 @@ void NavigationMap2D_Initialize(NavigationMap2D* map, float squareSize)
 
 uint32_t NavigationMap2D_GetPosition(NavigationMap2D* map, uint8_t x, uint8_t y)
 {
-    if(x < NAVIGATIONMAP2D_MAX_SIZE && y < NAVIGATIONMAP2D_MAX_SIZE)
+    if (x < NAVIGATIONMAP2D_MAX_SIZE && y < NAVIGATIONMAP2D_MAX_SIZE)
     {
         return map->square[x][y];
     }
@@ -28,7 +28,7 @@ uint32_t NavigationMap2D_GetPosition(NavigationMap2D* map, uint8_t x, uint8_t y)
 
 void NavigationMap2D_SetPosition(NavigationMap2D* map, uint8_t x, uint8_t y, uint32_t state)
 {
-    if(x < NAVIGATIONMAP2D_MAX_SIZE && y < NAVIGATIONMAP2D_MAX_SIZE)
+    if (x < NAVIGATIONMAP2D_MAX_SIZE && y < NAVIGATIONMAP2D_MAX_SIZE)
     {
         map->square[x][y] = state;
     }
@@ -42,11 +42,11 @@ void NavigationMap2D_FillSurroundingWeights(NavigationMap2D* map,
                                             uint8_t weightMap[NAVIGATIONMAP2D_MAX_SIZE][NAVIGATIONMAP2D_MAX_SIZE],
                                             uint8_t currentX, uint8_t currentY, uint8_t stopX, uint8_t stopY)
 {
-    for(uint8_t y = 0; y < NAVIGATIONMAP2D_MAX_SIZE; y++)
+    for (uint8_t y = 0; y < NAVIGATIONMAP2D_MAX_SIZE; y++)
     {
-        for(uint8_t x = 0; x < NAVIGATIONMAP2D_MAX_SIZE; x++)
+        for (uint8_t x = 0; x < NAVIGATIONMAP2D_MAX_SIZE; x++)
         {
-            if(map->square[x][y] != UINT32_MAX)
+            if (map->square[x][y] != UINT32_MAX)
             {
                 weightMap[x][y] = UINT8_MAX;
             }
@@ -83,17 +83,17 @@ void NavigationMap2D_GetNextMove(NavigationMap2D* map,
     uint8_t bestMoveX   = UINT8_MAX;
     uint8_t bestMoveY   = UINT8_MAX;
     uint8_t currentBest = UINT8_MAX;
-    for(uint8_t y = 0; y < 3; y++)
+    for (uint8_t y = 0; y < 3; y++)
     {
-        for(uint8_t x = 0; x < 3; x++)
+        for (uint8_t x = 0; x < 3; x++)
         {
             int8_t xPos = *currentX + x - 1;
             int8_t yPos = *currentY + y - 1;
-            if(x == 1 && y == 1)
+            if (x == 1 && y == 1)
                 continue;
-            if(xPos < 0 || yPos < 0 || xPos > NAVIGATIONMAP2D_MAX_SIZE || yPos > NAVIGATIONMAP2D_MAX_SIZE)
+            if (xPos < 0 || yPos < 0 || xPos > NAVIGATIONMAP2D_MAX_SIZE || yPos > NAVIGATIONMAP2D_MAX_SIZE)
                 continue;
-            if(weightMap[xPos][yPos] != UINT8_MAX && weightMap[xPos][yPos] < currentBest)
+            if (weightMap[xPos][yPos] != UINT8_MAX && weightMap[xPos][yPos] < currentBest)
             {
                 currentBest = weightMap[xPos][yPos];
                 bestMoveX   = *currentX + x - 1;
@@ -101,7 +101,7 @@ void NavigationMap2D_GetNextMove(NavigationMap2D* map,
             }
         }
     }
-    if(bestMoveX != UINT8_MAX && bestMoveY != UINT8_MAX)
+    if (bestMoveX != UINT8_MAX && bestMoveY != UINT8_MAX)
     {
         *currentX = bestMoveX;
         *currentY = bestMoveY;
@@ -112,9 +112,9 @@ NavigationMap2DPath NavigationMap2D_CalculatePath(NavigationMap2D* map, uint8_t 
                                                   uint8_t stopY)
 {
     uint8_t weightMap[NAVIGATIONMAP2D_MAX_SIZE][NAVIGATIONMAP2D_MAX_SIZE];
-    for(uint8_t y = 0; y < NAVIGATIONMAP2D_MAX_SIZE; y++)
+    for (uint8_t y = 0; y < NAVIGATIONMAP2D_MAX_SIZE; y++)
     {
-        for(uint8_t x = 0; x < NAVIGATIONMAP2D_MAX_SIZE; x++)
+        for (uint8_t x = 0; x < NAVIGATIONMAP2D_MAX_SIZE; x++)
         {
             weightMap[x][y] = 0;
         }
@@ -123,20 +123,20 @@ NavigationMap2DPath NavigationMap2D_CalculatePath(NavigationMap2D* map, uint8_t 
     NavigationMap2DPath path;
     uint8_t             currentX = startX;
     uint8_t             currentY = startY;
-    while(position < NAVIGATIONMAP2D_MAX_PATH)
+    while (position < NAVIGATIONMAP2D_MAX_PATH)
     {
         NavigationMap2D_FillSurroundingWeights(map, weightMap, currentX, currentY, stopX, stopY);
         NavigationMap2D_GetNextMove(map, weightMap, &currentX, &currentY);
         path.path[position].x = currentX;
         path.path[position].y = currentY;
         position++;
-        if(currentX == stopX && currentY == stopY)
+        if (currentX == stopX && currentY == stopY)
         {
             break;
         }
     }
     path.count = position;
-    for(int i = 0; i < position - 1; i++)
+    for (int i = 0; i < position - 1; i++)
     {
         DrawLine(path.path[i].x * map->sNavigation2DSquareSize
                      - (NAVIGATIONMAP2D_MAX_SIZE / 2) * map->sNavigation2DSquareSize,
@@ -172,9 +172,9 @@ NavigationMap2DPath NavigationMap2D_CalculatePath(NavigationMap2D* map, uint8_t 
 
 void NavigationMap2D_Clear(NavigationMap2D* map)
 {
-    for(uint8_t y = 0; y < NAVIGATIONMAP2D_MAX_SIZE; y++)
+    for (uint8_t y = 0; y < NAVIGATIONMAP2D_MAX_SIZE; y++)
     {
-        for(uint8_t x = 0; x < NAVIGATIONMAP2D_MAX_SIZE; x++)
+        for (uint8_t x = 0; x < NAVIGATIONMAP2D_MAX_SIZE; x++)
         {
             NavigationMap2D_SetPosition(map, x, y, UINT32_MAX);
         }
@@ -209,7 +209,7 @@ void NavigationMap2D_Fill(NavigationMap2D* map, Collider2D* collider)
     uint8_t entityId = 0;
     centerPos.x      = collider->position.x;
     centerPos.y      = collider->position.y;
-    if(collider->parent != NULL)
+    if (collider->parent != NULL)
     {
         centerPos.x += collider->parent->position.x;
         centerPos.y += collider->parent->position.y;
@@ -233,9 +233,9 @@ void NavigationMap2D_Fill(NavigationMap2D* map, Collider2D* collider)
     current.y        = centerPos.y + collider->size.y;
     bottomRightIndex = NavigationMap2D_ConvertWorldToMap(map, current);
 
-    for(uint32_t y = topLeftIndex.y; y <= bottomRightIndex.y; y++)
+    for (uint32_t y = topLeftIndex.y; y <= bottomRightIndex.y; y++)
     {
-        for(uint32_t x = topLeftIndex.x; x <= bottomRightIndex.x; x++)
+        for (uint32_t x = topLeftIndex.x; x <= bottomRightIndex.x; x++)
         {
             NavigationMap2D_SetPosition(map, x, y, entityId);
         }
@@ -249,11 +249,11 @@ void NavigationMap2D_Fill(NavigationMap2D* map, Collider2D* collider)
 
 void NavigationMap2D_Debug(NavigationMap2D* map)
 {
-    for(uint8_t y = 0; y < NAVIGATIONMAP2D_MAX_SIZE; y++)
+    for (uint8_t y = 0; y < NAVIGATIONMAP2D_MAX_SIZE; y++)
     {
-        for(uint8_t x = 0; x < NAVIGATIONMAP2D_MAX_SIZE; x++)
+        for (uint8_t x = 0; x < NAVIGATIONMAP2D_MAX_SIZE; x++)
         {
-            if(NavigationMap2D_GetPosition(map, x, y) == UINT32_MAX)
+            if (NavigationMap2D_GetPosition(map, x, y) == UINT32_MAX)
             {
                 DrawRectangleLines((x - NAVIGATIONMAP2D_MAX_SIZE / 2) * map->sNavigation2DSquareSize + 2,
                                    (y - NAVIGATIONMAP2D_MAX_SIZE / 2) * map->sNavigation2DSquareSize + 2,

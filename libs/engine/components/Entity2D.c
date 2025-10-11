@@ -16,7 +16,7 @@ void Entity2D_Initialize(Entity2D* ent)
 
 bool Entity2D_Add(Entity2D* ent)
 {
-    if(sEntityCount == 0)
+    if (sEntityCount == 0)
     {
         sEntityList       = ent;
         sEntityList->next = NULL;
@@ -24,7 +24,7 @@ bool Entity2D_Add(Entity2D* ent)
     else
     {
         Entity2D* current = sEntityList;
-        while(current->next != NULL)
+        while (current->next != NULL)
         {
             current = current->next;
         }

@@ -11,7 +11,7 @@ TextureData sTextures[TEXTURE_MAX_COUNT];
 
 bool Texture_AddTexture(Texture2D texture, const char* textureName)
 {
-    if(sTextureCount + 1 < TEXTURE_MAX_COUNT)
+    if (sTextureCount + 1 < TEXTURE_MAX_COUNT)
     {
         sTextures[sTextureCount].texture = texture;
         strcpy(sTextures[sTextureCount].textureName, textureName);
@@ -24,12 +24,12 @@ bool Texture_AddTexture(Texture2D texture, const char* textureName)
 
 bool Texture_LoadTexture(const char* fileName)
 {
-    if(fileName == NULL)
+    if (fileName == NULL)
     {
         return false;
     }
     Texture2D texture = LoadTexture(fileName);
-    if(texture.id > 0)  // Texture loaded correctly(?)
+    if (texture.id > 0)  // Texture loaded correctly(?)
     {
         return Texture_AddTexture(texture, GetFileNameWithoutExt(fileName));
     }
@@ -39,15 +39,15 @@ bool Texture_LoadTexture(const char* fileName)
 uint8_t Texture_LoadTextureSheet(const char* fileName, uint32_t textureWidth, uint32_t textureHeight,
                                  uint32_t texturesCount)
 {
-    if(fileName == NULL)
+    if (fileName == NULL)
     {
         return 0;
     }
     uint32_t completed = 0;
     Image    baseImage = LoadImage(fileName);
-    for(uint32_t y = 0; y < baseImage.height / textureHeight; y++)
+    for (uint32_t y = 0; y < baseImage.height / textureHeight; y++)
     {
-        for(uint32_t x = 0; x < baseImage.width / textureWidth; x++)
+        for (uint32_t x = 0; x < baseImage.width / textureWidth; x++)
         {
             Rectangle rect;
             rect.x      = x * textureWidth;
@@ -58,14 +58,14 @@ uint8_t Texture_LoadTextureSheet(const char* fileName, uint32_t textureWidth, ui
             ImageFormat(&image, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
             ImageColorReplace(&image, MAGENTA, BLANK);
             Texture texture = LoadTextureFromImage(image);
-            if(texture.id > 0)  // Texture loaded correctly(?)
+            if (texture.id > 0)  // Texture loaded correctly(?)
             {
                 char name[TEXTURE_MAX_NAME];
                 sprintf(name, "%s_%d", GetFileNameWithoutExt(fileName), (y * baseImage.height / textureHeight) + x);
-                if(Texture_AddTexture(texture, name))
+                if (Texture_AddTexture(texture, name))
                 {
                     completed++;
-                    if(completed + 1 > texturesCount && texturesCount != 0)
+                    if (completed + 1 > texturesCount && texturesCount != 0)
                     {
                         return completed;
                     }
@@ -78,24 +78,24 @@ uint8_t Texture_LoadTextureSheet(const char* fileName, uint32_t textureWidth, ui
 
 bool Texture_UnloadTextureByName(const char* textureName)
 {
-    if(textureName == NULL)
+    if (textureName == NULL)
     {
         return false;
     }
     bool moveTextures = false;
-    for(uint32_t i = 0; i < sTextureCount; i++)
+    for (uint32_t i = 0; i < sTextureCount; i++)
     {
-        if((strcmp(textureName, sTextures[i].textureName) == 0) && moveTextures == false)
+        if ((strcmp(textureName, sTextures[i].textureName) == 0) && moveTextures == false)
         {
             moveTextures = true;
             UnloadTexture(sTextures[i].texture);
         }
-        if(moveTextures && i != sTextureCount - 1)
+        if (moveTextures && i != sTextureCount - 1)
         {
             sTextures[i] = sTextures[i + 1];
         }
     }
-    if(moveTextures)
+    if (moveTextures)
     {
         sTextureCount--;
     }
@@ -105,19 +105,19 @@ bool Texture_UnloadTextureByName(const char* textureName)
 bool Texture_UnloadTextureById(uint32_t textureId)
 {
     bool moveTextures = false;
-    for(uint32_t i = 0; i < sTextureCount; i++)
+    for (uint32_t i = 0; i < sTextureCount; i++)
     {
-        if(sTextures[i].texture.id == textureId && moveTextures == false)
+        if (sTextures[i].texture.id == textureId && moveTextures == false)
         {
             moveTextures = true;
             UnloadTexture(sTextures[i].texture);
         }
-        if(moveTextures && i != sTextureCount - 1)
+        if (moveTextures && i != sTextureCount - 1)
         {
             sTextures[i] = sTextures[i + 1];
         }
     }
-    if(moveTextures)
+    if (moveTextures)
     {
         sTextureCount--;
     }
@@ -126,7 +126,7 @@ bool Texture_UnloadTextureById(uint32_t textureId)
 
 void Texture_UnloadTextures()
 {
-    for(uint32_t i = 0; i < sTextureCount; i++)
+    for (uint32_t i = 0; i < sTextureCount; i++)
     {
         UnloadTexture(sTextures[i].texture);
     }
@@ -145,9 +145,9 @@ TextureData* Texture_GetTextures()
 
 Texture2D* Texture_GetTextureByName(const char* textureName)
 {
-    for(uint32_t i = 0; i < sTextureCount; i++)
+    for (uint32_t i = 0; i < sTextureCount; i++)
     {
-        if(strcmp(sTextures[i].textureName, textureName) == 0)
+        if (strcmp(sTextures[i].textureName, textureName) == 0)
         {
             return &sTextures[i].texture;
         }

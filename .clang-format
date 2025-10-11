@@ -31,11 +31,10 @@ MaxEmptyLinesToKeep: '2'
 NamespaceIndentation: Inner
 PenaltyBreakAssignment: '0'
 PointerAlignment: Left
-SpaceBeforeParens: Never
+SpaceBeforeParens: ControlStatements
 SpacesBeforeTrailingComments: '2'
 Standard: Cpp11
 TabWidth: '4'
 UseTab: Never
 QualifierAlignment: Left
-
 ...

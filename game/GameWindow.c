@@ -36,7 +36,7 @@ void GameWindow_Initialize(GameWindow* window)
 
 void GameWindow_AddGameObject(GameWindow* window, GameObject* object)
 {
-    if(window->objectCount < GAMEWINDOW_MAX_GAMEOBJECTS)
+    if (window->objectCount < GAMEWINDOW_MAX_GAMEOBJECTS)
     {
         window->objects[window->objectCount] = object;
         window->objectCount++;
@@ -45,11 +45,11 @@ void GameWindow_AddGameObject(GameWindow* window, GameObject* object)
 
 void GameWindow_DeleteGameObject(GameWindow* window, GameObject* object)
 {
-    for(uint32_t i = 0; i < window->objectCount; i++)
+    for (uint32_t i = 0; i < window->objectCount; i++)
     {
-        if(object == window->objects[i])
+        if (object == window->objects[i])
         {
-            for(uint32_t j = 0; j < window->objectCount - i - 1; j++)
+            for (uint32_t j = 0; j < window->objectCount - i - 1; j++)
             {
                 window->objects[i + j] = window->objects[i + j + 1];
             }
@@ -60,12 +60,12 @@ void GameWindow_DeleteGameObject(GameWindow* window, GameObject* object)
 
 void GameWindow_Selection(GameWindow* gameWindow, uint8_t selectionCount, Vector2Int* selection)
 {
-    if(selectionCount > GAMEWINDOW_MAX_SELECTION)
+    if (selectionCount > GAMEWINDOW_MAX_SELECTION)
     {
         LOG_INF("GameWindow: Selection exceeded max limit");
         return;
     }
-    for(uint8_t i = 0; i < selectionCount; i++)
+    for (uint8_t i = 0; i < selectionCount; i++)
     {
         gameWindow->selection[i] = selection[i];
     }
@@ -75,16 +75,16 @@ void GameWindow_Draw(GameWindow* gameWindow)
 {
     AsciiWindow_DrawFill(&gameWindow->window, FONT_FILL_A);
     AsciiWindow_DrawBorder(&gameWindow->window, gameWindow->border);
-    for(uint32_t i = 0; i < gameWindow->objectCount; i++)
+    for (uint32_t i = 0; i < gameWindow->objectCount; i++)
     {
-        if(gameWindow->objects[i] != nullptr)
+        if (gameWindow->objects[i] != nullptr)
         {
-            if(gameWindow->objects[i]->textureId != 0)
+            if (gameWindow->objects[i]->textureId != 0)
             {
                 GameObject* object    = gameWindow->objects[i];
                 uint8_t     worldSize = ((GAMEWINDOW_SIZE) / 2);
-                if(abs(object->position.x - gameWindow->worldPosition.x) < worldSize
-                   && abs(object->position.y - gameWindow->worldPosition.y) < worldSize)
+                if (abs(object->position.x - gameWindow->worldPosition.x) < worldSize
+                    && abs(object->position.y - gameWindow->worldPosition.y) < worldSize)
                 {
                     // LOG_INF("%d %d", -object->position.x + worldSize, -object->position.y + worldSize);
                     AsciiWindow_SetCell(&gameWindow->window, -object->position.x + worldSize,
@@ -94,9 +94,9 @@ void GameWindow_Draw(GameWindow* gameWindow)
         }
     }
     AsciiWindow_Draw(&gameWindow->window);
-    if(gameWindow->selected != 0)
+    if (gameWindow->selected != 0)
     {
-        for(uint32_t i = 0; i < gameWindow->selected; i++)
+        for (uint32_t i = 0; i < gameWindow->selected; i++)
         {
             AsciiWindow_SetCell(&gameWindow->foreground, gameWindow->selection[i].x, gameWindow->selection[i].y,
                                 gameWindow->selectionChar);

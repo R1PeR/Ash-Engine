@@ -16,9 +16,9 @@ bool       resumed         = false;
 
 void Context_SetMode(Mode* mode)
 {
-    if(screenCount + 1 < MAX_MODES)
+    if (screenCount + 1 < MAX_MODES)
     {
-        if(screenCount != 0)
+        if (screenCount != 0)
         {
             screen[screenCount - 1]->OnPause();
         }
@@ -26,19 +26,19 @@ void Context_SetMode(Mode* mode)
         screenCount += 1;
         currentFinished = false;
         screen[screenCount - 1]->OnStart();
-        while(!currentFinished && !WindowShouldClose())
+        while (!currentFinished && !WindowShouldClose())
         {
             BeginDrawing();
             rlImGuiBegin();
             ClearBackground(BLACK);
             BeginMode2D(*Window_GetCamera());
-            for(int i = 0; i < updatablesCount; i++)
+            for (int i = 0; i < updatablesCount; i++)
             {
                 updatables[i]->Update();
             }
 
             // for IUpdatables
-            if(resumed)
+            if (resumed)
             {
                 screen[screenCount - 1]->OnResume();
                 resumed = false;
@@ -51,7 +51,7 @@ void Context_SetMode(Mode* mode)
         }
         screen[screenCount - 1]->OnStop();
         screenCount -= 1;
-        if(screenCount != 0)
+        if (screenCount != 0)
         {
             currentFinished = false;
             resumed         = true;
@@ -65,7 +65,7 @@ void Context_SetMode(Mode* mode)
 
 bool Context_AddUpdatable(Updatable* updatable)
 {
-    if(updatablesCount + 1 < MAX_UPDATABLES)
+    if (updatablesCount + 1 < MAX_UPDATABLES)
     {
         updatables[updatablesCount] = updatable;
         updatablesCount++;
@@ -76,7 +76,7 @@ bool Context_AddUpdatable(Updatable* updatable)
 
 void Context_ClearUpdatables()
 {
-    for(int i = 0; i < updatablesCount; i++)
+    for (int i = 0; i < updatablesCount; i++)
     {
         updatables[updatablesCount] = 0;
     }

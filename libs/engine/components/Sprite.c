@@ -20,7 +20,7 @@ void Sprite_Initialize(Sprite* spr)
 
 bool Sprite_Add(Sprite* spr)
 {
-    if(sSpriteCount == 0)
+    if (sSpriteCount == 0)
     {
         sSpriteList       = spr;
         sSpriteList->next = NULL;
@@ -28,7 +28,7 @@ bool Sprite_Add(Sprite* spr)
     else
     {
         Sprite* current = sSpriteList;
-        while(current->next != NULL)
+        while (current->next != NULL)
         {
             current = current->next;
         }
@@ -60,9 +60,9 @@ void Sprite_Update()
     //     qsort(sSprites, sSpriteCount, sizeof(Sprite), Sprite_CompareFunction);
     // }
     Sprite* current = sSpriteList;
-    while(current != NULL)
+    while (current != NULL)
     {
-        if(!current->isVisible || !current->currentTexture)
+        if (!current->isVisible || !current->currentTexture)
         {
             current = current->next;
             continue;
@@ -70,7 +70,7 @@ void Sprite_Update()
         Vector2 position = { 0.0f, 0.0f };
         float   scale    = 0.0f;
         float   rotation = 0.0f;
-        if(current->parent)
+        if (current->parent)
         {
             position.x = current->parent->position.x;
             position.y = current->parent->position.y;

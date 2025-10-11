@@ -16,15 +16,15 @@ typedef enum ProjectileFlag
 
 typedef struct ProjectileData
 {
-    Vector2 direction;
-    GameObject * parent;
-    GameObject * target;
-    uint32_t flags;
+    Vector2     direction;
+    GameObject* parent;
+    GameObject* target;
+    uint32_t    flags;
 } ProjectileData;
 
 typedef struct Projectile
 {
-    GameObject gameObject;
+    GameObject     gameObject;
     ProjectileData data;
 } Projectile;
 

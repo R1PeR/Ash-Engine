@@ -12,12 +12,12 @@ enum PlayerState
 
 typedef struct Player
 {
-    GameObject gameObject;
-    uint8_t health;
-    uint8_t stamina;
+    GameObject  gameObject;
+    uint8_t     health;
+    uint8_t     stamina;
     PlayerState state;
-    Stopwatch timer;
-}Player;
+    Stopwatch   timer;
+} Player;
 
 void Player_Initalize(Player* player);
 void Player_Update(Player* player);
