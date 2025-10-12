@@ -5,7 +5,6 @@
 #include "game/GameObject.h"
 #include "utils/SpriteDefines.h"
 
-
 void GameWindow_Initialize(GameWindow* window)
 {
     window->border.top[0]    = FONT_BORDER_D_TOP_LEFT;

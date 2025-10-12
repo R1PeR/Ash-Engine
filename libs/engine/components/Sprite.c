@@ -68,7 +68,7 @@ void Sprite_Update()
             continue;
         }
         Vector2 position = { 0.0f, 0.0f };
-        float   scale    = 0.0f;
+        float   scale    = 1.0f;
         float   rotation = 0.0f;
         if (current->parent)
         {
@@ -87,7 +87,6 @@ void Sprite_Update()
         color.r = 255;
         color.g = 255;
         color.b = 255;
-        // DrawTextureV(*current->currentTexture, pos, color);
         DrawTextureEx(*current->currentTexture, position, rotation, scale, color);
         current = current->next;
     }

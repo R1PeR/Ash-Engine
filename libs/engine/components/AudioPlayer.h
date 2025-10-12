@@ -15,6 +15,7 @@ typedef struct AudioPlayerData
 } AudioPlayerData;
 
 int32_t AudioPlayer_PlaySoundByName(const char* audioName);
+int32_t AudioPlayer_PlaySoundById(uint32_t id);
 bool    AudioPlayer_StopSoundById(uint32_t id);
 void    AudioPlayer_StopAll();
 #endif

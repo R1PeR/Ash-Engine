@@ -1,6 +1,9 @@
 #ifndef LIBS_ENGINE_MODE_H
 #define LIBS_ENGINE_MODE_H
 
+#define MODE_FROM_CLASSNAME(className) \
+    { className##_OnStart, className##_OnPause, className##_Update, className##_OnStop, className##_OnResume }
+
 typedef struct Mode
 {
     // OnStart runs once on mode start

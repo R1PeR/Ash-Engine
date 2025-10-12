@@ -1,14 +1,9 @@
 #ifndef GAME_GAMEOBJECT_H
 #define GAME_GAMEOBJECT_H
 #include "raylib.h"
+#include "libs/engine/misc/Utils.h"
 
 #include <stdint.h>
-
-typedef struct Vector2Int
-{
-    int32_t x;
-    int32_t y;
-} Vector2Int;
 
 enum GameObjectTag
 {

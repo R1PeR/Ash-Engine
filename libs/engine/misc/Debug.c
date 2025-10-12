@@ -52,17 +52,20 @@ static void Debug_ShowMisc()
                 {
                     if (ImGui::CollapsingHeader("Sprite parent"))
                     {
-                        ImGui::Text("Entity position: {%f, %f }", current->parent->position.x,
-                                    current->parent->position.y);
-                        ImGui::Text("Entity scale: %f", current->parent->scale);
-                        ImGui::Text("Entity rotation: %f", current->parent->rotation);
-                        ImGui::Text("Entity id: %d", current->parent->id);
+                        if (current->parent != NULL)
+                        {
+                            ImGui::Text("Entity position: {%f, %f }", current->parent->position.x,
+                                        current->parent->position.y);
+                            ImGui::Text("Entity scale: %f", current->parent->scale);
+                            ImGui::Text("Entity rotation: %f", current->parent->rotation);
+                            ImGui::Text("Entity id: %d", current->parent->id);
+                        }
                     }
                     ImGui::Text("Sprite position: {%f, %f }", current->position.x, current->position.y);
                     ImGui::Text("Sprite scale: %f", current->scale);
                     ImGui::Text("Sprite rotation: %f", current->rotation);
                     ImGui::Text("Sprite id: %d", current->id);
-                    ImGui::Image((ImTextureID)current->currentTexture, { 128, 128 });
+                    ImGui::Image((ImTextureID)current->currentTexture->id, { 128, 128 });
                     ImGui::Text("Sprite z order: %d", current->zOrder);
                     ImGui::Text("Sprite is visible: %d", current->isVisible);
                 }
@@ -100,7 +103,7 @@ static void Debug_ShowMisc()
                 {
                     ImGui::Text("Texture id: %d", Texture_GetTextures()[i].texture.id);
                     ImGui::Text("Texture name: %s", Texture_GetTextures()[i].textureName);
-                    ImGui::Image((ImTextureID)&Texture_GetTextures()[i].texture, { 128, 128 });
+                    ImGui::Image((ImTextureID)Texture_GetTextures()[i].texture.id, { 128, 128 });
                 }
             }
             ImGui::TreePop();

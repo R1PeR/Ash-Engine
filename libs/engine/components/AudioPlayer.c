@@ -29,6 +29,27 @@ int32_t AudioPlayer_PlaySoundByName(const char* audioName)
     return -1;
 }
 
+int32_t AudioPlayer_PlaySoundById(uint32_t id)
+{
+    if (sAudioPlayerCount >= AUDIOPLAYER_MAX_COUNT)
+    {
+        return -1;
+    }
+    for (uint32_t i = 0; i < Audio_GetCount(); i++)
+    {
+        if (Audio_GetAudios()[i].id == id)
+        {
+            uint16_t currentId                     = Audio_GetAudios()[i].id;
+            sAudioPlayers[sAudioPlayerCount].id    = currentId;
+            sAudioPlayers[sAudioPlayerCount].sound = LoadSoundAlias(Audio_GetAudios()[i].sound);
+            PlaySound(sAudioPlayers[sAudioPlayerCount].sound);
+            sAudioPlayerCount++;
+            return currentId;
+        }
+    }
+    return -1;
+}
+
 bool AudioPlayer_StopSoundById(uint32_t id)
 {
     bool moveAudioPlayers = false;

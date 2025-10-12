@@ -43,8 +43,9 @@ uint8_t Texture_LoadTextureSheet(const char* fileName, uint32_t textureWidth, ui
     {
         return 0;
     }
-    uint32_t completed = 0;
-    Image    baseImage = LoadImage(fileName);
+    uint32_t    completed          = 0;
+    Image       baseImage          = LoadImage(fileName);
+    const char* fileNameWithoutExt = GetFileNameWithoutExt(fileName);
     for (uint32_t y = 0; y < baseImage.height / textureHeight; y++)
     {
         for (uint32_t x = 0; x < baseImage.width / textureWidth; x++)
@@ -61,7 +62,7 @@ uint8_t Texture_LoadTextureSheet(const char* fileName, uint32_t textureWidth, ui
             if (texture.id > 0)  // Texture loaded correctly(?)
             {
                 char name[TEXTURE_MAX_NAME];
-                sprintf(name, "%s_%d", GetFileNameWithoutExt(fileName), (y * baseImage.height / textureHeight) + x);
+                sprintf(name, "%s_%d", fileNameWithoutExt, (y * baseImage.height / textureHeight) + x);
                 if (Texture_AddTexture(texture, name))
                 {
                     completed++;
@@ -72,6 +73,67 @@ uint8_t Texture_LoadTextureSheet(const char* fileName, uint32_t textureWidth, ui
                 }
             }
         }
+    }
+    return completed;
+}
+
+uint8_t Texture_LoadTextureSheetWithInfo(const char* fileName)
+{
+    if (fileName == NULL)
+    {
+        return 0;
+    }
+    uint32_t    completed          = 0;
+    Image       baseImage          = LoadImage(fileName);
+    const char* fileNameWithoutExt = GetFileNameWithoutExt(fileName);
+    char        fileTextureInfo[TEXTURE_INFO_FILE_MAX_NAME];
+    sprintf(fileTextureInfo, "resources/sprites/otsp_tiles_01.txt");
+    LOG_INF("Texture: Texture_LoadTextureSheetWithInfo(), Loading texture info from %s", fileTextureInfo);
+    FILE* file;
+    file = fopen(fileTextureInfo, "r");
+    if (file == NULL)
+    {
+        LOG_ERR("Texture: Texture_LoadTextureSheetWithInfo() failed to open %s", fileTextureInfo);
+        return 0;
+    }
+    char line[TEXTURE_INFO_LINE_MAX];
+    while (fgets(line, sizeof(line), file) != NULL)
+    {
+        char     textureName[TEXTURE_MAX_NAME];
+        uint32_t textureWidth;
+        uint32_t textureHeight;
+        uint32_t texturePosX;
+        uint32_t texturePosY;
+        if (!sscanf(line, "%s %d %d %d %d", textureName, &textureWidth, &textureHeight, &texturePosX, &texturePosY)
+            == 5)
+        {
+            LOG_ERR("Texture: Texture_LoadTextureSheetWithInfo() failed to read line from %s.txt", fileNameWithoutExt);
+            fclose(file);
+            return completed;
+        }
+        Rectangle rect;
+        rect.x      = texturePosX;
+        rect.y      = texturePosY;
+        rect.width  = textureWidth;
+        rect.height = textureHeight;
+        Image image = ImageFromImage(baseImage, rect);
+        ImageFormat(&image, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+        ImageColorReplace(&image, MAGENTA, BLANK);
+        Texture texture = LoadTextureFromImage(image);
+        if (texture.id > 0)  // Texture loaded correctly(?)
+        {
+            char name[TEXTURE_MAX_NAME];
+            sprintf(name, "%s", textureName);
+            if (Texture_AddTexture(texture, name))
+            {
+                completed++;
+            }
+        }
+    }
+    fclose(file);
+    if (completed == 0)
+    {
+        LOG_ERR("Texture: Texture_LoadTextureSheetWithInfo() failed to load any textures from %s", fileTextureInfo);
     }
     return completed;
 }
@@ -154,4 +216,9 @@ Texture2D* Texture_GetTextureByName(const char* textureName)
     }
     LOG_ERR("Texture: Texture_GetTextureByName() failed, texture of name `%s` not found", textureName);
     return NULL;
+}
+
+Texture2D* Texture_GetTextureById(uint32_t textureId)
+{
+    return &sTextures[textureId].texture;
 }
