@@ -1,6 +1,7 @@
 #ifndef LIBS_ENGINE_UTILS_H
 #define LIBS_ENGINE_UTILS_H
 #include "raylib.h"
+
 #include <stdint.h>
 
 typedef struct Vector2Int
@@ -81,6 +82,7 @@ typedef struct Vector3UInt8
     uint8_t z;
 } Vector3Uuint8;
 
-Vector2 Utils_CenterPosition(float width, float height);
-
+Vector2 Utils_WorldToScreen2D(Vector2 position, Camera2D camera);
+Vector2 Utils_ScreenToWorld2D(Vector2 position, Camera2D camera);
+Vector2 Utils_ScaleWithCamera(Vector2 value, Camera2D camera);
 #endif

@@ -104,8 +104,8 @@ uint8_t Texture_LoadTextureSheetWithInfo(const char* fileName)
         uint32_t textureHeight;
         uint32_t texturePosX;
         uint32_t texturePosY;
-        if (!sscanf(line, "%s %d %d %d %d", textureName, &textureWidth, &textureHeight, &texturePosX, &texturePosY)
-            == 5)
+        if (sscanf(line, "%s %d %d %d %d", textureName, &textureWidth, &textureHeight, &texturePosX, &texturePosY)
+            != 5)
         {
             LOG_ERR("Texture: Texture_LoadTextureSheetWithInfo() failed to read line from %s.txt", fileNameWithoutExt);
             fclose(file);
@@ -220,5 +220,13 @@ Texture2D* Texture_GetTextureByName(const char* textureName)
 
 Texture2D* Texture_GetTextureById(uint32_t textureId)
 {
-    return &sTextures[textureId].texture;
+    for (uint32_t i = 0; i < sTextureCount; i++)
+    {
+        if (sTextures[i].texture.id == textureId)
+        {
+            return &sTextures[i].texture;
+        }
+    }
+    LOG_ERR("Texture: Texture_GetTextureByName() failed, texture of id `%d` not found", textureId);
+    return NULL;
 }

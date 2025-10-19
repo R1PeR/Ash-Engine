@@ -133,15 +133,15 @@ enum
 };
 
 
-bool Input_IsKeyPressed(uint8_t key);
-bool Input_IsKeyDown(uint8_t key);
-bool Input_IsKeyReleased(uint8_t key);
-bool Input_IsKeyUp(uint8_t key);
+bool Input_IsKeyPressed(uint16_t key);
+bool Input_IsKeyDown(uint16_t key);
+bool Input_IsKeyReleased(uint16_t key);
+bool Input_IsKeyUp(uint16_t key);
 
-bool    Input_IsMouseButtonPressed(uint8_t button);
-bool    Input_IsMouseButtonDown(uint8_t button);
-bool    Input_IsMouseButtonReleased(uint8_t button);
-bool    Input_IsMouseButtonUp(uint8_t button);
+bool    Input_IsMouseButtonPressed(uint16_t button);
+bool    Input_IsMouseButtonDown(uint16_t button);
+bool    Input_IsMouseButtonReleased(uint16_t button);
+bool    Input_IsMouseButtonUp(uint16_t button);
 int16_t Input_GetMouseX(void);
 int16_t Input_GetMouseY(void);
 int16_t Input_GetMouseDeltaX(void);

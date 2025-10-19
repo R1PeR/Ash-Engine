@@ -16,6 +16,7 @@
 #define MOUSE_BUTTON_COUNT    5
 #define KEYBOARD_BUTTON_COUNT 128
 Updatable debugUpdatable = { Debug_ShowDebugWindow };
+bool      debugVisible   = false;
 
 static void Debug_ShowMisc()
 {
@@ -243,10 +244,18 @@ static void Debug_ShowMisc()
 
 void Debug_ShowDebugWindow()
 {
+    if (Input_IsKeyPressed(INPUT_KEYCODE_F3))
+    {
+        debugVisible = !debugVisible;
+    }
+    if (!debugVisible)
+    {
+        return;
+    }
     // We specify a default position/size in case there's no data in the .ini file. Typically this isn't required! We
     // only do it to make the Demo applications a little more welcoming.
-    ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(550, 680), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(550, 680), ImGuiCond_Always);
 
     ImGuiWindowFlags window_flags = 0;
 
@@ -267,7 +276,6 @@ void Debug_ShowDebugWindow()
 
     ImGui::Spacing();
 
-    // All demo contents
     Debug_ShowMisc();
 
     // End of ShowDemoWindow()

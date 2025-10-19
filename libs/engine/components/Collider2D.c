@@ -62,9 +62,7 @@ void Collider2D_Update()
     while (currentA != NULL)
     {
 #ifdef DEBUG
-        DrawRectangleLines(currentA->parent->position.x + currentA->position.x,
-                           currentA->parent->position.y + currentA->position.y, currentA->size.x, currentA->size.y,
-                           YELLOW);
+        Collider2D_DrawDebug(currentA);
 #endif
         Collider2D* currentB = sCollider2DList;
         while (currentB != NULL)
@@ -133,6 +131,26 @@ void Collider2D_Update()
     }
 }
 
+void Collider2D_DrawDebug(Collider2D* col)
+{
+    if (col == NULL)
+    {
+        LOG_ERR("Collider2D: DrawDebug(), collider is nullptr");
+        return;
+    }
+    if (col->parent == NULL)
+    {
+        DrawRectangleLines(col->parent->position.x + col->position.x, col->parent->position.y + col->position.y,
+                           col->size.x * col->parent->scale, col->size.y, YELLOW);
+    }
+    else
+    {
+        DrawRectangleLines(col->parent->position.x + (col->position.x * col->parent->scale),
+                           col->parent->position.y + (col->position.y * col->parent->scale),
+                           col->size.x * col->parent->scale, col->size.y * col->parent->scale, YELLOW);
+    }
+}
+
 bool Collider2D_Check(Collider2D* a, Collider2D* b)
 {
     if (a == NULL || b == NULL)
@@ -162,16 +180,22 @@ bool Collider2D_CheckCollider(Collider2D* a, Collider2D* b)
     Vector2 bSize = b->size;
     if (a->parent)
     {
-        aPos = a->parent->position;
+        aPos = { a->parent->position.x + (a->position.x * a->parent->scale),
+                 a->parent->position.y + (a->position.y * a->parent->scale) };
+    }
+    else
+    {
+        aPos = a->position;
     }
     if (b->parent)
     {
-        bPos = b->parent->position;
+        bPos = { b->parent->position.x + (b->position.x * b->parent->scale),
+                 b->parent->position.y + (b->position.y * b->parent->scale) };
     }
-    aPos.x += a->position.x;
-    aPos.y += a->position.y;
-    bPos.x += b->position.x;
-    bPos.y += b->position.y;
+    else
+    {
+        bPos = b->position;
+    }
     if (aPos.x < bPos.x + bSize.x && aPos.x + aSize.x > bPos.x && aPos.y < bPos.y + bSize.y
         && aPos.y + aSize.y > bPos.y)
     {

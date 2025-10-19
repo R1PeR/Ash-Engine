@@ -21,9 +21,9 @@ uint8_t Texture_LoadTextureSheet(const char* fileName, uint32_t textureWidth, ui
                                  uint32_t texturesCount);
 uint8_t Texture_LoadTextureSheetWithInfo(const char* fileName);
 
-bool    Texture_UnloadTextureByName(const char* textureName);
-bool    Texture_UnloadTextureById(uint32_t textureId);
-void    Texture_UnloadTextures();
+bool Texture_UnloadTextureByName(const char* textureName);
+bool Texture_UnloadTextureById(uint32_t textureId);
+void Texture_UnloadTextures();
 
 uint32_t     Texture_GetCount();
 TextureData* Texture_GetTextures();

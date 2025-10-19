@@ -17,6 +17,7 @@ typedef struct Sprite
     Texture2D* currentTexture;
     uint8_t    zOrder;
     bool       isVisible;
+    Color      tint;
     Sprite*    next;
 } Sprite;
 
@@ -24,6 +25,7 @@ void Sprite_Initialize(Sprite* spr);
 bool Sprite_Add(Sprite* spr);
 bool Sprite_Clear();
 void Sprite_Update();
+void Sprite_Draw(Sprite* spr);
 
 uint32_t   Sprite_GetCount();
 Sprite*    Sprite_GetSpriteList();

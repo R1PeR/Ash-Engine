@@ -16,6 +16,7 @@ void Sprite_Initialize(Sprite* spr)
     spr->scale          = 1.0f;
     spr->zOrder         = 0;
     spr->next           = NULL;
+    spr->tint           = WHITE;
 }
 
 bool Sprite_Add(Sprite* spr)
@@ -67,29 +68,32 @@ void Sprite_Update()
             current = current->next;
             continue;
         }
-        Vector2 position = { 0.0f, 0.0f };
-        float   scale    = 1.0f;
-        float   rotation = 0.0f;
-        if (current->parent)
-        {
-            position.x = current->parent->position.x;
-            position.y = current->parent->position.y;
-            scale      = current->parent->scale;
-            rotation   = current->parent->rotation;
-        }
-        position.x += current->position.x;
-        position.y += current->position.y;
-        scale *= current->scale;
-        rotation += current->rotation;
-        // TODO: may have a bug here, left because I can loollolo
-        Color color;
-        color.a = 255;
-        color.r = 255;
-        color.g = 255;
-        color.b = 255;
-        DrawTextureEx(*current->currentTexture, position, rotation, scale, color);
+        Sprite_Draw(current);
         current = current->next;
     }
+}
+
+void Sprite_Draw(Sprite* spr)
+{
+    if (!spr->isVisible || !spr->currentTexture)
+    {
+        return;
+    }
+    Vector2 position = { 0.0f, 0.0f };
+    float   scale    = 1.0f;
+    float   rotation = 0.0f;
+    if (spr->parent)
+    {
+        position.x = spr->parent->position.x;
+        position.y = spr->parent->position.y;
+        scale      = spr->parent->scale;
+        rotation   = spr->parent->rotation;
+    }
+    position.x += spr->position.x * scale;
+    position.y += spr->position.y * scale;
+    scale *= spr->scale;
+    rotation += spr->rotation;
+    DrawTextureEx(*spr->currentTexture, position, rotation, scale, spr->tint);
 }
 
 uint32_t Sprite_GetCount()

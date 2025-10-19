@@ -24,6 +24,7 @@ typedef struct Collider2D
     Vector2     position;
     Vector2     size;
     bool        isEnabled;
+    bool        isTrigger;
     uint8_t     id;
     Collision2D collision;
     Collider2D* next;
@@ -33,6 +34,7 @@ void Collider2D_Initialize(Collider2D* col);
 bool Collider2D_Add(Collider2D* col);
 bool Collider2D_Clear();
 void Collider2D_Update();
+void Collider2D_DrawDebug(Collider2D* col);
 bool Collider2D_Check(Collider2D* a, Collider2D* b);
 bool Collider2D_CheckCollider(Collider2D* a, Collider2D* b);
 bool Collider2D_CheckPoint(Collider2D* a, Vector2 b);

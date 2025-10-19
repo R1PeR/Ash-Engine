@@ -2,42 +2,42 @@
 
 #include "raylib.h"
 
-bool Input_IsKeyPressed(uint8_t key)
+bool Input_IsKeyPressed(uint16_t key)
 {
     return IsKeyPressed(key);
 }
 
-bool Input_IsKeyDown(uint8_t key)
+bool Input_IsKeyDown(uint16_t key)
 {
     return IsKeyDown(key);
 }
 
-bool Input_IsKeyReleased(uint8_t key)
+bool Input_IsKeyReleased(uint16_t key)
 {
     return IsKeyReleased(key);
 }
 
-bool Input_IsKeyUp(uint8_t key)
+bool Input_IsKeyUp(uint16_t key)
 {
     return IsKeyUp(key);
 }
 
-bool Input_IsMouseButtonPressed(uint8_t button)
+bool Input_IsMouseButtonPressed(uint16_t button)
 {
     return IsMouseButtonPressed(button);
 }
 
-bool Input_IsMouseButtonDown(uint8_t button)
+bool Input_IsMouseButtonDown(uint16_t button)
 {
     return IsMouseButtonDown(button);
 }
 
-bool Input_IsMouseButtonReleased(uint8_t button)
+bool Input_IsMouseButtonReleased(uint16_t button)
 {
     return IsMouseButtonReleased(button);
 }
 
-bool Input_IsMouseButtonUp(uint8_t button)
+bool Input_IsMouseButtonUp(uint16_t button)
 {
     return IsMouseButtonUp(button);
 }
