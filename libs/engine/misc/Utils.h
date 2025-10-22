@@ -82,7 +82,13 @@ typedef struct Vector3UInt8
     uint8_t z;
 } Vector3Uuint8;
 
-Vector2 Utils_WorldToScreen2D(Vector2 position, Camera2D camera);
-Vector2 Utils_ScreenToWorld2D(Vector2 position, Camera2D camera);
-Vector2 Utils_ScaleWithCamera(Vector2 value, Camera2D camera);
+Vector2     Utils_WorldToScreen2D(Vector2 position, Camera2D camera);
+Vector2     Utils_ScreenToWorld2D(Vector2 position, Camera2D camera);
+Vector2     Utils_ScaleWithCamera(Vector2 value, Camera2D camera);
+Vector3Int  Utils_WorldToGrid(Vector2 pos, uint8_t gridSize);
+Vector3Int8 Utils_WorldToChunk(Vector2 pos, uint8_t gridSize, uint8_t chunkSize);
+Vector2     Utils_GridToWorld(Vector3Int pos, uint8_t gridSize);
+Vector2     Utils_GridCenterToWorld(Vector3Int pos, uint8_t gridSize);
+Vector3Int8 Utils_GridToChunk(Vector3Int pos, uint8_t chunkSize);
+
 #endif

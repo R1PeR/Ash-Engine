@@ -1,159 +1,27 @@
 #include "MainMode.h"
 
+#include "engine/components/Audio.h"
 #include "engine/components/Collider2D.h"
 #include "engine/components/Entity2D.h"
 #include "engine/components/Sprite.h"
+#include "engine/components/Texture.h"
+#include "engine/io/Input.h"
 #include "engine/io/Window.h"
-#include "engine/misc/utils.h"
+#include "engine/misc/DeltaTime.h"
+#include "engine/misc/Logger.h"
+#include "engine/misc/Stopwatch.h"
+#include "engine/misc/Utils.h"
 #include "imgui.h"
-#include "libs/engine/components/Audio.h"
-#include "libs/engine/components/Texture.h"
-#include "libs/engine/io/Input.h"
-#include "libs/engine/misc/DeltaTime.h"
-#include "libs/engine/misc/Logger.h"
-#include "libs/engine/misc/Stopwatch.h"
-#include "libs/engine/misc/Utils.h"
 #include "raylib.h"
 #include "rlImGui.h"
-
 #include <stdio.h>
+#include "utils/Structs.h"
+#include "utils/Prefabs.h"
 
 Mode mainMode = MODE_FROM_CLASSNAME(MainMode);
-// Constants
 
-#define MAX_LAYERS        8
-#define CHUNK_SIZE        16
-#define CHUNK_MAX_OBJECTS 256
-#define TEXTURE_SCALE     4
-#define TEXTURE_SIZE      8
-#define SPRITE_MAX_COUNT  256
-
-// Enumerations
-
-enum Type : uint16_t
-{
-    TILE = 0,
-    ENTITY,
-    PROJECTILE,
-    EFFECT,
-    INTERACTIVE,
-    ITEM,
-};
-enum EntityType : uint16_t
-{
-    PLAYER = 0,
-    ENEMY,
-};
-enum InteractiveType : uint16_t
-{
-    CHEST = 0,
-    DOOR,
-    STAIRS_UP,
-    STAIRS_DOWN,
-};
-
-// Structures
-
-struct Chunk;
-
-struct Object
-{
-    int        id;
-    int        type;
-    int        layer;
-    uint32_t   textureId;
-    bool       isCollidable;
-    Vector3Int position;  // global world position
-    union
-    {
-        struct
-        {
-            // for PLAYER, ENEMY
-            int entityType;
-            int entityHealth;
-            int entityExperience;
-            int entityLevel;
-            int entitySpeed;
-            int entityDamage;
-            int entityAttackSpeed;
-            int entityArmor;
-            int entityStrength;
-            int entityDexterity;
-            int entityVitality;
-            int entityEnergy;
-            int entityItems[8];
-
-            Stopwatch   entityMovementTimer;
-            Vector2Int8 entityMovementDirection;
-            Stopwatch   entityAttackTimer;
-        } entity;
-        struct
-        {
-            // for PROJECTILE
-            float   projectileSpeed;
-            Vector2 projectileDirection;  // in degrees
-            int     projectileRange;
-            int     projectileDistanceTraveled;
-            int     projectileDamage;
-        } projectile;
-        struct
-        {
-            // for EFFECT
-            int   effectType;
-            float effectDuration;
-            float effectTimeElapsed;
-        } effect;
-        struct
-        {
-            // for INTERACTIVE
-            int  interactiveType;
-            bool isOpen;  // for CHEST, DOOR
-        } interactive;
-        struct
-        {
-            // for ITEM
-            int itemId;
-        } item;
-    };
-};
-
-struct Chunk
-{
-    Vector3Int8 chunkPosition;
-    Object      objects[CHUNK_MAX_OBJECTS];
-    uint16_t    objectCount;
-};
-
-struct GameData
-{
-    Sprite   sprites[SPRITE_MAX_COUNT];
-    Chunk    chunks[CHUNK_SIZE * CHUNK_SIZE];
-    uint16_t chunkCount;
-    uint16_t spriteCount;
-} gamedata;
-
-struct Objects
-{
-    Object   objects[MAX_LAYERS];
-    uint16_t count;
-};
-
-struct Chunks
-{
-    Chunk    chunks[CHUNK_SIZE * CHUNK_SIZE];
-    uint16_t count;
-};
-
-struct DebugData
-{
-    bool       isVisible;
-    bool       isGridVisible;
-    Texture2D* selectedTextureId;
-    Object     currentObject;
-    int        currentZPos;
-} debugData;
-
-// Function
+GameData gameData;
+DebugData debugData;
 
 void SaveChunksToFile(Chunk* chunks, uint16_t chunkCount)
 {
@@ -205,83 +73,16 @@ uint16_t LoadChunksFromFile(Chunk* chunks)
     return count;
 }
 
-Vector3Int worldToGrid(Vector2 pos)
-{
-    Vector3Int position;
-    position.x = (int)(pos.x / TEXTURE_SIZE / TEXTURE_SCALE);
-    position.y = (int)(pos.y / TEXTURE_SIZE / TEXTURE_SCALE);
-    position.z = 0;
-    if (pos.x < 0)
-    {
-        position.x -= 1;
-    }
-    if (pos.y < 0)
-    {
-        position.y -= 1;
-    }
-    return position;
-}
-
-Vector3Int8 worldToChunk(Vector2 pos)
-{
-    Vector3Int8 position;
-    position.x = (pos.x / TEXTURE_SIZE / TEXTURE_SCALE) / CHUNK_SIZE;
-    position.y = (pos.y / TEXTURE_SIZE / TEXTURE_SCALE) / CHUNK_SIZE;
-    if (pos.x < 0)
-    {
-        position.x -= 1;
-    }
-    if (pos.y < 0)
-    {
-        position.y -= 1;
-    }
-    position.z = 0;
-    return position;
-}
-
-Vector2 gridToWorld(Vector3Int pos)
-{
-    Vector2 position;
-    position.x = pos.x * TEXTURE_SIZE * TEXTURE_SCALE;
-    position.y = pos.y * TEXTURE_SIZE * TEXTURE_SCALE;
-    return position;
-}
-
-Vector2 gridCenterToWorld(Vector3Int pos)
-{
-    Vector2 position;
-    position.x = pos.x * TEXTURE_SIZE * TEXTURE_SCALE + (TEXTURE_SIZE * TEXTURE_SCALE / 2);
-    position.y = pos.y * TEXTURE_SIZE * TEXTURE_SCALE + (TEXTURE_SIZE * TEXTURE_SCALE / 2);
-    return position;
-}
-
-Vector3Int8 gridToChunk(Vector3Int pos)
+Objects GetObjectsAtPosition(Vector3Int pos)
 {
     Vector3Int8 chunkPos;
-    chunkPos.x = pos.x / CHUNK_SIZE;
-    chunkPos.y = pos.y / CHUNK_SIZE;
-    if (pos.x < 0)
-    {
-        chunkPos.x -= 1;
-    }
-    if (pos.y < 0)
-    {
-        chunkPos.y -= 1;
-    }
-    chunkPos.z = pos.z;
-    return chunkPos;
-}
-
-Objects getObjectsAtPosition(Vector3Int pos)
-{
-    Vector3Int8 chunkPos;
-    chunkPos = gridToChunk(pos);
+    chunkPos = Utils_GridToChunk(pos, CHUNK_SIZE);
 
     Objects objs;
     objs.count = 0;
-    for (uint16_t i = 0; i < gamedata.chunkCount; i++)
+    for (uint16_t i = 0; i < gameData.chunkCount; i++)
     {
-        Chunk* chunk = &gamedata.chunks[i];
+        Chunk* chunk = &gameData.chunks[i];
         if (chunk->chunkPosition.x == chunkPos.x && chunk->chunkPosition.y == chunkPos.y)
         {
             for (uint16_t j = 0; j < chunk->objectCount; j++)
@@ -331,9 +132,9 @@ void DrawDebug()
     {
         Vector2    mousePos  = { (float)(Input_GetMouseX()), (float)(Input_GetMouseY()) };
         Vector2    worldPos  = GetScreenToWorld2D(mousePos, *Window_GetCamera());
-        Vector3Int gridPos   = worldToGrid(worldPos);
-        gridPos.z            = debugData.currentZPos;
-        Vector3Int8 chunkPos = worldToChunk(worldPos);
+        Vector3Int gridPos   = Utils_WorldToGrid(worldPos, TEXTURE_SIZE * TEXTURE_SCALE);
+        gridPos.z            = gameData.currentZPos;
+        Vector3Int8 chunkPos = Utils_WorldToChunk(worldPos, TEXTURE_SIZE * TEXTURE_SCALE, CHUNK_SIZE);
 
         if (Input_IsKeyDown(INPUT_KEYCODE_W) || Input_IsKeyDown(INPUT_KEYCODE_S) || Input_IsKeyDown(INPUT_KEYCODE_A)
             || Input_IsKeyDown(INPUT_KEYCODE_D) || Input_IsKeyDown(INPUT_KEYCODE_Q) || Input_IsKeyDown(INPUT_KEYCODE_E))
@@ -364,10 +165,10 @@ void DrawDebug()
         {
             debugData.currentObject.textureId = debugData.selectedTextureId->id;
             debugData.currentObject.position  = gridPos;
-            Sprite* sprite                    = &gamedata.sprites[gamedata.spriteCount++];
+            Sprite* sprite                    = &gameData.sprites[gameData.spriteCount++];
             Sprite_Initialize(sprite);
             sprite->currentTexture = debugData.selectedTextureId;
-            sprite->position       = gridToWorld(gridPos);
+            sprite->position       = Utils_GridToWorld(gridPos, TEXTURE_SIZE * TEXTURE_SCALE);
             sprite->scale          = TEXTURE_SCALE;
             sprite->isVisible      = true;
             sprite->tint           = LIGHTGRAY;
@@ -378,7 +179,7 @@ void DrawDebug()
         {
             // Check if object exists at position
             // If so, delete it
-            Objects objsAtPos = getObjectsAtPosition(gridPos);
+            Objects objsAtPos = GetObjectsAtPosition(gridPos);
             int     topLayer  = 0;
             for (uint16_t i = 0; i < objsAtPos.count; i++)
             {
@@ -389,12 +190,12 @@ void DrawDebug()
             }
             // Find chunk
             Chunk* chunk = NULL;
-            for (uint16_t j = 0; j < gamedata.chunkCount; j++)
+            for (uint16_t j = 0; j < gameData.chunkCount; j++)
             {
-                if (gamedata.chunks[j].chunkPosition.x == chunkPos.x
-                    && gamedata.chunks[j].chunkPosition.y == chunkPos.y)
+                if (gameData.chunks[j].chunkPosition.x == chunkPos.x
+                    && gameData.chunks[j].chunkPosition.y == chunkPos.y)
                 {
-                    chunk = &gamedata.chunks[j];
+                    chunk = &gameData.chunks[j];
                     break;
                 }
             }
@@ -423,7 +224,7 @@ void DrawDebug()
         {
             LOG_INF("Selecting object at position");
             // Select top object at position
-            Objects objsAtPos = getObjectsAtPosition(gridPos);
+            Objects objsAtPos = GetObjectsAtPosition(gridPos);
             int     topLayer  = -1;
             if (objsAtPos.count != 0)
             {
@@ -447,9 +248,9 @@ void DrawDebug()
             // {
             // auto assign id
             int maxId = 0;
-            for (uint16_t i = 0; i < gamedata.chunkCount; i++)
+            for (uint16_t i = 0; i < gameData.chunkCount; i++)
             {
-                Chunk* chunk = &gamedata.chunks[i];
+                Chunk* chunk = &gameData.chunks[i];
                 for (uint16_t j = 0; j < chunk->objectCount; j++)
                 {
                     if (chunk->objects[j].id > maxId)
@@ -463,7 +264,7 @@ void DrawDebug()
             // Check if object already exists at position
             // If so, replace it
             // Else, add it
-            Objects objsAtPos = getObjectsAtPosition(gridPos);
+            Objects objsAtPos = GetObjectsAtPosition(gridPos);
             for (uint16_t i = 0; i < objsAtPos.count; i++)
             {
                 if (objsAtPos.objects[i].layer == debugData.currentObject.layer)
@@ -476,21 +277,21 @@ void DrawDebug()
             // Add object to chunk
             LOG_INF("Grid Pos: (%d, %d), ChunkPos: (%d, %d)", gridPos.x, gridPos.y, chunkPos.x, chunkPos.y);
             Chunk* chunk = NULL;
-            for (uint16_t i = 0; i < gamedata.chunkCount; i++)
+            for (uint16_t i = 0; i < gameData.chunkCount; i++)
             {
-                if (gamedata.chunks[i].chunkPosition.x == chunkPos.x
-                    && gamedata.chunks[i].chunkPosition.y == chunkPos.y)
+                if (gameData.chunks[i].chunkPosition.x == chunkPos.x
+                    && gameData.chunks[i].chunkPosition.y == chunkPos.y)
                 {
-                    chunk = &gamedata.chunks[i];
+                    chunk = &gameData.chunks[i];
                     break;
                 }
             }
 
             if (chunk == NULL)
             {
-                if (gamedata.chunkCount < (CHUNK_SIZE * CHUNK_SIZE))
+                if (gameData.chunkCount < (CHUNK_SIZE * CHUNK_SIZE))
                 {
-                    chunk                = &gamedata.chunks[gamedata.chunkCount++];
+                    chunk                = &gameData.chunks[gameData.chunkCount++];
                     chunk->chunkPosition = chunkPos;
                     chunk->objectCount   = 0;
                 }
@@ -514,14 +315,14 @@ void DrawDebug()
 
         if (Input_IsKeyPressed(INPUT_KEYCODE_UP) && ImGui::GetIO().WantCaptureKeyboard == false)
         {
-            debugData.currentZPos++;
-            LOG_INF("Current Z Pos: %d", debugData.currentZPos);
+            gameData.currentZPos++;
+            LOG_INF("Current Z Pos: %d", gameData.currentZPos);
         }
 
         if (Input_IsKeyPressed(INPUT_KEYCODE_DOWN) && ImGui::GetIO().WantCaptureKeyboard == false)
         {
-            debugData.currentZPos--;
-            LOG_INF("Current Z Pos: %d", debugData.currentZPos);
+            gameData.currentZPos--;
+            LOG_INF("Current Z Pos: %d", gameData.currentZPos);
         }
 
         ImGui::SetNextWindowPos(ImVec2(50, 20), ImGuiCond_Always);
@@ -621,7 +422,7 @@ void DrawDebug()
 
 bool checkCollision(Vector3Int pos)
 {
-    Objects objsAtPos = getObjectsAtPosition(pos);
+    Objects objsAtPos = GetObjectsAtPosition(pos);
     for (uint16_t i = 0; i < objsAtPos.count; i++)
     {
         if (objsAtPos.objects[i].isCollidable)
@@ -638,7 +439,7 @@ bool checkCollision(Vector3Int pos)
 
 bool checkCollision(Vector3Int pos, Object* outObj)
 {
-    Objects objsAtPos = getObjectsAtPosition(pos);
+    Objects objsAtPos = GetObjectsAtPosition(pos);
     for (uint16_t i = 0; i < objsAtPos.count; i++)
     {
         if (objsAtPos.objects[i].isCollidable)
@@ -659,7 +460,7 @@ void UpdateEntity(Object* obj)
     if (obj->entity.entityType == EntityType::PLAYER)
     {
         Camera2D* camera   = Window_GetCamera();
-        Vector2   worldPos = gridCenterToWorld(obj->position);
+        Vector2   worldPos = Utils_GridCenterToWorld(obj->position, TEXTURE_SIZE * TEXTURE_SCALE);
         camera->target.x += (worldPos.x - camera->target.x) * DeltaTime_GetDeltaTime() * 2.0f;
         camera->target.y += (worldPos.y - camera->target.y) * DeltaTime_GetDeltaTime() * 2.0f;
         // Example: simple player movement logic
@@ -679,14 +480,14 @@ void UpdateEntity(Object* obj)
             }
         }
 
-        Sprite* sprite = &gamedata.sprites[gamedata.spriteCount++];
+        Sprite* sprite = &gameData.sprites[gameData.spriteCount++];
         Sprite_Initialize(sprite);
         sprite->currentTexture = Texture_GetTextureById(obj->textureId);
-        sprite->position       = gridToWorld(obj->position);
+        sprite->position       = Utils_GridToWorld(obj->position, TEXTURE_SIZE * TEXTURE_SCALE);
         sprite->scale          = TEXTURE_SCALE;
         sprite->isVisible      = true;
         sprite->tint           = WHITE;
-        sprite->position       = gridToWorld(obj->position);
+        sprite->position       = Utils_GridToWorld(obj->position, TEXTURE_SIZE * TEXTURE_SCALE);
         if (!Stopwatch_IsElapsed(&obj->entity.entityMovementTimer))
         {
             sprite->position.x += float(-obj->entity.entityMovementDirection.x
@@ -722,10 +523,10 @@ void UpdateEntity(Object* obj)
                 }
             }
         }
-        Sprite* sprite = &gamedata.sprites[gamedata.spriteCount++];
+        Sprite* sprite = &gameData.sprites[gameData.spriteCount++];
         Sprite_Initialize(sprite);
         sprite->currentTexture = Texture_GetTextureById(obj->textureId);
-        sprite->position       = gridToWorld(obj->position);
+        sprite->position       = Utils_GridToWorld(obj->position, TEXTURE_SIZE * TEXTURE_SCALE);
         sprite->scale          = TEXTURE_SCALE;
         sprite->isVisible      = true;
         sprite->tint           = LIGHTGRAY;
@@ -777,10 +578,10 @@ void MainMode_OnStart()
 {
     Texture_LoadTextureSheet("resources/sprites/Anikki_square_8x8.png", 8, 8, 256);
 
-    gamedata.chunkCount = LoadChunksFromFile(gamedata.chunks);
-    for (uint16_t i = 0; i < gamedata.chunkCount; i++)
+    gameData.chunkCount = LoadChunksFromFile(gameData.chunks);
+    for (uint16_t i = 0; i < gameData.chunkCount; i++)
     {
-        Chunk* chunk = &gamedata.chunks[i];
+        Chunk* chunk = &gameData.chunks[i];
         for (uint16_t j = 0; j < chunk->objectCount; j++)
         {
             Object* obj = &chunk->objects[j];
@@ -799,17 +600,17 @@ void MainMode_OnPause()
 void MainMode_Update()
 {
     Sprite_Clear();
-    gamedata.spriteCount = 0;
+    gameData.spriteCount = 0;
 
     DrawDebug();
     // check what objects are in view of the camera and draw them
-    Vector3Int8 camPosChunk = worldToChunk(Window_GetCamera()->target);
-    camPosChunk.z           = debugData.currentZPos;
+    Vector3Int8 camPosChunk = Utils_WorldToChunk(Window_GetCamera()->target, TEXTURE_SIZE * TEXTURE_SCALE, CHUNK_SIZE);
+    camPosChunk.z           = gameData.currentZPos;
     Chunk*   visibleChunks[15];
     uint16_t visibleChunkCount = 0;
-    for (uint16_t i = 0; i < gamedata.chunkCount; i++)
+    for (uint16_t i = 0; i < gameData.chunkCount; i++)
     {
-        Chunk* chunk = &gamedata.chunks[i];
+        Chunk* chunk = &gameData.chunks[i];
         if (chunk->chunkPosition.x >= camPosChunk.x - 2 && chunk->chunkPosition.x <= camPosChunk.x + 2
             && chunk->chunkPosition.y >= camPosChunk.y - 1 && chunk->chunkPosition.y <= camPosChunk.y + 1
             && chunk->chunkPosition.z == camPosChunk.z)
@@ -825,13 +626,14 @@ void MainMode_Update()
             {
                 case Type::TILE:
                 {
-                    Sprite* sprite = &gamedata.sprites[gamedata.spriteCount++];
+                    Sprite* sprite = &gameData.sprites[gameData.spriteCount++];
                     Sprite_Initialize(sprite);
                     sprite->currentTexture = Texture_GetTextureById(visibleChunks[i]->objects[j].textureId);
-                    sprite->position       = gridToWorld(visibleChunks[i]->objects[j].position);
-                    sprite->scale          = TEXTURE_SCALE;
-                    sprite->isVisible      = true;
-                    sprite->zOrder         = visibleChunks[i]->objects[j].layer;
+                    sprite->position =
+                        Utils_GridToWorld(visibleChunks[i]->objects[j].position, TEXTURE_SIZE * TEXTURE_SCALE);
+                    sprite->scale     = TEXTURE_SCALE;
+                    sprite->isVisible = true;
+                    sprite->zOrder    = visibleChunks[i]->objects[j].layer;
                     Sprite_Add(sprite);
                 }
                 break;
@@ -864,7 +666,7 @@ void MainMode_Update()
 
 void MainMode_OnStop()
 {
-    SaveChunksToFile(gamedata.chunks, gamedata.chunkCount);
+    SaveChunksToFile(gameData.chunks, gameData.chunkCount);
     Texture_UnloadTextures();
     Audio_UnloadAudios();
 }
