@@ -1,6 +1,5 @@
 #include "Sprite.h"
 
-#include "engine/misc/Logger.h"
 Updatable spriteUpdatable = { Sprite_Update };
 uint32_t  sSpriteCount    = 0;
 Sprite*   sSpriteList     = NULL;
@@ -17,6 +16,7 @@ void Sprite_Initialize(Sprite* spr)
     spr->zOrder         = 0;
     spr->next           = NULL;
     spr->tint           = WHITE;
+    spr->parent         = NULL;
 }
 
 bool Sprite_Add(Sprite* spr)
@@ -82,7 +82,7 @@ void Sprite_Draw(Sprite* spr)
     Vector2 position = { 0.0f, 0.0f };
     float   scale    = 1.0f;
     float   rotation = 0.0f;
-    if (spr->parent)
+    if (spr->parent != NULL)
     {
         position.x = spr->parent->position.x;
         position.y = spr->parent->position.y;

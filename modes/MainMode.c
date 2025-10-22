@@ -4,12 +4,9 @@
 #include "engine/components/Entity2D.h"
 #include "engine/components/Sprite.h"
 #include "engine/io/Window.h"
-#include "game/GameWindow.h"
-#include "game/objects/Player.h"
+#include "engine/misc/utils.h"
 #include "imgui.h"
-#include "libs/engine/components/AsciiWindow.h"
 #include "libs/engine/components/Audio.h"
-#include "libs/engine/components/AudioPlayer.h"
 #include "libs/engine/components/Texture.h"
 #include "libs/engine/io/Input.h"
 #include "libs/engine/misc/DeltaTime.h"
@@ -18,43 +15,65 @@
 #include "libs/engine/misc/Utils.h"
 #include "raylib.h"
 #include "rlImGui.h"
-#include "utils/SpriteDefines.h"
 
 #include <stdio.h>
 
-#define MAX_LAYERS          8
-#define OBJECT_MAX_POSITION 16
-#define CHUNK_SIZE          16
-#define CHUNK_MAX_OBJECTS   256
-#define TEXTURE_SCALE       4
-#define TEXTURE_SIZE        8
-#define SPRITE_MAX_COUNT    256
-
 Mode mainMode = MODE_FROM_CLASSNAME(MainMode);
+// Constants
+
+#define MAX_LAYERS        8
+#define CHUNK_SIZE        16
+#define CHUNK_MAX_OBJECTS 256
+#define TEXTURE_SCALE     4
+#define TEXTURE_SIZE      8
+#define SPRITE_MAX_COUNT  256
+
+// Enumerations
+
+enum Type : uint16_t
+{
+    TILE = 0,
+    ENTITY,
+    PROJECTILE,
+    EFFECT,
+    INTERACTIVE,
+    ITEM,
+};
+enum EntityType : uint16_t
+{
+    PLAYER = 0,
+    ENEMY,
+};
+enum InteractiveType : uint16_t
+{
+    CHEST = 0,
+    DOOR,
+    STAIRS_UP,
+    STAIRS_DOWN,
+};
+
+// Structures
+
+struct Chunk;
 
 struct Object
 {
-    enum Type : uint16_t
-    {
-        TILE = 0,
-        ENTITY,
-        PROJECTILE,
-        EFFECT,
-    };
-    int         id;
-    int         type;
-    int         layer;
-    uint32_t    textureId;
-    bool        isCollidable;
-    Vector2Int8 position;  // 0-16
+    int        id;
+    int        type;
+    int        layer;
+    uint32_t   textureId;
+    bool       isCollidable;
+    Vector3Int position;  // global world position
     union
     {
         struct
         {
             // for PLAYER, ENEMY
+            int entityType;
             int entityHealth;
             int entityExperience;
             int entityLevel;
+            int entitySpeed;
             int entityDamage;
             int entityAttackSpeed;
             int entityArmor;
@@ -63,6 +82,10 @@ struct Object
             int entityVitality;
             int entityEnergy;
             int entityItems[8];
+
+            Stopwatch   entityMovementTimer;
+            Vector2Int8 entityMovementDirection;
+            Stopwatch   entityAttackTimer;
         } entity;
         struct
         {
@@ -80,6 +103,17 @@ struct Object
             float effectDuration;
             float effectTimeElapsed;
         } effect;
+        struct
+        {
+            // for INTERACTIVE
+            int  interactiveType;
+            bool isOpen;  // for CHEST, DOOR
+        } interactive;
+        struct
+        {
+            // for ITEM
+            int itemId;
+        } item;
     };
 };
 
@@ -95,20 +129,15 @@ struct GameData
     Sprite   sprites[SPRITE_MAX_COUNT];
     Chunk    chunks[CHUNK_SIZE * CHUNK_SIZE];
     uint16_t chunkCount;
+    uint16_t spriteCount;
 } gamedata;
-
-struct Position
-{
-    Vector2Int8 gridPos;
-    Vector3Int8 chunkPos;
-};
 
 struct Objects
 {
     Object   objects[MAX_LAYERS];
     uint16_t count;
 };
-// Tu chyba się za dużo heapa alokuje :/
+
 struct Chunks
 {
     Chunk    chunks[CHUNK_SIZE * CHUNK_SIZE];
@@ -117,13 +146,14 @@ struct Chunks
 
 struct DebugData
 {
-#define BUTTON_COUNT 256
     bool       isVisible;
     bool       isGridVisible;
     Texture2D* selectedTextureId;
     Object     currentObject;
-    uint32_t   currentZPos;
+    int        currentZPos;
 } debugData;
+
+// Function
 
 void SaveChunksToFile(Chunk* chunks, uint16_t chunkCount)
 {
@@ -175,48 +205,89 @@ uint16_t LoadChunksFromFile(Chunk* chunks)
     return count;
 }
 
-Position worldToGridAndChunk(Vector2 pos)
+Vector3Int worldToGrid(Vector2 pos)
 {
-    Position position;
-    position.gridPos.x  = (int)(pos.x / TEXTURE_SIZE / TEXTURE_SCALE) % OBJECT_MAX_POSITION;
-    position.chunkPos.x = (pos.x / TEXTURE_SIZE / TEXTURE_SCALE) / CHUNK_SIZE;
-    position.gridPos.y  = (int)(pos.y / TEXTURE_SIZE / TEXTURE_SCALE) % OBJECT_MAX_POSITION;
-    position.chunkPos.y = (pos.y / TEXTURE_SIZE / TEXTURE_SCALE) / CHUNK_SIZE;
+    Vector3Int position;
+    position.x = (int)(pos.x / TEXTURE_SIZE / TEXTURE_SCALE);
+    position.y = (int)(pos.y / TEXTURE_SIZE / TEXTURE_SCALE);
+    position.z = 0;
     if (pos.x < 0)
     {
-        position.gridPos.x += OBJECT_MAX_POSITION - 1;
-        position.chunkPos.x -= 1;
+        position.x -= 1;
     }
     if (pos.y < 0)
     {
-        position.gridPos.y += OBJECT_MAX_POSITION - 1;
-        position.chunkPos.y -= 1;
+        position.y -= 1;
     }
-    position.chunkPos.z = debugData.currentZPos;
     return position;
 }
 
-Vector2 gridAndChunkToWorld(Position pos)
+Vector3Int8 worldToChunk(Vector2 pos)
+{
+    Vector3Int8 position;
+    position.x = (pos.x / TEXTURE_SIZE / TEXTURE_SCALE) / CHUNK_SIZE;
+    position.y = (pos.y / TEXTURE_SIZE / TEXTURE_SCALE) / CHUNK_SIZE;
+    if (pos.x < 0)
+    {
+        position.x -= 1;
+    }
+    if (pos.y < 0)
+    {
+        position.y -= 1;
+    }
+    position.z = 0;
+    return position;
+}
+
+Vector2 gridToWorld(Vector3Int pos)
 {
     Vector2 position;
-    position.x = (pos.chunkPos.x * CHUNK_SIZE + pos.gridPos.x) * TEXTURE_SIZE * TEXTURE_SCALE;
-    position.y = (pos.chunkPos.y * CHUNK_SIZE + pos.gridPos.y) * TEXTURE_SIZE * TEXTURE_SCALE;
+    position.x = pos.x * TEXTURE_SIZE * TEXTURE_SCALE;
+    position.y = pos.y * TEXTURE_SIZE * TEXTURE_SCALE;
     return position;
 }
 
-Objects getObjectsAtPosition(Position pos)
+Vector2 gridCenterToWorld(Vector3Int pos)
 {
+    Vector2 position;
+    position.x = pos.x * TEXTURE_SIZE * TEXTURE_SCALE + (TEXTURE_SIZE * TEXTURE_SCALE / 2);
+    position.y = pos.y * TEXTURE_SIZE * TEXTURE_SCALE + (TEXTURE_SIZE * TEXTURE_SCALE / 2);
+    return position;
+}
+
+Vector3Int8 gridToChunk(Vector3Int pos)
+{
+    Vector3Int8 chunkPos;
+    chunkPos.x = pos.x / CHUNK_SIZE;
+    chunkPos.y = pos.y / CHUNK_SIZE;
+    if (pos.x < 0)
+    {
+        chunkPos.x -= 1;
+    }
+    if (pos.y < 0)
+    {
+        chunkPos.y -= 1;
+    }
+    chunkPos.z = pos.z;
+    return chunkPos;
+}
+
+Objects getObjectsAtPosition(Vector3Int pos)
+{
+    Vector3Int8 chunkPos;
+    chunkPos = gridToChunk(pos);
+
     Objects objs;
     objs.count = 0;
     for (uint16_t i = 0; i < gamedata.chunkCount; i++)
     {
         Chunk* chunk = &gamedata.chunks[i];
-        if (chunk->chunkPosition.x == pos.chunkPos.x && chunk->chunkPosition.y == pos.chunkPos.y)
+        if (chunk->chunkPosition.x == chunkPos.x && chunk->chunkPosition.y == chunkPos.y)
         {
             for (uint16_t j = 0; j < chunk->objectCount; j++)
             {
                 Object* obj = &chunk->objects[j];
-                if (obj->position.x == pos.gridPos.x && obj->position.y == pos.gridPos.y)
+                if (obj->position.x == pos.x && obj->position.y == pos.y)
                 {
                     if (objs.count < MAX_LAYERS)
                     {
@@ -224,8 +295,8 @@ Objects getObjectsAtPosition(Position pos)
                     }
                     else
                     {
-                        LOG_ERR("Max layers reached at position (%d, %d) in chunk (%d, %d)", pos.gridPos.x,
-                                pos.gridPos.y, pos.chunkPos.x, pos.chunkPos.y);
+                        LOG_ERR("Max layers reached at position (%d, %d) in chunk (%d, %d)", pos.x, pos.y, chunkPos.x,
+                                chunkPos.y);
                     }
                 }
             }
@@ -258,91 +329,11 @@ void DrawDebug()
     }
     if (debugData.isVisible)
     {
-        ImGui::SetNextWindowPos(ImVec2(50, 20), ImGuiCond_Always);
-        ImGui::SetNextWindowSize(ImVec2(500, 680), ImGuiCond_Always);
-
-        ImGuiWindowFlags window_flags = 0;
-
-        if (!ImGui::Begin("Select View", nullptr, window_flags))
-        {
-            ImGui::End();
-            return;
-        }
-
-        ImGui::Text("Select a texture to paint with:");
-        for (int i = 0; i < BUTTON_COUNT; i++)
-        {
-            ImGui::PushID(i);
-            if (rlImGuiImageButtonSize("", Texture_GetTextureById(i + 3), { 32, 32 }))
-            {
-                debugData.selectedTextureId = Texture_GetTextureById(i + 3);
-            }
-            ImGui::PopID();
-            if ((i + 1) % 10 != 0)
-            {
-                ImGui::SameLine();
-            }
-        }
-
-        ImGui::NewLine();
-
-        if (debugData.selectedTextureId != NULL)
-        {
-            ImGui::Text("Selected Texture:");
-            rlImGuiImageSize(debugData.selectedTextureId, 64, 64);
-        }
-        else
-        {
-            ImGui::Text("No Texture Selected");
-        }
-
-        ImGui::InputInt("Id", &debugData.currentObject.id);
-        ImGui::InputInt("Layer", (int*)&debugData.currentObject.layer);
-        ImGui::Checkbox("Collidable", &debugData.currentObject.isCollidable);
-
-        const char* items[] = { "TILE", "ENTITY", "PROJECTILE", "EFFECT" };
-        ImGui::ListBox("Type", &debugData.currentObject.type, items, IM_ARRAYSIZE(items), 4);
-
-        if (debugData.currentObject.type == Object::Type::ENTITY)
-        {
-            ImGui::InputInt("Health", &debugData.currentObject.entity.entityHealth);
-            ImGui::InputInt("Damage", &debugData.currentObject.entity.entityDamage);
-            ImGui::InputInt4("Items1", debugData.currentObject.entity.entityItems);
-            ImGui::InputInt4("Items2", debugData.currentObject.entity.entityItems);
-            ImGui::InputInt("Experience", &debugData.currentObject.entity.entityExperience);
-            ImGui::InputInt("Level", &debugData.currentObject.entity.entityLevel);
-            ImGui::InputInt("Attack Speed", &debugData.currentObject.entity.entityAttackSpeed);
-            ImGui::InputInt("Armor", &debugData.currentObject.entity.entityArmor);
-            ImGui::InputInt("Strength", &debugData.currentObject.entity.entityStrength);
-            ImGui::InputInt("Dexterity", &debugData.currentObject.entity.entityDexterity);
-            ImGui::InputInt("Vitality", &debugData.currentObject.entity.entityVitality);
-            ImGui::InputInt("Energy", &debugData.currentObject.entity.entityEnergy);
-        }
-        else if (debugData.currentObject.type == Object::Type::PROJECTILE)
-        {
-            ImGui::InputFloat("Speed", &debugData.currentObject.projectile.projectileSpeed);
-            ImGui::InputFloat2("Direction", (float*)&debugData.currentObject.projectile.projectileDirection);
-            ImGui::InputInt("Range", &debugData.currentObject.projectile.projectileRange);
-            ImGui::InputInt("Damage", &debugData.currentObject.projectile.projectileDamage);
-        }
-        else if (debugData.currentObject.type == Object::Type::EFFECT)
-        {
-            ImGui::InputInt("Effect Type", &debugData.currentObject.effect.effectType);
-            ImGui::InputFloat("Duration", &debugData.currentObject.effect.effectDuration);
-        }
-
-        Vector2     mousePos = { (float)(Input_GetMouseX()), (float)(Input_GetMouseY()) };
-        Vector2     worldPos = GetScreenToWorld2D(mousePos, *Window_GetCamera());
-        Position    pos      = worldToGridAndChunk(worldPos);
-        Vector2Int8 gridPos  = pos.gridPos;
-        Vector3Int8 chunkPos = pos.chunkPos;
-
-        ImGui::Text("Mouse Position: (%.1f, %.1f)", mousePos.x, mousePos.y);
-        ImGui::Text("World Position: (%.1f, %.1f)", worldPos.x, worldPos.y);
-        ImGui::Text("Grid Position: (%d, %d)", gridPos.x, gridPos.y);
-        ImGui::Text("Chunk Position: (%d, %d)", chunkPos.x, chunkPos.y);
-
-        ImGui::End();
+        Vector2    mousePos  = { (float)(Input_GetMouseX()), (float)(Input_GetMouseY()) };
+        Vector2    worldPos  = GetScreenToWorld2D(mousePos, *Window_GetCamera());
+        Vector3Int gridPos   = worldToGrid(worldPos);
+        gridPos.z            = debugData.currentZPos;
+        Vector3Int8 chunkPos = worldToChunk(worldPos);
 
         if (Input_IsKeyDown(INPUT_KEYCODE_W) || Input_IsKeyDown(INPUT_KEYCODE_S) || Input_IsKeyDown(INPUT_KEYCODE_A)
             || Input_IsKeyDown(INPUT_KEYCODE_D) || Input_IsKeyDown(INPUT_KEYCODE_Q) || Input_IsKeyDown(INPUT_KEYCODE_E))
@@ -373,56 +364,78 @@ void DrawDebug()
         {
             debugData.currentObject.textureId = debugData.selectedTextureId->id;
             debugData.currentObject.position  = gridPos;
-            Sprite sprite;
-            Sprite_Initialize(&sprite);
-            sprite.currentTexture = debugData.selectedTextureId;
-            sprite.position       = gridAndChunkToWorld(pos);
-            sprite.scale          = TEXTURE_SCALE;
-            sprite.isVisible      = true;
-            Sprite_Draw(&sprite);
+            Sprite* sprite                    = &gamedata.sprites[gamedata.spriteCount++];
+            Sprite_Initialize(sprite);
+            sprite->currentTexture = debugData.selectedTextureId;
+            sprite->position       = gridToWorld(gridPos);
+            sprite->scale          = TEXTURE_SCALE;
+            sprite->isVisible      = true;
+            sprite->tint           = LIGHTGRAY;
+            Sprite_Add(sprite);
         }
 
         if (Input_IsKeyPressed(INPUT_KEYCODE_X) && ImGui::GetIO().WantCaptureKeyboard == false)
         {
             // Check if object exists at position
             // If so, delete it
-            Objects objsAtPos = getObjectsAtPosition(pos);
+            Objects objsAtPos = getObjectsAtPosition(gridPos);
+            int     topLayer  = 0;
             for (uint16_t i = 0; i < objsAtPos.count; i++)
             {
-                if (objsAtPos.objects[i].layer == debugData.currentObject.layer)
+                if (objsAtPos.objects[i].layer > topLayer)
                 {
-                    // Find chunk
-                    Chunk* chunk = NULL;
-                    for (uint16_t j = 0; j < gamedata.chunkCount; j++)
+                    topLayer = objsAtPos.objects[i].layer;
+                }
+            }
+            // Find chunk
+            Chunk* chunk = NULL;
+            for (uint16_t j = 0; j < gamedata.chunkCount; j++)
+            {
+                if (gamedata.chunks[j].chunkPosition.x == chunkPos.x
+                    && gamedata.chunks[j].chunkPosition.y == chunkPos.y)
+                {
+                    chunk = &gamedata.chunks[j];
+                    break;
+                }
+            }
+            if (chunk != NULL)
+            {
+                // Find object in chunk
+                for (uint16_t j = 0; j < chunk->objectCount; j++)
+                {
+                    if (chunk->objects[j].position.x == gridPos.x && chunk->objects[j].position.y == gridPos.y
+                        && chunk->objects[j].layer == topLayer)
                     {
-                        if (gamedata.chunks[j].chunkPosition.x == chunkPos.x
-                            && gamedata.chunks[j].chunkPosition.y == chunkPos.y)
+                        // Delete object by shifting array
+                        for (uint16_t k = j; k < chunk->objectCount - 1; k++)
                         {
-                            chunk = &gamedata.chunks[j];
-                            break;
+                            chunk->objects[k] = chunk->objects[k + 1];
                         }
+                        chunk->objectCount--;
+                        LOG_INF("Deleted object at layer %d", topLayer);
+                        break;
                     }
-                    if (chunk != NULL)
+                }
+            }
+        }
+
+        if (Input_IsMouseButtonPressed(INPUT_MOUSE_BUTTON_RIGHT) && ImGui::GetIO().WantCaptureMouse == false)
+        {
+            LOG_INF("Selecting object at position");
+            // Select top object at position
+            Objects objsAtPos = getObjectsAtPosition(gridPos);
+            int     topLayer  = -1;
+            if (objsAtPos.count != 0)
+            {
+                LOG_INF("No objects at position");
+                for (uint16_t i = 0; i < objsAtPos.count; i++)
+                {
+                    if (objsAtPos.objects[i].layer > topLayer)
                     {
-                        // Find object in chunk
-                        for (uint16_t j = 0; j < chunk->objectCount; j++)
-                        {
-                            if (chunk->objects[j].position.x == pos.gridPos.x
-                                && chunk->objects[j].position.y == pos.gridPos.y
-                                && chunk->objects[j].layer == debugData.currentObject.layer)
-                            {
-                                // Delete object by shifting array
-                                for (uint16_t k = j; k < chunk->objectCount - 1; k++)
-                                {
-                                    chunk->objects[k] = chunk->objects[k + 1];
-                                }
-                                chunk->objectCount--;
-                                LOG_INF("Deleted object at layer %d", debugData.currentObject.layer);
-                                break;
-                            }
-                        }
+                        topLayer                    = objsAtPos.objects[i].layer;
+                        debugData.currentObject     = objsAtPos.objects[i];
+                        debugData.selectedTextureId = Texture_GetTextureById(debugData.currentObject.textureId);
                     }
-                    return;
                 }
             }
         }
@@ -430,10 +443,27 @@ void DrawDebug()
         if (Input_IsMouseButtonPressed(INPUT_MOUSE_BUTTON_LEFT) && debugData.selectedTextureId != NULL
             && ImGui::GetIO().WantCaptureMouse == false)
         {
+            // if (debugData.currentObject.id == -1)
+            // {
+            // auto assign id
+            int maxId = 0;
+            for (uint16_t i = 0; i < gamedata.chunkCount; i++)
+            {
+                Chunk* chunk = &gamedata.chunks[i];
+                for (uint16_t j = 0; j < chunk->objectCount; j++)
+                {
+                    if (chunk->objects[j].id > maxId)
+                    {
+                        maxId = chunk->objects[j].id;
+                    }
+                }
+            }
+            debugData.currentObject.id = maxId + 1;
+            // }
             // Check if object already exists at position
             // If so, replace it
             // Else, add it
-            Objects objsAtPos = getObjectsAtPosition(pos);
+            Objects objsAtPos = getObjectsAtPosition(gridPos);
             for (uint16_t i = 0; i < objsAtPos.count; i++)
             {
                 if (objsAtPos.objects[i].layer == debugData.currentObject.layer)
@@ -481,37 +511,266 @@ void DrawDebug()
                 LOG_ERR("Max object count reached in chunk!");
             }
         }
+
+        if (Input_IsKeyPressed(INPUT_KEYCODE_UP) && ImGui::GetIO().WantCaptureKeyboard == false)
+        {
+            debugData.currentZPos++;
+            LOG_INF("Current Z Pos: %d", debugData.currentZPos);
+        }
+
+        if (Input_IsKeyPressed(INPUT_KEYCODE_DOWN) && ImGui::GetIO().WantCaptureKeyboard == false)
+        {
+            debugData.currentZPos--;
+            LOG_INF("Current Z Pos: %d", debugData.currentZPos);
+        }
+
+        ImGui::SetNextWindowPos(ImVec2(50, 20), ImGuiCond_Always);
+        ImGui::SetNextWindowSize(ImVec2(500, 680), ImGuiCond_Always);
+
+        ImGuiWindowFlags window_flags = 0;
+
+        if (!ImGui::Begin("Select View", nullptr, window_flags))
+        {
+            ImGui::End();
+            return;
+        }
+        ImGui::Text("Select a texture to paint with:");
+        for (int i = 0; i < 256; i++)
+        {
+            ImGui::PushID(i);
+            if (rlImGuiImageButtonSize("", Texture_GetTextureById(i + 3), { 32, 32 }))
+            {
+                debugData.selectedTextureId = Texture_GetTextureById(i + 3);
+            }
+            ImGui::PopID();
+            if ((i + 1) % 10 != 0)
+            {
+                ImGui::SameLine();
+            }
+        }
+
+        ImGui::NewLine();
+
+        if (debugData.selectedTextureId != NULL)
+        {
+            ImGui::Text("Selected Texture:");
+            rlImGuiImageSize(debugData.selectedTextureId, 64, 64);
+        }
+        else
+        {
+            ImGui::Text("No Texture Selected");
+        }
+
+        ImGui::InputInt("Id", &debugData.currentObject.id);
+        ImGui::InputInt("Layer", (int*)&debugData.currentObject.layer);
+        ImGui::Checkbox("Collidable", &debugData.currentObject.isCollidable);
+
+        const char* items[] = { "TILE", "ENTITY", "PROJECTILE", "EFFECT", "INTERACTIVE", "ITEM" };
+        ImGui::ListBox("Type", &debugData.currentObject.type, items, IM_ARRAYSIZE(items), 5);
+
+        if (debugData.currentObject.type == Type::ENTITY)
+        {
+            const char* entityItems[] = { "PLAYER", "ENEMY" };
+            ImGui::ListBox("Entity Type", &debugData.currentObject.entity.entityType, entityItems,
+                           IM_ARRAYSIZE(entityItems), 2);
+            ImGui::InputInt("Health", &debugData.currentObject.entity.entityHealth);
+            ImGui::InputInt("Damage", &debugData.currentObject.entity.entityDamage);
+            ImGui::InputInt4("Items1", debugData.currentObject.entity.entityItems);
+            ImGui::InputInt4("Items2", debugData.currentObject.entity.entityItems);
+            ImGui::InputInt("Experience", &debugData.currentObject.entity.entityExperience);
+            ImGui::InputInt("Level", &debugData.currentObject.entity.entityLevel);
+            ImGui::InputInt("Attack Speed", &debugData.currentObject.entity.entityAttackSpeed);
+            ImGui::InputInt("Armor", &debugData.currentObject.entity.entityArmor);
+            ImGui::InputInt("Strength", &debugData.currentObject.entity.entityStrength);
+            ImGui::InputInt("Dexterity", &debugData.currentObject.entity.entityDexterity);
+            ImGui::InputInt("Vitality", &debugData.currentObject.entity.entityVitality);
+            ImGui::InputInt("Energy", &debugData.currentObject.entity.entityEnergy);
+        }
+        else if (debugData.currentObject.type == Type::PROJECTILE)
+        {
+            ImGui::InputFloat("Speed", &debugData.currentObject.projectile.projectileSpeed);
+            ImGui::InputFloat2("Direction", (float*)&debugData.currentObject.projectile.projectileDirection);
+            ImGui::InputInt("Range", &debugData.currentObject.projectile.projectileRange);
+            ImGui::InputInt("Damage", &debugData.currentObject.projectile.projectileDamage);
+        }
+        else if (debugData.currentObject.type == Type::EFFECT)
+        {
+            ImGui::InputInt("Effect Type", &debugData.currentObject.effect.effectType);
+            ImGui::InputFloat("Duration", &debugData.currentObject.effect.effectDuration);
+        }
+        else if (debugData.currentObject.type == Type::INTERACTIVE)
+        {
+            // No additional properties for TILE
+            const char* items[] = { "CHEST", "DOOR", "STAIRS_UP", "STAIRS_DOWN" };
+            ImGui::ListBox("Type", &debugData.currentObject.interactive.interactiveType, items, IM_ARRAYSIZE(items), 4);
+        }
+        else if (debugData.currentObject.type == Type::ITEM)
+        {
+            ImGui::InputInt("Item ID", &debugData.currentObject.item.itemId);
+        }
+
+        ImGui::Text("Mouse Position: (%.1f, %.1f)", mousePos.x, mousePos.y);
+        ImGui::Text("World Position: (%.1f, %.1f)", worldPos.x, worldPos.y);
+        ImGui::Text("Grid Position: (%d, %d)", gridPos.x, gridPos.y);
+        ImGui::Text("Chunk Position: (%d, %d)", chunkPos.x, chunkPos.y);
+
+
+        ImGui::End();
     }
 }
 
-void DrawObjectsInChunks(Chunk* chunks, uint16_t chunkCount)
+bool checkCollision(Vector3Int pos)
 {
-    for (uint16_t i = 0; i < chunkCount; i++)
+    Objects objsAtPos = getObjectsAtPosition(pos);
+    for (uint16_t i = 0; i < objsAtPos.count; i++)
     {
-        Chunk* chunk = &chunks[i];
-        for (uint16_t i = 0; i < chunk->objectCount; i++)
+        if (objsAtPos.objects[i].isCollidable)
         {
-            Object* obj = &chunk->objects[i];
-            Sprite  spr;
-            Sprite_Initialize(&spr);
-            spr.currentTexture = Texture_GetTextureById(obj->textureId);
-            if (spr.currentTexture != NULL)
-            {
-                spr.parent = NULL;
-                Position pos;
-                pos.gridPos      = obj->position;
-                pos.chunkPos     = chunk->chunkPosition;
-                Vector2 worldPos = gridAndChunkToWorld(pos);
-                spr.position     = worldPos;
-                spr.scale        = TEXTURE_SCALE;
-                spr.rotation     = 0.0f;
-                spr.tint         = WHITE;
-                spr.isVisible    = true;
-                // LOG_INF("Drawing object at (%f, %f)", spr.position.x, spr.position.y);
-                Sprite_Draw(&spr);
-            }
+            // Collision detected
+            LOG_INF("Collision detected at (%d, %d, %d) with object id %d", pos.x, pos.y, pos.z,
+                    objsAtPos.objects[i].id);
+            return true;
         }
     }
+    return false;
+    // No collision
+}
+
+bool checkCollision(Vector3Int pos, Object* outObj)
+{
+    Objects objsAtPos = getObjectsAtPosition(pos);
+    for (uint16_t i = 0; i < objsAtPos.count; i++)
+    {
+        if (objsAtPos.objects[i].isCollidable)
+        {
+            // Collision detected
+            LOG_INF("Collision detected at (%d, %d, %d) with object id %d", pos.x, pos.y, pos.z,
+                    objsAtPos.objects[i].id);
+            *outObj = objsAtPos.objects[i];
+            return true;
+        }
+    }
+    return false;
+    // No collision
+}
+
+void UpdateEntity(Object* obj)
+{
+    if (obj->entity.entityType == EntityType::PLAYER)
+    {
+        Camera2D* camera   = Window_GetCamera();
+        Vector2   worldPos = gridCenterToWorld(obj->position);
+        camera->target.x += (worldPos.x - camera->target.x) * DeltaTime_GetDeltaTime() * 2.0f;
+        camera->target.y += (worldPos.y - camera->target.y) * DeltaTime_GetDeltaTime() * 2.0f;
+        // Example: simple player movement logic
+        int8_t y = (Input_IsKeyDown(INPUT_KEYCODE_S) - Input_IsKeyDown(INPUT_KEYCODE_W));
+        int8_t x = (Input_IsKeyDown(INPUT_KEYCODE_D) - Input_IsKeyDown(INPUT_KEYCODE_A));
+        if (abs(x + y) > 0 && abs(x + y) < 2)
+        {
+            if (Stopwatch_IsZero(&obj->entity.entityMovementTimer))
+            {
+                if (!checkCollision({ obj->position.x + x, obj->position.y + y, obj->position.z }))
+                {
+                    obj->position.x += x;
+                    obj->position.y += y;
+                    obj->entity.entityMovementDirection = { x, y };
+                    Stopwatch_Start(&obj->entity.entityMovementTimer, 500);
+                }
+            }
+        }
+
+        Sprite* sprite = &gamedata.sprites[gamedata.spriteCount++];
+        Sprite_Initialize(sprite);
+        sprite->currentTexture = Texture_GetTextureById(obj->textureId);
+        sprite->position       = gridToWorld(obj->position);
+        sprite->scale          = TEXTURE_SCALE;
+        sprite->isVisible      = true;
+        sprite->tint           = WHITE;
+        sprite->position       = gridToWorld(obj->position);
+        if (!Stopwatch_IsElapsed(&obj->entity.entityMovementTimer))
+        {
+            sprite->position.x += float(-obj->entity.entityMovementDirection.x
+                                        * Stopwatch_GetPercentRemainingTime(&obj->entity.entityMovementTimer)
+                                        * TEXTURE_SIZE * TEXTURE_SCALE);
+            sprite->position.y += float(-obj->entity.entityMovementDirection.y
+                                        * Stopwatch_GetPercentRemainingTime(&obj->entity.entityMovementTimer)
+                                        * TEXTURE_SIZE * TEXTURE_SCALE);
+        }
+        Sprite_Add(sprite);
+
+        // obj->entity.entitySpriteOffset = { float(-x * TEXTURE_SIZE * TEXTURE_SCALE),
+        // float(-y * TEXTURE_SIZE * TEXTURE_SCALE) };
+    }
+    if (obj->entity.entityType == EntityType::ENEMY)
+    {
+        // Example: simple enemy AI logic
+        int8_t x = (rand() % 3) - 1;  // -1, 0, or 1
+        int8_t y = (rand() % 3) - 1;  // -1, 0, or 1
+        // if (x == 0 && y == 0)
+        // {
+        //     return;
+        // }
+        if (x != 0 || y != 0)
+        {
+            if (!Stopwatch_IsZero(&obj->entity.entityMovementTimer))
+            {
+                if (checkCollision({ obj->position.x + x, obj->position.y + y, obj->position.z }))
+                {
+                    obj->position.x += (rand() % 3) - 1;  // Move randomly left, right, or stay
+                    obj->position.y += (rand() % 3) - 1;  // Move randomly up, down, or stay
+                    Stopwatch_Start(&obj->entity.entityMovementTimer, 100);
+                }
+            }
+        }
+        Sprite* sprite = &gamedata.sprites[gamedata.spriteCount++];
+        Sprite_Initialize(sprite);
+        sprite->currentTexture = Texture_GetTextureById(obj->textureId);
+        sprite->position       = gridToWorld(obj->position);
+        sprite->scale          = TEXTURE_SCALE;
+        sprite->isVisible      = true;
+        sprite->tint           = LIGHTGRAY;
+        sprite->position.x += float(-x * TEXTURE_SIZE * TEXTURE_SCALE);
+        sprite->position.y += float(-y * TEXTURE_SIZE * TEXTURE_SCALE);
+        Sprite_Add(sprite);
+    }
+}
+
+void UpdateProjectile(Object* obj)
+{
+    // // Example: simple movement logic
+    // obj->position.x += (int8_t)(obj->projectile.projectileDirection.x * obj->projectile.projectileSpeed);
+    // obj->position.y += (int8_t)(obj->projectile.projectileDirection.y * obj->projectile.projectileSpeed);
+    // obj->projectile.projectileDistanceTraveled += (int)(obj->projectile.projectileSpeed);
+    // if (obj->projectile.projectileDistanceTraveled >= obj->projectile.projectileRange)
+    // {
+    //     // Mark for deletion or reset
+    //     obj->position.x = -1;  // Example of marking for deletion
+    // }
+}
+
+void UpdateEffect(Object* obj)
+{
+    // obj->effect.effectTimeElapsed += DeltaTime_Get();
+    // if (obj->effect.effectTimeElapsed >= obj->effect.effectDuration)
+    // {
+    //     // Mark for deletion or reset
+    //     obj->position.x = -1;  // Example of marking for deletion
+    // }
+}
+
+void UpdateInteractive(Object* obj)
+{
+    // // Example: toggle open state
+    // if (obj->interactive.interactiveType == Object::InteractiveType::CHEST)
+    // {
+    //     obj->interactive.isOpen = !obj->interactive.isOpen;
+    // }
+}
+
+void UpdateItem(Object* obj)
+{
+    // Example: item logic
+    // Items might not have update logic
 }
 
 void MainMode_OnStart()
@@ -519,6 +778,18 @@ void MainMode_OnStart()
     Texture_LoadTextureSheet("resources/sprites/Anikki_square_8x8.png", 8, 8, 256);
 
     gamedata.chunkCount = LoadChunksFromFile(gamedata.chunks);
+    for (uint16_t i = 0; i < gamedata.chunkCount; i++)
+    {
+        Chunk* chunk = &gamedata.chunks[i];
+        for (uint16_t j = 0; j < chunk->objectCount; j++)
+        {
+            Object* obj = &chunk->objects[j];
+            if (obj->type == Type::ENTITY)
+            {
+                Stopwatch_Stop(&obj->entity.entityMovementTimer);
+            }
+        }
+    }
 }
 
 void MainMode_OnPause()
@@ -527,8 +798,68 @@ void MainMode_OnPause()
 
 void MainMode_Update()
 {
+    Sprite_Clear();
+    gamedata.spriteCount = 0;
+
     DrawDebug();
-    DrawObjectsInChunks(gamedata.chunks, gamedata.chunkCount);
+    // check what objects are in view of the camera and draw them
+    Vector3Int8 camPosChunk = worldToChunk(Window_GetCamera()->target);
+    camPosChunk.z           = debugData.currentZPos;
+    Chunk*   visibleChunks[15];
+    uint16_t visibleChunkCount = 0;
+    for (uint16_t i = 0; i < gamedata.chunkCount; i++)
+    {
+        Chunk* chunk = &gamedata.chunks[i];
+        if (chunk->chunkPosition.x >= camPosChunk.x - 2 && chunk->chunkPosition.x <= camPosChunk.x + 2
+            && chunk->chunkPosition.y >= camPosChunk.y - 1 && chunk->chunkPosition.y <= camPosChunk.y + 1
+            && chunk->chunkPosition.z == camPosChunk.z)
+        {
+            visibleChunks[visibleChunkCount++] = chunk;
+        }
+    }
+    for (uint32_t i = 0; i < visibleChunkCount; i++)
+    {
+        for (uint16_t j = 0; j < visibleChunks[i]->objectCount; j++)
+        {
+            switch (visibleChunks[i]->objects[j].type)
+            {
+                case Type::TILE:
+                {
+                    Sprite* sprite = &gamedata.sprites[gamedata.spriteCount++];
+                    Sprite_Initialize(sprite);
+                    sprite->currentTexture = Texture_GetTextureById(visibleChunks[i]->objects[j].textureId);
+                    sprite->position       = gridToWorld(visibleChunks[i]->objects[j].position);
+                    sprite->scale          = TEXTURE_SCALE;
+                    sprite->isVisible      = true;
+                    sprite->zOrder         = visibleChunks[i]->objects[j].layer;
+                    Sprite_Add(sprite);
+                }
+                break;
+                case Type::ENTITY:
+                    UpdateEntity(&visibleChunks[i]->objects[j]);
+                    // Update entity logic here
+                    break;
+                case Type::PROJECTILE:
+                    UpdateProjectile(&visibleChunks[i]->objects[j]);
+                    // Update projectile logic here
+                    break;
+                case Type::EFFECT:
+                    UpdateEffect(&visibleChunks[i]->objects[j]);
+                    // Update effect logic here
+                    break;
+                case Type::INTERACTIVE:
+                    UpdateInteractive(&visibleChunks[i]->objects[j]);
+                    // Update interactive logic here
+                    break;
+                case Type::ITEM:
+                    UpdateItem(&visibleChunks[i]->objects[j]);
+                    // Update item logic here
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
 }
 
 void MainMode_OnStop()

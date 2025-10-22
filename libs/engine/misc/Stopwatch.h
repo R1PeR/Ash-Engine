@@ -7,15 +7,18 @@
 
 typedef struct Stopwatch
 {
-    int32_t startTime;
-    int32_t endTime;
+    uint32_t startTime;
+    uint32_t endTime;
 } Stopwatch;
 
 void Stopwatch_Start(Stopwatch* stopwatch, uint32_t milis);
 void Stopwatch_Stop(Stopwatch* stopwatch);
 
 uint32_t Stopwatch_GetElapsedTime(Stopwatch* stopwatch);
+float    Stopwatch_GetPercentRemainingTime(Stopwatch* stopwatch);
+
 uint32_t Stopwatch_GetRemainingTime(Stopwatch* stopwatch);
+float    Stopwatch_GetPercentRemainingTime(Stopwatch* stopwatch);
 
 bool Stopwatch_IsRunning(Stopwatch* stopwatch);
 bool Stopwatch_IsElapsed(Stopwatch* stopwatch);
