@@ -90,5 +90,7 @@ Vector3Int8 Utils_WorldToChunk(Vector2 pos, uint8_t gridSize, uint8_t chunkSize)
 Vector2     Utils_GridToWorld(Vector3Int pos, uint8_t gridSize);
 Vector2     Utils_GridCenterToWorld(Vector3Int pos, uint8_t gridSize);
 Vector3Int8 Utils_GridToChunk(Vector3Int pos, uint8_t chunkSize);
+bool        Utils_IsInGridRadius(Vector2Int originalPos, Vector2Int currentPos, uint16_t radius);
+float       Utils_Vector2Distance(Vector2 a, Vector2 b);
 
 #endif

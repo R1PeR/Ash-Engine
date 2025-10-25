@@ -63,11 +63,6 @@ void Sprite_Update()
     Sprite* current = sSpriteList;
     while (current != NULL)
     {
-        if (!current->isVisible || !current->currentTexture)
-        {
-            current = current->next;
-            continue;
-        }
         Sprite_Draw(current);
         current = current->next;
     }

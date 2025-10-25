@@ -13,7 +13,7 @@
 #define TEXTURE_SIZE      8
 #define SPRITE_MAX_COUNT  256
 
-enum Type : uint16_t
+enum Type : uint8_t
 {
     TILE = 0,
     ENTITY,
@@ -22,12 +22,12 @@ enum Type : uint16_t
     INTERACTIVE,
     ITEM,
 };
-enum EntityType : uint16_t
+enum EntityType : uint8_t
 {
     PLAYER = 0,
     ENEMY,
 };
-enum InteractiveType : uint16_t
+enum InteractiveType : uint8_t
 {
     CHEST = 0,
     DOOR,
@@ -35,12 +35,18 @@ enum InteractiveType : uint16_t
     STAIRS_DOWN,
 };
 
+enum EntityState : uint8_t
+{
+    PATROLLING = 0,
+    CHASING,
+};
+
 struct Chunk;
 struct Object
 {
-    int        id;
-    int        type;
-    int        layer;
+    uint16_t   id;
+    uint8_t    type;
+    uint16_t   layer;
     uint32_t   textureId;
     bool       isCollidable;
     Vector3Int position;  // global world position
@@ -49,50 +55,53 @@ struct Object
         struct
         {
             // for PLAYER, ENEMY
-            int entityType;
-            int entityHealth;
-            int entityExperience;
-            int entityLevel;
-            int entitySpeed;
-            int entityDamage;
-            int entityAttackSpeed;
-            int entityArmor;
-            int entityStrength;
-            int entityDexterity;
-            int entityVitality;
-            int entityEnergy;
-            int entityItems[8];
+            uint8_t  entityType;
+            uint16_t entityHealth;
+            uint32_t entityExperience;
+            uint8_t  entityLevel;
+            uint16_t entitySpeed;
+            uint32_t entityDamage;
+            uint16_t entityAttackSpeed;
+            uint16_t entityArmor;
+            uint16_t entityStrength;
+            uint16_t entityDexterity;
+            uint16_t entityVitality;
+            uint16_t entityEnergy;
+            uint16_t entityItems[8];
 
-            Stopwatch   entityMovementTimer;
+            EntityState entityState;
+            Vector2Int  entityOriginalPosition;
+            uint16_t    entityPatrolRadius;
+
             Vector2Int8 entityMovementDirection;
+            Stopwatch   entityMovementTimer;
             Stopwatch   entityAttackTimer;
+
+            Object* entityTarget;
         } entity;
         struct
         {
             // for PROJECTILE
             float   projectileSpeed;
-            Vector2 projectileDirection;  // in degrees
-            int     projectileRange;
-            int     projectileDistanceTraveled;
-            int     projectileDamage;
+            Vector2 projectileDestination;
         } projectile;
         struct
         {
             // for EFFECT
-            int   effectType;
-            float effectDuration;
-            float effectTimeElapsed;
+            uint8_t   effectType;
+            uint16_t  effectDuration;
+            Stopwatch effectTimer;
         } effect;
         struct
         {
             // for INTERACTIVE
-            int  interactiveType;
-            bool isOpen;  // for CHEST, DOOR
+            uint8_t interactiveType;
+            uint8_t state;
         } interactive;
         struct
         {
             // for ITEM
-            int itemId;
+            uint8_t itemId;
         } item;
     };
 };
@@ -131,5 +140,6 @@ struct DebugData
     bool       isGridVisible;
     Texture2D* selectedTextureId;
     Object     currentObject;
+    int        currentPrefab;
 };
 #endif  // UTILS_STRUCTS_H

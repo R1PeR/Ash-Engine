@@ -14,13 +14,15 @@
 #include "imgui.h"
 #include "raylib.h"
 #include "rlImGui.h"
-#include <stdio.h>
-#include "utils/Structs.h"
 #include "utils/Prefabs.h"
+#include "utils/Stats.h"
+#include "utils/Structs.h"
+
+#include <stdio.h>
 
 Mode mainMode = MODE_FROM_CLASSNAME(MainMode);
 
-GameData gameData;
+GameData  gameData;
 DebugData debugData;
 
 void SaveChunksToFile(Chunk* chunks, uint16_t chunkCount)
@@ -73,6 +75,70 @@ uint16_t LoadChunksFromFile(Chunk* chunks)
     return count;
 }
 
+uint16_t LoadWorldMap(char* worldMap, size_t rows, size_t cols, Chunk* chunks)
+{
+    uint16_t count = 0;
+    uint16_t lastId = 0;
+    for (size_t i = 0; i < rows; i++)
+    {
+        for (size_t j = 0; j < cols; j++)
+        {
+            char        tile     = worldMap[i * cols + j];
+            Vector3Int  pos      = { (int)j, (int)i, 0 };
+            Chunk*      chunk    = NULL;
+            Vector3Int8 chunkPos = Utils_GridToChunk(pos, CHUNK_SIZE);
+            // Find or create chunk
+            for (uint16_t k = 0; k < gameData.chunkCount; k++)
+            {
+                if (gameData.chunks[k].chunkPosition.x == chunkPos.x
+                    && gameData.chunks[k].chunkPosition.y == chunkPos.y)
+                {
+                    chunk = &gameData.chunks[k];
+                    break;
+                }
+            }
+            if (chunk == NULL)
+            {
+                chunk                = &gameData.chunks[gameData.chunkCount++];
+                chunk->chunkPosition = chunkPos;
+                chunk->objectCount   = 0;
+                count++;
+            }
+            // Create object based on tile type
+            Object obj;
+            switch (tile)
+            {
+                case '0':
+                    obj                                  = emptyTilePrefab;
+                    obj.position                         = pos;
+                    obj.id=lastId++;
+                    chunk->objects[chunk->objectCount++] = obj;
+                    break;
+                case '1':
+                    obj                                  = wallTilePrefab;
+                    obj.position                         = pos;
+                    obj.id=lastId++;
+                    chunk->objects[chunk->objectCount++] = obj;
+                    break;
+                case 'p':
+                    obj                                  = playerPrefab;
+                    obj.position                         = pos;
+                    obj.id=lastId++;
+                    chunk->objects[chunk->objectCount++] = obj;
+                    break;
+                case 'r':
+                    obj                                  = enemyRatPrefab;
+                    obj.position                         = pos;
+                    obj.id=lastId++;
+                    chunk->objects[chunk->objectCount++] = obj;
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+    return count;
+}
 Objects GetObjectsAtPosition(Vector3Int pos)
 {
     Vector3Int8 chunkPos;
@@ -106,6 +172,37 @@ Objects GetObjectsAtPosition(Vector3Int pos)
     return objs;
 }
 
+bool GetClosestEntityInRange(Object* sourceObj, uint8_t range, Object** outObj)
+{
+    Vector2 sourceWorldPos = Utils_GridCenterToWorld(sourceObj->position, TEXTURE_SIZE * TEXTURE_SCALE);
+    float   closestDist    = float(range * TEXTURE_SIZE * TEXTURE_SCALE);
+    Object* closestObj     = NULL;
+    for (uint16_t i = 0; i < gameData.chunkCount; i++)
+    {
+        Chunk* chunk = &gameData.chunks[i];
+        for (uint16_t j = 0; j < chunk->objectCount; j++)
+        {
+            Object* obj = &chunk->objects[j];
+            if (obj->type == Type::ENTITY && obj->id != sourceObj->id)
+            {
+                Vector2 targetWorldPos = Utils_GridCenterToWorld(obj->position, TEXTURE_SIZE * TEXTURE_SCALE);
+                float   dist           = Utils_Vector2Distance(sourceWorldPos, targetWorldPos);
+                if (dist < closestDist)
+                {
+                    closestDist = dist;
+                    closestObj  = obj;
+                }
+            }
+        }
+    }
+    if (closestObj != NULL)
+    {
+        *outObj = closestObj;
+        return true;
+    }
+    return false;
+}
+
 void DrawDebug()
 {
     if (Input_IsKeyPressed(INPUT_KEYCODE_F1))
@@ -135,6 +232,7 @@ void DrawDebug()
         Vector3Int gridPos   = Utils_WorldToGrid(worldPos, TEXTURE_SIZE * TEXTURE_SCALE);
         gridPos.z            = gameData.currentZPos;
         Vector3Int8 chunkPos = Utils_WorldToChunk(worldPos, TEXTURE_SIZE * TEXTURE_SCALE, CHUNK_SIZE);
+        chunkPos.z           = gameData.currentZPos;
 
         if (Input_IsKeyDown(INPUT_KEYCODE_W) || Input_IsKeyDown(INPUT_KEYCODE_S) || Input_IsKeyDown(INPUT_KEYCODE_A)
             || Input_IsKeyDown(INPUT_KEYCODE_D) || Input_IsKeyDown(INPUT_KEYCODE_Q) || Input_IsKeyDown(INPUT_KEYCODE_E))
@@ -335,92 +433,110 @@ void DrawDebug()
             ImGui::End();
             return;
         }
-        ImGui::Text("Select a texture to paint with:");
-        for (int i = 0; i < 256; i++)
-        {
-            ImGui::PushID(i);
-            if (rlImGuiImageButtonSize("", Texture_GetTextureById(i + 3), { 32, 32 }))
-            {
-                debugData.selectedTextureId = Texture_GetTextureById(i + 3);
-            }
-            ImGui::PopID();
-            if ((i + 1) % 10 != 0)
-            {
-                ImGui::SameLine();
-            }
-        }
 
-        ImGui::NewLine();
-
-        if (debugData.selectedTextureId != NULL)
+        const char* prefabs[] = { "EMPTY_TILE", "WALL_TILE", "PLAYER", "ENEMY_RAT" };
+        ImGui::ListBox("Prefab", &debugData.currentPrefab, prefabs, IM_ARRAYSIZE(prefabs), 5);
+        switch (debugData.currentPrefab)
         {
-            ImGui::Text("Selected Texture:");
-            rlImGuiImageSize(debugData.selectedTextureId, 64, 64);
+            case 0:
+                debugData.currentObject = emptyTilePrefab;
+                break;
+            case 1:
+                debugData.currentObject = wallTilePrefab;
+                break;
+            case 2:
+                debugData.currentObject = playerPrefab;
+                break;
+            case 3:
+                debugData.currentObject = enemyRatPrefab;
+                break;
+            default:
+                break;
         }
-        else
-        {
-            ImGui::Text("No Texture Selected");
-        }
-
-        ImGui::InputInt("Id", &debugData.currentObject.id);
+        // ImGui::InputInt("Id", (int*)&debugData.currentObject.id);
         ImGui::InputInt("Layer", (int*)&debugData.currentObject.layer);
-        ImGui::Checkbox("Collidable", &debugData.currentObject.isCollidable);
-
-        const char* items[] = { "TILE", "ENTITY", "PROJECTILE", "EFFECT", "INTERACTIVE", "ITEM" };
-        ImGui::ListBox("Type", &debugData.currentObject.type, items, IM_ARRAYSIZE(items), 5);
-
-        if (debugData.currentObject.type == Type::ENTITY)
-        {
-            const char* entityItems[] = { "PLAYER", "ENEMY" };
-            ImGui::ListBox("Entity Type", &debugData.currentObject.entity.entityType, entityItems,
-                           IM_ARRAYSIZE(entityItems), 2);
-            ImGui::InputInt("Health", &debugData.currentObject.entity.entityHealth);
-            ImGui::InputInt("Damage", &debugData.currentObject.entity.entityDamage);
-            ImGui::InputInt4("Items1", debugData.currentObject.entity.entityItems);
-            ImGui::InputInt4("Items2", debugData.currentObject.entity.entityItems);
-            ImGui::InputInt("Experience", &debugData.currentObject.entity.entityExperience);
-            ImGui::InputInt("Level", &debugData.currentObject.entity.entityLevel);
-            ImGui::InputInt("Attack Speed", &debugData.currentObject.entity.entityAttackSpeed);
-            ImGui::InputInt("Armor", &debugData.currentObject.entity.entityArmor);
-            ImGui::InputInt("Strength", &debugData.currentObject.entity.entityStrength);
-            ImGui::InputInt("Dexterity", &debugData.currentObject.entity.entityDexterity);
-            ImGui::InputInt("Vitality", &debugData.currentObject.entity.entityVitality);
-            ImGui::InputInt("Energy", &debugData.currentObject.entity.entityEnergy);
-        }
-        else if (debugData.currentObject.type == Type::PROJECTILE)
-        {
-            ImGui::InputFloat("Speed", &debugData.currentObject.projectile.projectileSpeed);
-            ImGui::InputFloat2("Direction", (float*)&debugData.currentObject.projectile.projectileDirection);
-            ImGui::InputInt("Range", &debugData.currentObject.projectile.projectileRange);
-            ImGui::InputInt("Damage", &debugData.currentObject.projectile.projectileDamage);
-        }
-        else if (debugData.currentObject.type == Type::EFFECT)
-        {
-            ImGui::InputInt("Effect Type", &debugData.currentObject.effect.effectType);
-            ImGui::InputFloat("Duration", &debugData.currentObject.effect.effectDuration);
-        }
-        else if (debugData.currentObject.type == Type::INTERACTIVE)
-        {
-            // No additional properties for TILE
-            const char* items[] = { "CHEST", "DOOR", "STAIRS_UP", "STAIRS_DOWN" };
-            ImGui::ListBox("Type", &debugData.currentObject.interactive.interactiveType, items, IM_ARRAYSIZE(items), 4);
-        }
-        else if (debugData.currentObject.type == Type::ITEM)
-        {
-            ImGui::InputInt("Item ID", &debugData.currentObject.item.itemId);
-        }
 
         ImGui::Text("Mouse Position: (%.1f, %.1f)", mousePos.x, mousePos.y);
         ImGui::Text("World Position: (%.1f, %.1f)", worldPos.x, worldPos.y);
         ImGui::Text("Grid Position: (%d, %d)", gridPos.x, gridPos.y);
-        ImGui::Text("Chunk Position: (%d, %d)", chunkPos.x, chunkPos.y);
+        ImGui::Text("Chunk Position: (%d, %d, %d)", chunkPos.x, chunkPos.y, chunkPos.z);
 
+        //display all objects in memory in a list, only display entities
+        ImGui::Separator();
+
+
+        ImGui::Text("Objects in Memory:");
+        for (uint16_t i = 0; i < gameData.chunkCount; i++)
+        {
+            Chunk* chunk = &gameData.chunks[i];
+            ImGui::Text("Chunk (%d, %d):", chunk->chunkPosition.x, chunk->chunkPosition.y);
+            for (uint16_t j = 0; j < chunk->objectCount; j++)
+            {
+                if(chunk->objects[j].type != Type::ENTITY)
+                {
+                    continue;
+                }
+                ImGui::PushID(j);
+                Object* obj = &chunk->objects[j];
+                if (ImGui::TreeNode("Entity"))
+                {
+                    ImGui::Text("Object ID: %d", obj->id);
+                    ImGui::Text("Type: %d", (int)obj->type);
+                    ImGui::Text("Layer: %d", obj->layer);
+                    ImGui::Text("Texture ID: %d", obj->textureId);
+                    ImGui::Text("Is Collidable: %d", obj->isCollidable);
+                    ImGui::Text("Position: (%d, %d, %d)", obj->position.x, obj->position.y, obj->position.z);
+                    if (obj->type == Type::ENTITY)
+                    {
+                        ImGui::Text("Entity Type: %d", (int)obj->entity.entityType);
+                        ImGui::Text("Health: %d", obj->entity.entityHealth);
+                        ImGui::Text("Experience: %d", obj->entity.entityExperience);
+                        ImGui::Text("Level: %d", obj->entity.entityLevel);
+                        ImGui::Text("Speed: %d", obj->entity.entitySpeed);
+                        ImGui::Text("Damage: %d", obj->entity.entityDamage);
+                        if(obj->entity.entityType == EntityType::ENEMY)
+                        {
+                            // ImGui::Text("Entity State: %d", (int)obj->entity.entityState);
+                            switch (obj->entity.entityState)
+                            {
+                                case EntityState::PATROLLING:
+                                    ImGui::Text("Entity State: PATROLLING");
+                                    break;
+                                case EntityState::CHASING:
+                                    ImGui::Text("Entity State: CHASING");
+                                    break;
+                                default:
+                                    ImGui::Text("Entity State: UNKNOWN");
+                                    break;
+                            }
+                            if(obj->entity.entityState == EntityState::CHASING && obj->entity.entityTarget != NULL)
+                            {
+                                ImGui::Text("Chasing Target ID: %d", obj->entity.entityTarget->id);
+                            }
+                            ImGui::Text("Original Position: (%d, %d)", obj->entity.entityOriginalPosition.x,
+                                        obj->entity.entityOriginalPosition.y);
+                            ImGui::Text("Patrol Radius: %d", obj->entity.entityPatrolRadius);
+                        }
+                        if(obj->entity.entityType == EntityType::PLAYER)
+                        {
+                            ImGui::Text("Items:");
+                            for (uint8_t k = 0; k < 8; k++)
+                            {
+                                ImGui::Text("Item %d: %d", k, obj->entity.entityItems[k]);
+                            }
+                        }
+                    }
+                    ImGui::TreePop();
+                }
+                ImGui::PopID();
+            }
+        }
 
         ImGui::End();
     }
 }
 
-bool checkCollision(Vector3Int pos)
+bool CheckCollision(Vector3Int pos)
 {
     Objects objsAtPos = GetObjectsAtPosition(pos);
     for (uint16_t i = 0; i < objsAtPos.count; i++)
@@ -428,8 +544,8 @@ bool checkCollision(Vector3Int pos)
         if (objsAtPos.objects[i].isCollidable)
         {
             // Collision detected
-            LOG_INF("Collision detected at (%d, %d, %d) with object id %d", pos.x, pos.y, pos.z,
-                    objsAtPos.objects[i].id);
+            // LOG_INF("Collision detected at (%d, %d, %d) with object id %d", pos.x, pos.y, pos.z,
+            //         objsAtPos.objects[i].id);
             return true;
         }
     }
@@ -437,7 +553,7 @@ bool checkCollision(Vector3Int pos)
     // No collision
 }
 
-bool checkCollision(Vector3Int pos, Object* outObj)
+bool CheckCollision(Vector3Int pos, Object* outObj)
 {
     Objects objsAtPos = GetObjectsAtPosition(pos);
     for (uint16_t i = 0; i < objsAtPos.count; i++)
@@ -445,8 +561,8 @@ bool checkCollision(Vector3Int pos, Object* outObj)
         if (objsAtPos.objects[i].isCollidable)
         {
             // Collision detected
-            LOG_INF("Collision detected at (%d, %d, %d) with object id %d", pos.x, pos.y, pos.z,
-                    objsAtPos.objects[i].id);
+            // LOG_INF("Collision detected at (%d, %d, %d) with object id %d", pos.x, pos.y, pos.z,
+            //         objsAtPos.objects[i].id);
             *outObj = objsAtPos.objects[i];
             return true;
         }
@@ -466,16 +582,17 @@ void UpdateEntity(Object* obj)
         // Example: simple player movement logic
         int8_t y = (Input_IsKeyDown(INPUT_KEYCODE_S) - Input_IsKeyDown(INPUT_KEYCODE_W));
         int8_t x = (Input_IsKeyDown(INPUT_KEYCODE_D) - Input_IsKeyDown(INPUT_KEYCODE_A));
-        if (abs(x + y) > 0 && abs(x + y) < 2)
+        if (x*x + y*y <= 1)
         {
             if (Stopwatch_IsZero(&obj->entity.entityMovementTimer))
             {
-                if (!checkCollision({ obj->position.x + x, obj->position.y + y, obj->position.z }))
+                if (!CheckCollision({ obj->position.x + x, obj->position.y + y, obj->position.z }))
                 {
                     obj->position.x += x;
                     obj->position.y += y;
                     obj->entity.entityMovementDirection = { x, y };
-                    Stopwatch_Start(&obj->entity.entityMovementTimer, 500);
+                    Stopwatch_Start(&obj->entity.entityMovementTimer,
+                                    Stats_MovementDelayFromSpeed(obj->entity.entitySpeed));
                 }
             }
         }
@@ -483,7 +600,6 @@ void UpdateEntity(Object* obj)
         Sprite* sprite = &gameData.sprites[gameData.spriteCount++];
         Sprite_Initialize(sprite);
         sprite->currentTexture = Texture_GetTextureById(obj->textureId);
-        sprite->position       = Utils_GridToWorld(obj->position, TEXTURE_SIZE * TEXTURE_SCALE);
         sprite->scale          = TEXTURE_SCALE;
         sprite->isVisible      = true;
         sprite->tint           = WHITE;
@@ -504,34 +620,123 @@ void UpdateEntity(Object* obj)
     }
     if (obj->entity.entityType == EntityType::ENEMY)
     {
-        // Example: simple enemy AI logic
-        int8_t x = (rand() % 3) - 1;  // -1, 0, or 1
-        int8_t y = (rand() % 3) - 1;  // -1, 0, or 1
-        // if (x == 0 && y == 0)
-        // {
-        //     return;
-        // }
-        if (x != 0 || y != 0)
+        switch (obj->entity.entityState)
         {
-            if (!Stopwatch_IsZero(&obj->entity.entityMovementTimer))
+            case EntityState::PATROLLING:
             {
-                if (checkCollision({ obj->position.x + x, obj->position.y + y, obj->position.z }))
+                if(GetClosestEntityInRange(obj, 5, &obj->entity.entityTarget))
                 {
-                    obj->position.x += (rand() % 3) - 1;  // Move randomly left, right, or stay
-                    obj->position.y += (rand() % 3) - 1;  // Move randomly up, down, or stay
-                    Stopwatch_Start(&obj->entity.entityMovementTimer, 100);
+                    obj->entity.entityState = EntityState::CHASING;
+                    break;
+                }
+                int8_t x = (rand() % 3) - 1;  // -1, 0, or 1
+                int8_t y = (rand() % 3) - 1;  // -1, 0, or 1
+                if (x*x + y*y == 2)
+                {
+                    break;
+                }
+                if (!Stopwatch_IsZero(&obj->entity.entityMovementTimer))
+                {
+                    break;
+                }
+                if (CheckCollision({ obj->position.x + x, obj->position.y + y, obj->position.z }))
+                {
+                    break;
+                }
+                Vector2Int newPos = { obj->position.x + x, obj->position.y + y };
+                if (!Utils_IsInGridRadius(obj->entity.entityOriginalPosition, newPos,
+                                         obj->entity.entityPatrolRadius))
+                {
+                    break;
+                }
+                obj->position.x += x;
+                obj->position.y += y;
+                obj->entity.entityMovementDirection = { x, y };
+                Stopwatch_Start(&obj->entity.entityMovementTimer,
+                                Stats_MovementDelayFromSpeed(obj->entity.entitySpeed));
+            }
+            break;
+            case EntityState::CHASING:
+            {
+                if (obj->entity.entityTarget == NULL)
+                {
+                    obj->entity.entityState = EntityState::PATROLLING;
+                    break;
+                }
+                Vector2 sourceWorldPos = Utils_GridCenterToWorld(obj->position, TEXTURE_SIZE * TEXTURE_SCALE);
+                Vector2 targetWorldPos =
+                    Utils_GridCenterToWorld(obj->entity.entityTarget->position, TEXTURE_SIZE * TEXTURE_SCALE);
+                float   dist = Utils_Vector2Distance(sourceWorldPos, targetWorldPos);
+                if (dist > float(5 * TEXTURE_SIZE * TEXTURE_SCALE))
+                {
+                    obj->entity.entityTarget = NULL;
+                    obj->entity.entityState  = EntityState::PATROLLING;
+                    break;
+                }
+                int8_t dirX = 0;
+                int8_t dirY = 0;
+                if (targetWorldPos.x > sourceWorldPos.x)
+                {
+                    dirX = 1;
+                }
+                else if (targetWorldPos.x < sourceWorldPos.x)
+                {
+                    dirX = -1;
+                }
+                if (targetWorldPos.y > sourceWorldPos.y)
+                {
+                    dirY = 1;
+                }
+                else if (targetWorldPos.y < sourceWorldPos.y)
+                {
+                    dirY = -1;
+                }
+                if(dirX * dirX > 0 && dirY * dirY > 0)
+                {
+                    // diagonal movement not allowed
+                    if(rand() % 2 == 0)
+                    {
+                        dirX = 0;
+                    }
+                    else
+                    {
+                        dirY = 0;
+                    }
+                }
+                if (!Stopwatch_IsZero(&obj->entity.entityMovementTimer))
+                {
+                    break;
+                }
+                if (!CheckCollision({ obj->position.x + dirX, obj->position.y + dirY, obj->position.z }))
+                {
+                    obj->position.x += dirX;
+                    obj->position.y += dirY;
+                    obj->entity.entityMovementDirection = { dirX, dirY };
+                    Stopwatch_Start(&obj->entity.entityMovementTimer,
+                                    Stats_MovementDelayFromSpeed(obj->entity.entitySpeed));
                 }
             }
+            break;
+            default:
+                break;
         }
+        // Example: simple enemy AI logic
         Sprite* sprite = &gameData.sprites[gameData.spriteCount++];
         Sprite_Initialize(sprite);
         sprite->currentTexture = Texture_GetTextureById(obj->textureId);
-        sprite->position       = Utils_GridToWorld(obj->position, TEXTURE_SIZE * TEXTURE_SCALE);
         sprite->scale          = TEXTURE_SCALE;
         sprite->isVisible      = true;
-        sprite->tint           = LIGHTGRAY;
-        sprite->position.x += float(-x * TEXTURE_SIZE * TEXTURE_SCALE);
-        sprite->position.y += float(-y * TEXTURE_SIZE * TEXTURE_SCALE);
+        sprite->tint           = WHITE;
+        sprite->position       = Utils_GridToWorld(obj->position, TEXTURE_SIZE * TEXTURE_SCALE);
+        if (!Stopwatch_IsElapsed(&obj->entity.entityMovementTimer))
+        {
+            sprite->position.x += float(-obj->entity.entityMovementDirection.x
+                                        * Stopwatch_GetPercentRemainingTime(&obj->entity.entityMovementTimer)
+                                        * TEXTURE_SIZE * TEXTURE_SCALE);
+            sprite->position.y += float(-obj->entity.entityMovementDirection.y
+                                        * Stopwatch_GetPercentRemainingTime(&obj->entity.entityMovementTimer)
+                                        * TEXTURE_SIZE * TEXTURE_SCALE);
+        }
         Sprite_Add(sprite);
     }
 }
@@ -578,7 +783,7 @@ void MainMode_OnStart()
 {
     Texture_LoadTextureSheet("resources/sprites/Anikki_square_8x8.png", 8, 8, 256);
 
-    gameData.chunkCount = LoadChunksFromFile(gameData.chunks);
+    gameData.chunkCount = LoadWorldMap((char*)worldMap, WORLD_MAP_SIZE, WORLD_MAP_SIZE, gameData.chunks);
     for (uint16_t i = 0; i < gameData.chunkCount; i++)
     {
         Chunk* chunk = &gameData.chunks[i];
@@ -666,7 +871,7 @@ void MainMode_Update()
 
 void MainMode_OnStop()
 {
-    SaveChunksToFile(gameData.chunks, gameData.chunkCount);
+    // SaveChunksToFile(gameData.chunks, gameData.chunkCount);
     Texture_UnloadTextures();
     Audio_UnloadAudios();
 }

@@ -1,5 +1,6 @@
 #include "Utils.h"
 #include "raylib.h"
+#include <math.h>
 
 Vector2 Utils_WorldToScreen2D(Vector2 position, Camera2D camera)
 {
@@ -90,3 +91,18 @@ Vector3Int8 Utils_GridToChunk(Vector3Int pos, uint8_t chunkSize)
     chunkPos.z = pos.z;
     return chunkPos;
 }
+
+bool Utils_IsInGridRadius(Vector2Int center, Vector2Int point, uint16_t radius)
+{
+    int32_t dx = center.x - point.x;
+    int32_t dy = center.y - point.y;
+    return (dx * dx + dy * dy) <= (radius * radius);
+}
+
+float Utils_Vector2Distance(Vector2 a, Vector2 b)
+{
+    float dx = a.x - b.x;
+    float dy = a.y - b.y;
+    return sqrtf(dx * dx + dy * dy);
+}
+
