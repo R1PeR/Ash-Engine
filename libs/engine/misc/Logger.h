@@ -1,7 +1,7 @@
 #ifndef LIBS_ENGINE_LOGGER_H
 #define LIBS_ENGINE_LOGGER_H
 #include "raylib.h"
-#include "utils.h"
+#include "Utils.h"
 
 #define LOG_LEVEL_DEBUG   4
 #define LOG_LEVEL_INFO    3

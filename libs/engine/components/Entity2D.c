@@ -1,6 +1,8 @@
 #include "Entity2D.h"
 
 #include "engine/misc/Logger.h"
+
+#include <stddef.h>
 uint32_t  sEntityCount = 0;
 Entity2D* sEntityList  = NULL;
 

@@ -3,9 +3,8 @@
 -Wno-missing-field-initializers
 -Wno-unused-parameter
 -Wno-unused-variable
--std=c++11
 -g
+-std=c++11
 -DSUPPORT_TRACELOG
 -DDEBUG
 -DLOG_LEVEL=LOG_LEVEL_INFO
-

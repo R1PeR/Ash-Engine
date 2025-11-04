@@ -44,21 +44,6 @@ EXCLUDE_PATTERNS := $(addsuffix /**, $(CLEAN_EXCLUDE_DIRS))
 #    any file matching 'libs/imgui/backends/%' or 'oldlibs/%' 
 SOURCE_FILES := $(filter-out $(EXCLUDE_PATTERNS), $(CLEAN_SOURCES))
 
-# --- Debugging ---
-# $(info --- RAW SOURCES ---)
-# $(info $(RAW_SOURCES))
-# $(info --- RAW EXCLUDE ---)
-# $(info $(RAW_EXCLUDE_DIRS))
-# $(info --- CLEAN SOURCES ---)
-# $(info $(CLEAN_SOURCES))
-# $(info --- CLEAN EXCLUDE ---)
-# $(info $(CLEAN_EXCLUDE_DIRS))
-# $(info --- EXCLUDE_PATTERNS ---)
-# $(info $(EXCLUDE_PATTERNS))
-# $(info --- FINAL FILES ---)
-# $(info $(SOURCE_FILES))
-# --- End Debugging ---
-
 # --- Create Object File List (Preserving Directory Structure) ---
 # This turns 'src/main.cpp' into 'obj/src/main.o'
 OBJ_FILES := $(SOURCE_FILES)

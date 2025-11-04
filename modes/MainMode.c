@@ -3,6 +3,7 @@
 #include "engine/components/Audio.h"
 #include "engine/components/Collider2D.h"
 #include "engine/components/Entity2D.h"
+#include "engine/components/NavigationMap2D.h"
 #include "engine/components/Sprite.h"
 #include "engine/components/Texture.h"
 #include "engine/io/Input.h"
@@ -77,7 +78,7 @@ uint16_t LoadChunksFromFile(Chunk* chunks)
 
 uint16_t LoadWorldMap(char* worldMap, size_t rows, size_t cols, Chunk* chunks)
 {
-    uint16_t count = 0;
+    uint16_t count  = 0;
     uint16_t lastId = 0;
     for (size_t i = 0; i < rows; i++)
     {
@@ -111,25 +112,26 @@ uint16_t LoadWorldMap(char* worldMap, size_t rows, size_t cols, Chunk* chunks)
                 case '0':
                     obj                                  = emptyTilePrefab;
                     obj.position                         = pos;
-                    obj.id=lastId++;
+                    obj.id                               = lastId++;
                     chunk->objects[chunk->objectCount++] = obj;
                     break;
                 case '1':
                     obj                                  = wallTilePrefab;
                     obj.position                         = pos;
-                    obj.id=lastId++;
+                    obj.id                               = lastId++;
                     chunk->objects[chunk->objectCount++] = obj;
                     break;
                 case 'p':
                     obj                                  = playerPrefab;
                     obj.position                         = pos;
-                    obj.id=lastId++;
+                    obj.id                               = lastId++;
                     chunk->objects[chunk->objectCount++] = obj;
                     break;
                 case 'r':
                     obj                                  = enemyRatPrefab;
                     obj.position                         = pos;
-                    obj.id=lastId++;
+                    obj.id                               = lastId++;
+                    obj.entity.entityOriginalPosition    = { pos.x, pos.y };
                     chunk->objects[chunk->objectCount++] = obj;
                     break;
                 default:
@@ -202,6 +204,7 @@ bool GetClosestEntityInRange(Object* sourceObj, uint8_t range, Object** outObj)
     }
     return false;
 }
+
 
 void DrawDebug()
 {
@@ -461,7 +464,7 @@ void DrawDebug()
         ImGui::Text("Grid Position: (%d, %d)", gridPos.x, gridPos.y);
         ImGui::Text("Chunk Position: (%d, %d, %d)", chunkPos.x, chunkPos.y, chunkPos.z);
 
-        //display all objects in memory in a list, only display entities
+        // display all objects in memory in a list, only display entities
         ImGui::Separator();
 
 
@@ -472,7 +475,7 @@ void DrawDebug()
             ImGui::Text("Chunk (%d, %d):", chunk->chunkPosition.x, chunk->chunkPosition.y);
             for (uint16_t j = 0; j < chunk->objectCount; j++)
             {
-                if(chunk->objects[j].type != Type::ENTITY)
+                if (chunk->objects[j].type != Type::ENTITY)
                 {
                     continue;
                 }
@@ -494,7 +497,7 @@ void DrawDebug()
                         ImGui::Text("Level: %d", obj->entity.entityLevel);
                         ImGui::Text("Speed: %d", obj->entity.entitySpeed);
                         ImGui::Text("Damage: %d", obj->entity.entityDamage);
-                        if(obj->entity.entityType == EntityType::ENEMY)
+                        if (obj->entity.entityType == EntityType::ENEMY)
                         {
                             // ImGui::Text("Entity State: %d", (int)obj->entity.entityState);
                             switch (obj->entity.entityState)
@@ -505,11 +508,14 @@ void DrawDebug()
                                 case EntityState::CHASING:
                                     ImGui::Text("Entity State: CHASING");
                                     break;
+                                case EntityState::GOING_BACK:
+                                    ImGui::Text("Entity State: GOING_BACK");
+                                    break;
                                 default:
                                     ImGui::Text("Entity State: UNKNOWN");
                                     break;
                             }
-                            if(obj->entity.entityState == EntityState::CHASING && obj->entity.entityTarget != NULL)
+                            if (obj->entity.entityState == EntityState::CHASING && obj->entity.entityTarget != NULL)
                             {
                                 ImGui::Text("Chasing Target ID: %d", obj->entity.entityTarget->id);
                             }
@@ -517,7 +523,7 @@ void DrawDebug()
                                         obj->entity.entityOriginalPosition.y);
                             ImGui::Text("Patrol Radius: %d", obj->entity.entityPatrolRadius);
                         }
-                        if(obj->entity.entityType == EntityType::PLAYER)
+                        if (obj->entity.entityType == EntityType::PLAYER)
                         {
                             ImGui::Text("Items:");
                             for (uint8_t k = 0; k < 8; k++)
@@ -571,6 +577,129 @@ bool CheckCollision(Vector3Int pos, Object* outObj)
     // No collision
 }
 
+Vector2Int8 GetMoveTowardsPosition(Vector2Int source, Vector2Int target)
+{
+    LOG_INF("A* Pathfinding from (%d, %d) to (%d, %d)", source.x, source.y, target.x, target.y);
+    struct Node;
+    struct Node
+    {
+        Vector2Int position;
+        uint32_t   gCost;
+        uint32_t   hCost;
+        uint32_t   fCost;
+        Node*      parent;
+        bool closed;
+    };
+    Node     nodeList[256];
+    uint16_t nodeListCount = 0;
+
+    Node* currentNode = NULL;
+    // Initialize start node
+    Node startNode;
+    startNode.position    = source;
+    startNode.gCost       = 0;
+    startNode.hCost       = Utils_ManhattanDistance(source, target);
+    startNode.fCost       = startNode.gCost + startNode.hCost;
+    startNode.parent      = NULL;
+    startNode.closed      = false;
+    nodeList[nodeListCount++] = startNode;
+    while (nodeListCount < 255)
+    {
+        for (uint16_t i = 0; i < nodeListCount; i++)
+        {
+            Vector3Int pos3D    = { nodeList[i].position.x, nodeList[i].position.y, 0 };
+            Vector2    worldPos = Utils_GridToWorld(pos3D, TEXTURE_SIZE * TEXTURE_SCALE);
+            DrawRectangleLines(int(worldPos.x), int(worldPos.y), int(TEXTURE_SIZE * TEXTURE_SCALE),
+                               int(TEXTURE_SIZE * TEXTURE_SCALE), BLUE);
+        }
+        // Find node with lowest fCost
+        uint16_t lowerstFCost = UINT16_MAX;
+        uint16_t lowestIndex = 0;
+        for (uint16_t i = 0; i < nodeListCount; i++)
+        {
+            if (nodeList[i].fCost < lowerstFCost && nodeList[i].closed == false)
+            {
+                lowerstFCost = nodeList[i].fCost;
+                lowestIndex = i;
+            }
+        }
+        // LOG_INF("Current Node (%d, %d) fCost: %d", openList[lowestIndex].position.x,
+        //         openList[lowestIndex].position.y, openList[lowestIndex].fCost);
+        currentNode = &nodeList[lowestIndex];
+        // Check if reached target
+        if (currentNode->position.x == target.x && currentNode->position.y == target.y)
+        {
+            LOG_INF("Reached target at (%d, %d)", currentNode->position.x, currentNode->position.y);
+            break;
+        }
+        if(nodeListCount >= 256)
+        {
+            LOG_ERR("Closed list overflow in A* pathfinding");
+            return { 0, 0 };
+        }
+        // Move current node from open to closed list
+        currentNode->closed = true;
+        if(CheckCollision({currentNode->position.x, currentNode->position.y, 0}) && currentNode->parent != NULL)
+        {
+            continue;
+        }
+        // Check neighbors
+        Vector2Int neighbors[4] = {
+            { currentNode->position.x + 1, currentNode->position.y },
+            { currentNode->position.x - 1, currentNode->position.y },
+            { currentNode->position.x, currentNode->position.y + 1 },
+            { currentNode->position.x, currentNode->position.y - 1 },
+        };
+        for (uint8_t i = 0; i < 4; i++)
+        {
+            Vector2Int neighborPos  = neighbors[i];
+            bool       skipNeighbor = false;
+            for (uint16_t j = 0; j < nodeListCount; j++)
+            {
+                if (nodeList[j].position.x == neighborPos.x && nodeList[j].position.y == neighborPos.y)
+                {
+                    skipNeighbor = true;
+                    break;
+                }
+            }
+            if (skipNeighbor)
+            {
+                continue;
+            }
+            nodeList[nodeListCount].position = neighborPos;
+            nodeList[nodeListCount].gCost    = currentNode->gCost + 1;
+            nodeList[nodeListCount].hCost    = Utils_ManhattanDistance(neighborPos, target);
+            nodeList[nodeListCount].fCost    = nodeList[nodeListCount].gCost + nodeList[nodeListCount].hCost;
+            nodeList[nodeListCount].parent   = currentNode;
+            nodeList[nodeListCount].closed   = false;
+            nodeListCount++;
+            if (nodeListCount >= 256)
+            {
+                LOG_ERR("Open list overflow in A* pathfinding when adding neighbor");
+                return { 0, 0 };
+            }
+        }
+    }
+    Node* pathNode = currentNode;
+    for (int i = 0; i < nodeListCount; i++)
+    {
+        Vector3Int pos3D    = { pathNode->position.x, pathNode->position.y, 0 };
+        Vector2    worldPos = Utils_GridToWorld(pos3D, TEXTURE_SIZE * TEXTURE_SCALE);
+        DrawRectangleLines(int(worldPos.x), int(worldPos.y), int(TEXTURE_SIZE * TEXTURE_SCALE),
+                           int(TEXTURE_SIZE * TEXTURE_SCALE), GREEN);
+        if (pathNode->parent == NULL
+            || (pathNode->parent->position.x == source.x && pathNode->parent->position.y == source.y))
+        {
+            break;
+        }
+        pathNode = pathNode->parent;
+    }
+    Vector2Int8 direction;
+    direction.x = int8_t(pathNode->position.x - source.x);
+    direction.y = int8_t(pathNode->position.y - source.y);
+    return direction;
+}
+
 void UpdateEntity(Object* obj)
 {
     if (obj->entity.entityType == EntityType::PLAYER)
@@ -582,7 +711,7 @@ void UpdateEntity(Object* obj)
         // Example: simple player movement logic
         int8_t y = (Input_IsKeyDown(INPUT_KEYCODE_S) - Input_IsKeyDown(INPUT_KEYCODE_W));
         int8_t x = (Input_IsKeyDown(INPUT_KEYCODE_D) - Input_IsKeyDown(INPUT_KEYCODE_A));
-        if (x*x + y*y <= 1)
+        if (x * x + y * y <= 1)
         {
             if (Stopwatch_IsZero(&obj->entity.entityMovementTimer))
             {
@@ -624,14 +753,14 @@ void UpdateEntity(Object* obj)
         {
             case EntityState::PATROLLING:
             {
-                if(GetClosestEntityInRange(obj, 5, &obj->entity.entityTarget))
+                if (GetClosestEntityInRange(obj, 5, &obj->entity.entityTarget))
                 {
                     obj->entity.entityState = EntityState::CHASING;
                     break;
                 }
                 int8_t x = (rand() % 3) - 1;  // -1, 0, or 1
                 int8_t y = (rand() % 3) - 1;  // -1, 0, or 1
-                if (x*x + y*y == 2)
+                if (x * x + y * y == 2)
                 {
                     break;
                 }
@@ -644,9 +773,9 @@ void UpdateEntity(Object* obj)
                     break;
                 }
                 Vector2Int newPos = { obj->position.x + x, obj->position.y + y };
-                if (!Utils_IsInGridRadius(obj->entity.entityOriginalPosition, newPos,
-                                         obj->entity.entityPatrolRadius))
+                if (!Utils_IsInGridRadius(obj->entity.entityOriginalPosition, newPos, obj->entity.entityPatrolRadius))
                 {
+                    obj->entity.entityState = EntityState::GOING_BACK;
                     break;
                 }
                 obj->position.x += x;
@@ -666,57 +795,61 @@ void UpdateEntity(Object* obj)
                 Vector2 sourceWorldPos = Utils_GridCenterToWorld(obj->position, TEXTURE_SIZE * TEXTURE_SCALE);
                 Vector2 targetWorldPos =
                     Utils_GridCenterToWorld(obj->entity.entityTarget->position, TEXTURE_SIZE * TEXTURE_SCALE);
-                float   dist = Utils_Vector2Distance(sourceWorldPos, targetWorldPos);
+                float dist = Utils_Vector2Distance(sourceWorldPos, targetWorldPos);
                 if (dist > float(5 * TEXTURE_SIZE * TEXTURE_SCALE))
                 {
                     obj->entity.entityTarget = NULL;
                     obj->entity.entityState  = EntityState::PATROLLING;
                     break;
                 }
-                int8_t dirX = 0;
-                int8_t dirY = 0;
-                if (targetWorldPos.x > sourceWorldPos.x)
+                if (!Utils_IsInGridRadius(obj->entity.entityOriginalPosition, { obj->position.x, obj->position.y },
+                                          obj->entity.entityPatrolRadius + 2))
                 {
-                    dirX = 1;
+                    obj->entity.entityTarget = NULL;
+                    obj->entity.entityState  = EntityState::GOING_BACK;
+                    break;
                 }
-                else if (targetWorldPos.x < sourceWorldPos.x)
-                {
-                    dirX = -1;
-                }
-                if (targetWorldPos.y > sourceWorldPos.y)
-                {
-                    dirY = 1;
-                }
-                else if (targetWorldPos.y < sourceWorldPos.y)
-                {
-                    dirY = -1;
-                }
-                if(dirX * dirX > 0 && dirY * dirY > 0)
-                {
-                    // diagonal movement not allowed
-                    if(rand() % 2 == 0)
-                    {
-                        dirX = 0;
-                    }
-                    else
-                    {
-                        dirY = 0;
-                    }
-                }
+                Vector2Int8 dir = GetMoveTowardsPosition(
+                    { obj->position.x, obj->position.y },
+                    { obj->entity.entityTarget->position.x, obj->entity.entityTarget->position.y });
                 if (!Stopwatch_IsZero(&obj->entity.entityMovementTimer))
                 {
                     break;
                 }
-                if (!CheckCollision({ obj->position.x + dirX, obj->position.y + dirY, obj->position.z }))
+                if (!CheckCollision({ obj->position.x + dir.x, obj->position.y + dir.y, obj->position.z }))
                 {
-                    obj->position.x += dirX;
-                    obj->position.y += dirY;
-                    obj->entity.entityMovementDirection = { dirX, dirY };
+                    obj->position.x += dir.x;
+                    obj->position.y += dir.y;
+                    obj->entity.entityMovementDirection = { dir.x, dir.y };
                     Stopwatch_Start(&obj->entity.entityMovementTimer,
                                     Stats_MovementDelayFromSpeed(obj->entity.entitySpeed));
                 }
             }
             break;
+            case EntityState::GOING_BACK:
+            {
+                if (obj->position.x == obj->entity.entityOriginalPosition.x
+                    && obj->position.y == obj->entity.entityOriginalPosition.y)
+                {
+                    obj->entity.entityState = EntityState::PATROLLING;
+                    break;
+                }
+                if (!Stopwatch_IsZero(&obj->entity.entityMovementTimer))
+                {
+                    break;
+                }
+                Vector2Int8 dir =
+                    GetMoveTowardsPosition({ obj->position.x, obj->position.y }, obj->entity.entityOriginalPosition);
+                LOG_INF("Going back dir: (%d, %d)", dir.x, dir.y);
+                if (!CheckCollision({ obj->position.x + dir.x, obj->position.y + dir.y, obj->position.z }))
+                {
+                    obj->position.x += dir.x;
+                    obj->position.y += dir.y;
+                    obj->entity.entityMovementDirection = { dir.x, dir.y };
+                    Stopwatch_Start(&obj->entity.entityMovementTimer,
+                                    Stats_MovementDelayFromSpeed(obj->entity.entitySpeed));
+                }
+            }
             default:
                 break;
         }
@@ -793,6 +926,7 @@ void MainMode_OnStart()
             if (obj->type == Type::ENTITY)
             {
                 Stopwatch_Stop(&obj->entity.entityMovementTimer);
+                Stopwatch_Stop(&obj->entity.entityAttackTimer);
             }
         }
     }

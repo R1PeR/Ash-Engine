@@ -9,8 +9,8 @@ char worldMap[WORLD_MAP_SIZE][WORLD_MAP_SIZE] =
     {'1', '0', '0', '0', 'r', '1', '0'},
     {'1', '0', '0', '0', '0', '1', '0'},
     {'1', '0', 'p', '0', '0', '1', '0'},
-    {'1', '1', '1', '1', '1', '1', '0'},
-    {'0', '0', '0', '0', '0', '0', '0'}
+    {'1', '1', '0', '1', '1', '1', '0'},
+    {'0', '1', '0', '1', '0', '0', '0'}
 };
 
 Object emptyTilePrefab = {
@@ -43,7 +43,7 @@ Object playerPrefab = {
         .entityHealth          = 100,
         .entityExperience      = 0,
         .entityLevel           = 1,
-        .entitySpeed           = 100,
+        .entitySpeed           = 500,
         .entityDamage          = 10,
         .entityAttackSpeed     = 1000,
         .entityArmor           = 0,
@@ -68,7 +68,7 @@ Object enemyRatPrefab = {
         .entityHealth          = 50,
         .entityExperience      = 10,
         .entityLevel           = 1,
-        .entitySpeed           = 80,
+        .entitySpeed           = 10,
         .entityDamage          = 5,
         .entityAttackSpeed     = 1500,
         .entityArmor           = 0,

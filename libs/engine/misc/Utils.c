@@ -1,7 +1,18 @@
 #include "Utils.h"
+
 #include "raylib.h"
+
 #include <math.h>
 
+uint32_t Utils_AbsInt32(int32_t value)
+{
+    return (value < 0) ? -value : value;
+}
+
+uint16_t Utils_AbsInt16(int16_t value)
+{
+    return (value < 0) ? -value : value;
+}
 Vector2 Utils_WorldToScreen2D(Vector2 position, Camera2D camera)
 {
     float   zoom = camera.zoom;
@@ -70,8 +81,8 @@ Vector2 Utils_GridToWorld(Vector3Int pos, uint8_t gridSize)
 Vector2 Utils_GridCenterToWorld(Vector3Int pos, uint8_t gridSize)
 {
     Vector2 position;
-    position.x = pos.x * gridSize + (gridSize / 2);
-    position.y = pos.y * gridSize + (gridSize / 2);
+    position.x = pos.x * gridSize + (gridSize / 2.0);
+    position.y = pos.y * gridSize + (gridSize / 2.0);
     return position;
 }
 
@@ -104,5 +115,10 @@ float Utils_Vector2Distance(Vector2 a, Vector2 b)
     float dx = a.x - b.x;
     float dy = a.y - b.y;
     return sqrtf(dx * dx + dy * dy);
+}
+
+uint16_t Utils_ManhattanDistance(Vector2Int a, Vector2Int b)
+{
+    return Utils_AbsInt16(a.x - b.x) + Utils_AbsInt16(a.y - b.y);
 }
 

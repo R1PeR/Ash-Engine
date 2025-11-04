@@ -39,6 +39,7 @@ enum EntityState : uint8_t
 {
     PATROLLING = 0,
     CHASING,
+    GOING_BACK,
 };
 
 struct Chunk;
@@ -76,6 +77,7 @@ struct Object
             Vector2Int8 entityMovementDirection;
             Stopwatch   entityMovementTimer;
             Stopwatch   entityAttackTimer;
+            Vector2Int  entityCurrentPath[8];
 
             Object* entityTarget;
         } entity;

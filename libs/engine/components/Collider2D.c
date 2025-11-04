@@ -1,6 +1,7 @@
 #include "Collider2D.h"
 
 #include "engine/misc/Logger.h"
+#include <stddef.h>
 
 Updatable   collider2DUpdatable = { Collider2D_Update };
 uint32_t    sCollider2DCount    = 0;
