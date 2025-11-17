@@ -80,6 +80,7 @@ Object enemyRatPrefab = {
         .entityState             = EntityState::PATROLLING,
         .entityOriginalPosition  = { 0, 0 },
         .entityPatrolRadius      = 4,
+        .entityChaseRadius       = 6,
         .entityMovementDirection = { 0, 0 },
     },
 };

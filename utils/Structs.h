@@ -69,15 +69,16 @@ struct Object
             uint16_t entityVitality;
             uint16_t entityEnergy;
             uint16_t entityItems[8];
+            uint16_t entityRange;
 
             EntityState entityState;
             Vector2Int  entityOriginalPosition;
             uint16_t    entityPatrolRadius;
+            uint16_t    entityChaseRadius;
 
             Vector2Int8 entityMovementDirection;
             Stopwatch   entityMovementTimer;
             Stopwatch   entityAttackTimer;
-            Vector2Int  entityCurrentPath[8];
 
             Object* entityTarget;
         } entity;

@@ -97,6 +97,8 @@ Vector2     Utils_GridCenterToWorld(Vector3Int pos, uint8_t gridSize);
 Vector3Int8 Utils_GridToChunk(Vector3Int pos, uint8_t chunkSize);
 bool        Utils_IsInGridRadius(Vector2Int originalPos, Vector2Int currentPos, uint16_t radius);
 float       Utils_Vector2Distance(Vector2 a, Vector2 b);
+uint16_t    Utils_Vector2DistanceInt(Vector2Int a, Vector2Int b);
 uint16_t    Utils_ManhattanDistance(Vector2Int a, Vector2Int b);
+int16_t     Utils_GerRandomInRange(int16_t min, int16_t max);
 
 #endif

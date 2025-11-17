@@ -116,9 +116,19 @@ float Utils_Vector2Distance(Vector2 a, Vector2 b)
     float dy = a.y - b.y;
     return sqrtf(dx * dx + dy * dy);
 }
+uint16_t    Utils_Vector2DistanceInt(Vector2Int a, Vector2Int b)
+{
+    int32_t dx = a.x - b.x;
+    int32_t dy = a.y - b.y;
+    return (uint16_t)sqrtf((float)(dx * dx + dy * dy));
+}
 
 uint16_t Utils_ManhattanDistance(Vector2Int a, Vector2Int b)
 {
     return Utils_AbsInt16(a.x - b.x) + Utils_AbsInt16(a.y - b.y);
 }
 
+int16_t Utils_GerRandomInRange(int16_t min, int16_t max)
+{
+    return (rand() % (max - min + 1)) + min;
+}
