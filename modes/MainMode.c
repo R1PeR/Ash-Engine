@@ -867,6 +867,7 @@ void UpdateEnemy(Object* obj)
                                 Stats_MovementDelay(obj->entity.entitySpeed));
             }
         }
+        break;
         default:
             break;
     }
