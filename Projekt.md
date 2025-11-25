@@ -3,7 +3,6 @@
 - [ ] Implement ability to select target by mouse click and attack
 - [ ] Implement ability to pick up items and use them
 - [ ] Implement basic ui to show health and inventory
-- [ ] Move A* algorithm to separate module
 - [ ] Implement saving and loading game state
 - [ ] Add sound effects for attacks and item pickups
 - [ ] Implement basic enemy AI to chase and attack player
@@ -21,4 +20,5 @@ Day 1:
 - [x] Implement renddering of the tile-based map
 
 Day 2:
+- [x] Move A* algorithm to separate module
 
