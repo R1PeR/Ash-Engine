@@ -1,12 +1,11 @@
 #include "AStar.h"
 
 #include "Logger.h"
+// #include "raylib.h"
+// #include "utils/Structs.h"
 
-#include <cstddef>
-#include <stdint.h>
-
-AStar_Node* AStar_CalucalatePath(AStar_Node* nodeArray, size_t nodeArraySize, const Vector2Int& startPos,
-                                 const Vector2Int& targetPos, bool (*hFunc)(Vector2Int, uint16_t& outCost))
+AStar_Node* AStar_CalucalatePath(AStar_Node* nodeArray, size_t nodeArraySize, const Vector2Int startPos, const Vector2Int targetPos,
+                                 HeuristicFuncPtr hFunc)
 {
     LOG_INF("A* Pathfinding from (%d, %d) to (%d, %d)", startPos.x, startPos.y, targetPos.x, targetPos.y);
     uint16_t nodeListCount = 0;
@@ -14,12 +13,14 @@ AStar_Node* AStar_CalucalatePath(AStar_Node* nodeArray, size_t nodeArraySize, co
     AStar_Node* currentNode = NULL;
     // Initialize start node
     AStar_Node startNode;
-    startNode.position         = startPos;
-    startNode.gCost            = 0;
-    startNode.hCost            = Utils_ManhattanDistance(startPos, targetPos);
+    startNode.position = startPos;
+    startNode.gCost    = 0;
+    hFunc(startPos, targetPos, startNode.hCost);
+    // startNode.hCost            =  ? UINT16_MAX : startNode.hCost;
     startNode.fCost            = startNode.gCost + startNode.hCost;
     startNode.parent           = NULL;
     startNode.closed           = false;
+    startNode.valid            = true;
     nodeArray[nodeListCount++] = startNode;
     while (nodeListCount < nodeArraySize)
     {
@@ -29,11 +30,12 @@ AStar_Node* AStar_CalucalatePath(AStar_Node* nodeArray, size_t nodeArraySize, co
         bool     anyOpen      = false;
         for (uint16_t i = 0; i < nodeListCount; i++)
         {
-            if (nodeArray[i].closed == false)
+            if (nodeArray[i].closed == true)
             {
-                anyOpen = true;
+                continue;
             }
-            if (nodeArray[i].fCost < lowerstFCost && nodeArray[i].closed == false)
+            anyOpen = true;
+            if (nodeArray[i].fCost < lowerstFCost)
             {
                 lowerstFCost = nodeArray[i].fCost;
                 lowestIndex  = i;
@@ -41,6 +43,15 @@ AStar_Node* AStar_CalucalatePath(AStar_Node* nodeArray, size_t nodeArraySize, co
         }
         if (!anyOpen)
         {
+// #if 1
+//             for (uint16_t i = 0; i < nodeListCount; i++)
+//             {
+//                 Vector3Int pos3D    = { nodeArray[i].position.x, nodeArray[i].position.y, 0 };
+//                 Vector2    worldPos = Utils_GridToWorld(pos3D, TEXTURE_SIZE * TEXTURE_SCALE);
+//                 DrawRectangleLines(int(worldPos.x), int(worldPos.y), int(TEXTURE_SIZE * TEXTURE_SCALE),
+//                                    int(TEXTURE_SIZE * TEXTURE_SCALE), BLUE);
+//             }
+// #endif
             LOG_WRN("No path found to target (%d, %d)", targetPos.x, targetPos.y);
             return NULL;
         }
@@ -59,10 +70,8 @@ AStar_Node* AStar_CalucalatePath(AStar_Node* nodeArray, size_t nodeArraySize, co
             return NULL;
         }
         // Move current node from open to closed list
-        currentNode->closed    = true;
-        uint16_t hCost         = 0;
-        bool     validPosition = hFunc(currentNode->position, hCost);
-        if (validPosition && currentNode->parent != NULL)
+        currentNode->closed = true;
+        if (currentNode->valid == false)
         {
             continue;
         }
@@ -89,15 +98,13 @@ AStar_Node* AStar_CalucalatePath(AStar_Node* nodeArray, size_t nodeArraySize, co
             {
                 continue;
             }
-            uint16_t hCost                    = 0;
+            nodeArray[nodeListCount].closed   = false;
+            nodeArray[nodeListCount].valid    = hFunc(neighborPos, targetPos, nodeArray[nodeListCount].hCost);
             nodeArray[nodeListCount].position = neighborPos;
             nodeArray[nodeListCount].gCost    = currentNode->gCost + 1;
-            hFunc(neighborPos, hCost);
-            nodeArray[nodeListCount].hCost = hCost;
-            // nodeArray[nodeListCount].hCost    = Utils_ManhattanDistance(neighborPos, targetPos);
-            nodeArray[nodeListCount].fCost  = nodeArray[nodeListCount].gCost + nodeArray[nodeListCount].hCost;
-            nodeArray[nodeListCount].parent = currentNode;
-            nodeArray[nodeListCount].closed = false;
+            nodeArray[nodeListCount].fCost    = nodeArray[nodeListCount].gCost + nodeArray[nodeListCount].hCost;
+            nodeArray[nodeListCount].parent   = currentNode;
+            nodeArray[nodeListCount].closed   = false;
             nodeListCount++;
             if (nodeListCount >= 256)
             {
@@ -106,10 +113,11 @@ AStar_Node* AStar_CalucalatePath(AStar_Node* nodeArray, size_t nodeArraySize, co
             }
         }
     }
+    return NULL;
 }
 
-Vector2Int8 AStar_GetMoveDirection(const Vector2Int& startPos, const Vector2Int& targetPos, uint16_t maxSearchArea,
-                                   bool (*hFunc)(Vector2Int, uint16_t& outCost))
+Vector2Int8 AStar_GetMoveDirection(const Vector2Int startPos, const Vector2Int targetPos, uint16_t maxSearchArea,
+                                   HeuristicFuncPtr hFunc)
 {
     LOG_INF("A* Pathfinding from (%d, %d) to (%d, %d)", startPos.x, startPos.y, targetPos.x, targetPos.y);
     AStar_Node  nodeList[maxSearchArea];
@@ -123,7 +131,12 @@ Vector2Int8 AStar_GetMoveDirection(const Vector2Int& startPos, const Vector2Int&
 
     for (int i = 0; i < maxSearchArea; i++)
     {
-        Vector3Int pos3D = { lastNode->position.x, lastNode->position.y, 0 };
+// #if 1
+//         Vector3Int pos3D    = { lastNode->position.x, lastNode->position.y, 0 };
+//         Vector2    worldPos = Utils_GridToWorld(pos3D, TEXTURE_SIZE * TEXTURE_SCALE);
+//         DrawRectangleLines(int(worldPos.x), int(worldPos.y), int(TEXTURE_SIZE * TEXTURE_SCALE),
+//                            int(TEXTURE_SIZE * TEXTURE_SCALE), GREEN);
+// #endif
         if (lastNode->parent == NULL
             || (lastNode->parent->position.x == startPos.x && lastNode->parent->position.y == startPos.y))
         {
@@ -137,8 +150,7 @@ Vector2Int8 AStar_GetMoveDirection(const Vector2Int& startPos, const Vector2Int&
     return direction;
 }
 
-bool AStar_IsPathAvailable(const Vector2Int& startPos, const Vector2Int& targetPos, uint16_t maxSearchArea,
-                           bool (*hFunc)(Vector2Int, uint16_t& outCost))
+bool AStar_IsPathAvailable(const Vector2Int startPos, const Vector2Int targetPos, uint16_t maxSearchArea, HeuristicFuncPtr hFunc)
 {
     LOG_INF("A* Pathfinding from (%d, %d) to (%d, %d)", startPos.x, startPos.y, targetPos.x, targetPos.y);
     AStar_Node  nodeList[maxSearchArea];
@@ -147,9 +159,8 @@ bool AStar_IsPathAvailable(const Vector2Int& startPos, const Vector2Int& targetP
     return AStar_CalucalatePath(nodeList, maxSearchArea, startPos, targetPos, hFunc) != NULL;
 }
 
-uint16_t AStar_GetPath(const Vector2Int& startPos, const Vector2Int& targetPos, uint16_t maxSearchArea,
-                       Vector2Int* outPathBuffer, size_t outPathBufferSize,
-                       bool (*hFunc)(Vector2Int, uint16_t& outCost))
+uint16_t AStar_GetPath(const Vector2Int startPos, const Vector2Int targetPos, uint16_t maxSearchArea, Vector2Int* outPathBuffer,
+                       size_t outPathBufferSize, HeuristicFuncPtr hFunc)
 {
 
     LOG_INF("A* Pathfinding from (%d, %d) to (%d, %d)", startPos.x, startPos.y, targetPos.x, targetPos.y);
@@ -161,7 +172,7 @@ uint16_t AStar_GetPath(const Vector2Int& startPos, const Vector2Int& targetPos, 
     {
         return 0;
     }
-    // Reconstruct path
+    // Reruct path
     uint16_t pathLength = 0;
     for (int i = 0; i < maxSearchArea; i++)
     {
@@ -179,4 +190,5 @@ uint16_t AStar_GetPath(const Vector2Int& startPos, const Vector2Int& targetPos, 
         }
         lastNode = lastNode->parent;
     }
+    return 0;
 }

@@ -5,6 +5,7 @@
 #include "engine/components/Texture.h"
 #include "engine/io/Input.h"
 #include "engine/io/Window.h"
+#include "engine/misc/AStar.h"
 #include "engine/misc/DeltaTime.h"
 #include "engine/misc/Logger.h"
 #include "engine/misc/Stopwatch.h"
@@ -573,140 +574,19 @@ bool CheckCollision(Vector3Int pos, Object* outObj)
     // No collision
 }
 
+bool MoveCost(Vector2Int startPos, Vector2Int targetPos, uint16_t& outCost)
+{
+    outCost = Utils_ManhattanDistance(startPos, targetPos);
+    if (!CheckCollision({ startPos.x, startPos.y, 0 }))
+    {
+        return true;
+    }
+    return false;
+}
+
 Vector2Int8 GetMoveTowardsPosition(Vector2Int source, Vector2Int target)
 {
-    LOG_INF("A* Pathfinding from (%d, %d) to (%d, %d)", source.x, source.y, target.x, target.y);
-    struct Node;
-    struct Node
-    {
-        Vector2Int position;
-        uint32_t   gCost;
-        uint32_t   hCost;
-        uint32_t   fCost;
-        Node*      parent;
-        bool       closed;
-    };
-    Node     nodeList[256];
-    uint16_t nodeListCount = 0;
-
-    Node* currentNode = NULL;
-    // Initialize start node
-    Node startNode;
-    startNode.position        = source;
-    startNode.gCost           = 0;
-    startNode.hCost           = Utils_ManhattanDistance(source, target);
-    startNode.fCost           = startNode.gCost + startNode.hCost;
-    startNode.parent          = NULL;
-    startNode.closed          = false;
-    nodeList[nodeListCount++] = startNode;
-    while (nodeListCount < 256)
-    {
-#if 0
-        for (uint16_t i = 0; i < nodeListCount; i++)
-        {
-            Vector3Int pos3D    = { nodeList[i].position.x, nodeList[i].position.y, 0 };
-            Vector2    worldPos = Utils_GridToWorld(pos3D, TEXTURE_SIZE * TEXTURE_SCALE);
-            DrawRectangleLines(int(worldPos.x), int(worldPos.y), int(TEXTURE_SIZE * TEXTURE_SCALE),
-                               int(TEXTURE_SIZE * TEXTURE_SCALE), BLUE);
-        }
-#endif
-        // Find node with lowest fCost
-        uint16_t lowerstFCost = UINT16_MAX;
-        uint16_t lowestIndex  = 0;
-        bool anyOpen = false;
-        for (uint16_t i = 0; i < nodeListCount; i++)
-        {
-            if(nodeList[i].closed == false)
-            {
-                anyOpen = true;
-            }
-            if (nodeList[i].fCost < lowerstFCost && nodeList[i].closed == false)
-            {
-                lowerstFCost = nodeList[i].fCost;
-                lowestIndex  = i;
-            }
-        }
-        if(!anyOpen)
-        {
-            LOG_WRN("No path found to target (%d, %d)", target.x, target.y);
-            return { 0, 0 };
-        }
-        // LOG_INF("Current Node (%d, %d) fCost: %d", openList[lowestIndex].position.x,
-        //         openList[lowestIndex].position.y, openList[lowestIndex].fCost);
-        currentNode = &nodeList[lowestIndex];
-        // Check if reached target
-        if (currentNode->position.x == target.x && currentNode->position.y == target.y)
-        {
-            LOG_INF("Reached target at (%d, %d)", currentNode->position.x, currentNode->position.y);
-            break;
-        }
-        if (nodeListCount >= 256)
-        {
-            LOG_ERR("Closed list overflow in A* pathfinding");
-            return { 0, 0 };
-        }
-        // Move current node from open to closed list
-        currentNode->closed = true;
-        if (CheckCollision({ currentNode->position.x, currentNode->position.y, 0 }) && currentNode->parent != NULL)
-        {
-            continue;
-        }
-        // Check neighbors
-        Vector2Int neighbors[4] = {
-            { currentNode->position.x + 1, currentNode->position.y },
-            { currentNode->position.x - 1, currentNode->position.y },
-            { currentNode->position.x, currentNode->position.y + 1 },
-            { currentNode->position.x, currentNode->position.y - 1 },
-        };
-        for (uint8_t i = 0; i < 4; i++)
-        {
-            Vector2Int neighborPos  = neighbors[i];
-            bool       skipNeighbor = false;
-            for (uint16_t j = 0; j < nodeListCount; j++)
-            {
-                if (nodeList[j].position.x == neighborPos.x && nodeList[j].position.y == neighborPos.y)
-                {
-                    skipNeighbor = true;
-                    break;
-                }
-            }
-            if (skipNeighbor)
-            {
-                continue;
-            }
-            nodeList[nodeListCount].position = neighborPos;
-            nodeList[nodeListCount].gCost    = currentNode->gCost + 1;
-            nodeList[nodeListCount].hCost    = Utils_ManhattanDistance(neighborPos, target);
-            nodeList[nodeListCount].fCost    = nodeList[nodeListCount].gCost + nodeList[nodeListCount].hCost;
-            nodeList[nodeListCount].parent   = currentNode;
-            nodeList[nodeListCount].closed   = false;
-            nodeListCount++;
-            if (nodeListCount >= 256)
-            {
-                LOG_ERR("Open list overflow in A* pathfinding when adding neighbor");
-                return { 0, 0 };
-            }
-        }
-    }
-    Node* pathNode = currentNode;
-    for (int i = 0; i < nodeListCount; i++)
-    {
-        Vector3Int pos3D    = { pathNode->position.x, pathNode->position.y, 0 };
-        Vector2    worldPos = Utils_GridToWorld(pos3D, TEXTURE_SIZE * TEXTURE_SCALE);
-#if 0
-        DrawRectangleLines(int(worldPos.x), int(worldPos.y), int(TEXTURE_SIZE * TEXTURE_SCALE),
-                           int(TEXTURE_SIZE * TEXTURE_SCALE), GREEN);
-#endif
-        if (pathNode->parent == NULL
-            || (pathNode->parent->position.x == source.x && pathNode->parent->position.y == source.y))
-        {
-            break;
-        }
-        pathNode = pathNode->parent;
-    }
-    Vector2Int8 direction;
-    direction.x = int8_t(pathNode->position.x - source.x);
-    direction.y = int8_t(pathNode->position.y - source.y);
+    Vector2Int8 direction = AStar_GetMoveDirection(source, target, 256, MoveCost);
     return direction;
 }
 
@@ -719,7 +599,7 @@ void UpdatePlayer(Object* obj)
     // Example: simple player movement logic
     int8_t y = (Input_IsKeyDown(INPUT_KEYCODE_S) - Input_IsKeyDown(INPUT_KEYCODE_W));
     int8_t x = (Input_IsKeyDown(INPUT_KEYCODE_D) - Input_IsKeyDown(INPUT_KEYCODE_A));
-    if (x * x + y * y <= 1)
+    if (x * x + y * y <= 1 && (x != 0 || y != 0))
     {
         if (Stopwatch_IsZero(&obj->entity.entityMovementTimer))
         {
@@ -728,8 +608,7 @@ void UpdatePlayer(Object* obj)
                 obj->position.x += x;
                 obj->position.y += y;
                 obj->entity.entityMovementDirection = { x, y };
-                Stopwatch_Start(&obj->entity.entityMovementTimer,
-                                Stats_MovementDelay(obj->entity.entitySpeed));
+                Stopwatch_Start(&obj->entity.entityMovementTimer, Stats_MovementDelay(obj->entity.entitySpeed));
             }
         }
     }
@@ -764,32 +643,34 @@ void UpdateEnemy(Object* obj)
                 obj->entity.entityState = EntityState::CHASING;
                 break;
             }
-            if (Stopwatch_IsZero(&obj->entity.entityMovementTimer))
+            if (!Stopwatch_IsZero(&obj->entity.entityMovementTimer))
             {
-                int16_t      x = Utils_GerRandomInRange(-(uint16_t)obj->entity.entityPatrolRadius, (uint16_t)obj->entity.entityPatrolRadius);
-                int16_t      y = Utils_GerRandomInRange(-(uint16_t)obj->entity.entityPatrolRadius, (uint16_t)obj->entity.entityPatrolRadius);
-                Vector2Int8 move = GetMoveTowardsPosition({ obj->position.x, obj->position.y },
-                                                          { obj->position.x + x, obj->position.y + y });
-                if(move.x == 0 && move.y == 0)
-                {
-                    break;
-                }
-                if (CheckCollision({ obj->position.x + move.x, obj->position.y + move.y, obj->position.z }))
-                {
-                    break;
-                }
-                Vector2Int newPos = { obj->position.x + x, obj->position.y + y };
-                if (!Utils_IsInGridRadius(obj->entity.entityOriginalPosition, newPos, obj->entity.entityPatrolRadius))
-                {
-                    obj->entity.entityState = EntityState::GOING_BACK;
-                    break;
-                }
-                obj->position.x += move.x;
-                obj->position.y += move.y;
-                obj->entity.entityMovementDirection = { move.x, move.y };
-                Stopwatch_Start(&obj->entity.entityMovementTimer,
-                                Stats_MovementDelay(obj->entity.entitySpeed));
+                break;
             }
+            int16_t     x    = Utils_GerRandomInRange(-(uint16_t)obj->entity.entityPatrolRadius,
+                                                      (uint16_t)obj->entity.entityPatrolRadius);
+            int16_t     y    = Utils_GerRandomInRange(-(uint16_t)obj->entity.entityPatrolRadius,
+                                                      (uint16_t)obj->entity.entityPatrolRadius);
+            Vector2Int8 move = GetMoveTowardsPosition({ obj->position.x, obj->position.y },
+                                                      { obj->position.x + x, obj->position.y + y });
+            if (move.x == 0 && move.y == 0)
+            {
+                break;
+            }
+            if (CheckCollision({ obj->position.x + move.x, obj->position.y + move.y, obj->position.z }))
+            {
+                break;
+            }
+            Vector2Int newPos = { obj->position.x + x, obj->position.y + y };
+            if (!Utils_IsInGridRadius(obj->entity.entityOriginalPosition, newPos, obj->entity.entityPatrolRadius))
+            {
+                obj->entity.entityState = EntityState::GOING_BACK;
+                break;
+            }
+            obj->position.x += move.x;
+            obj->position.y += move.y;
+            obj->entity.entityMovementDirection = { move.x, move.y };
+            Stopwatch_Start(&obj->entity.entityMovementTimer, Stats_MovementDelay(obj->entity.entitySpeed));
         }
         break;
         case EntityState::CHASING:
@@ -799,13 +680,16 @@ void UpdateEnemy(Object* obj)
                 obj->entity.entityState = EntityState::PATROLLING;
                 break;
             }
-            if(Utils_Vector2DistanceInt({ obj->position.x, obj->position.y }, { obj->entity.entityTarget->position.x, obj->entity.entityTarget->position.y }) <= obj->entity.entityRange)
+            if (Utils_Vector2DistanceInt({ obj->position.x, obj->position.y },
+                                         { obj->entity.entityTarget->position.x, obj->entity.entityTarget->position.y })
+                <= obj->entity.entityRange)
             {
-                if(Stopwatch_IsZero(&obj->entity.entityAttackTimer))
+                if (Stopwatch_IsZero(&obj->entity.entityAttackTimer))
                 {
                     LOG_INF("Enemy %d attacking target %d", obj->id, obj->entity.entityTarget->id);
                     obj->entity.entityTarget->entity.entityHealth -= obj->entity.entityDamage;
-                    Stopwatch_Start(&obj->entity.entityAttackTimer, Stats_AttackDelay(obj->entity.entityAttackSpeed, obj->entity.entityDexterity));
+                    Stopwatch_Start(&obj->entity.entityAttackTimer,
+                                    Stats_AttackDelay(obj->entity.entityAttackSpeed, obj->entity.entityDexterity));
                 }
                 break;
             }
@@ -826,20 +710,19 @@ void UpdateEnemy(Object* obj)
                 obj->entity.entityState  = EntityState::GOING_BACK;
                 break;
             }
-            Vector2Int8 dir =
-                GetMoveTowardsPosition({ obj->position.x, obj->position.y },
-                                       { obj->entity.entityTarget->position.x, obj->entity.entityTarget->position.y });
             if (!Stopwatch_IsZero(&obj->entity.entityMovementTimer))
             {
                 break;
             }
+            Vector2Int8 dir =
+                GetMoveTowardsPosition({ obj->position.x, obj->position.y },
+                        { obj->entity.entityTarget->position.x, obj->entity.entityTarget->position.y });
             if (!CheckCollision({ obj->position.x + dir.x, obj->position.y + dir.y, obj->position.z }))
             {
                 obj->position.x += dir.x;
                 obj->position.y += dir.y;
                 obj->entity.entityMovementDirection = { dir.x, dir.y };
-                Stopwatch_Start(&obj->entity.entityMovementTimer,
-                                Stats_MovementDelay(obj->entity.entitySpeed));
+                Stopwatch_Start(&obj->entity.entityMovementTimer, Stats_MovementDelay(obj->entity.entitySpeed));
             }
         }
         break;
@@ -863,8 +746,7 @@ void UpdateEnemy(Object* obj)
                 obj->position.x += dir.x;
                 obj->position.y += dir.y;
                 obj->entity.entityMovementDirection = { dir.x, dir.y };
-                Stopwatch_Start(&obj->entity.entityMovementTimer,
-                                Stats_MovementDelay(obj->entity.entitySpeed));
+                Stopwatch_Start(&obj->entity.entityMovementTimer, Stats_MovementDelay(obj->entity.entitySpeed));
             }
         }
         break;
@@ -934,7 +816,7 @@ void MainMode_OnStart()
     Texture_LoadTextureSheet("resources/sprites/Anikki_square_8x8.png", 8, 8, 256);
 
     Window_GetCamera()->target = (Vector2){ 0.0f, 0.0f };
-    gameData.chunkCount = LoadWorldMap((char*)worldMap, WORLD_MAP_SIZE, WORLD_MAP_SIZE, gameData.chunks);
+    gameData.chunkCount        = LoadWorldMap((char*)worldMap, WORLD_MAP_SIZE, WORLD_MAP_SIZE, gameData.chunks);
     for (uint16_t i = 0; i < gameData.chunkCount; i++)
     {
         Chunk* chunk = &gameData.chunks[i];
