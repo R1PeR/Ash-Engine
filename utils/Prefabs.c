@@ -2,15 +2,10 @@
 
 #include "Structs.h"
 
-char worldMap[WORLD_MAP_SIZE][WORLD_MAP_SIZE] =
-{
-    {'1', '1', '1', '1', '1', '1', '0'},
-    {'1', '0', '0', '0', '0', '1', '0'},
-    {'1', '0', '0', '0', 'r', '1', '0'},
-    {'1', '0', '0', '0', '0', '1', '0'},
-    {'1', '0', 'p', '0', '0', '1', '0'},
-    {'1', '1', '0', '1', '1', '1', '0'},
-    {'0', '1', '0', '1', '0', '0', '0'}
+char worldMap[WORLD_MAP_SIZE][WORLD_MAP_SIZE] = {
+    { '1', '1', '1', '1', '1', '1', '0' }, { '1', '0', '0', '0', '0', '1', '0' }, { '1', '0', '0', '0', 'r', '1', '0' },
+    { '1', '0', '0', '0', '0', '1', '0' }, { '1', '0', 'p', '0', '0', '1', '0' }, { '1', '1', '0', '1', '1', '1', '0' },
+    { '0', '1', '0', '1', '0', '0', '0' }
 };
 
 Object emptyTilePrefab = {
@@ -77,6 +72,7 @@ Object enemyRatPrefab = {
         .entityVitality        = 5,
         .entityEnergy          = 5,
         .entityItems           = { 0 },
+        .entityRange           = 1,
         .entityState             = EntityState::PATROLLING,
         .entityOriginalPosition  = { 0, 0 },
         .entityPatrolRadius      = 4,

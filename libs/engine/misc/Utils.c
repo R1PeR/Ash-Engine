@@ -132,3 +132,14 @@ int16_t Utils_GerRandomInRange(int16_t min, int16_t max)
 {
     return (rand() % (max - min + 1)) + min;
 }
+
+bool Utils_PointInRectangle(Vector2 point, Rectangle rect)
+{
+    return (point.x >= rect.x && point.x <= rect.x + rect.width && point.y >= rect.y
+            && point.y <= rect.y + rect.height);
+}
+
+bool Utils_RectangleOverlap(Rectangle a, Rectangle b)
+{
+    return (a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y);
+}

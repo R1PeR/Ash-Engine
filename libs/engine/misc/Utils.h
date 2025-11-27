@@ -101,4 +101,7 @@ uint16_t    Utils_Vector2DistanceInt(Vector2Int a, Vector2Int b);
 uint16_t    Utils_ManhattanDistance(Vector2Int a, Vector2Int b);
 int16_t     Utils_GerRandomInRange(int16_t min, int16_t max);
 
+bool Utils_PointInRectangle(Vector2 point, Rectangle rect);
+bool Utils_RectangleOverlap(Rectangle point, Rectangle rect);
+
 #endif

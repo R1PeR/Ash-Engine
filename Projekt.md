@@ -1,8 +1,7 @@
-- [ ] Implement simple attack for enemies
+- [ ] Implement basic ui to show health and inventory
 - [ ] Implement health system for player and enemies
 - [ ] Implement ability to select target by mouse click and attack
 - [ ] Implement ability to pick up items and use them
-- [ ] Implement basic ui to show health and inventory
 - [ ] Implement saving and loading game state
 - [ ] Add sound effects for attacks and item pickups
 - [ ] Implement basic enemy AI to chase and attack player
@@ -10,7 +9,6 @@
 - [ ] Implement leveling system for player with experience points
 - [ ] Add more items with different effects (healing, buffs, etc.)
 
-Day 1:
 - [x] Implement basic movement for player using arrow keys
 - [x] Implement basic tile-based map with walls and walkable tiles
 - [x] Implement A* pathfinding algorithm for enemy movement
@@ -22,3 +20,5 @@ Day 1:
 Day 2:
 - [x] Move A* algorithm to separate module
 
+Day 3:
+- [x] Implement simple attack for enemies
