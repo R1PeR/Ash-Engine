@@ -45,9 +45,9 @@ static void Debug_ShowMisc()
         if (ImGui::TreeNode("Sprites"))
         {
             ImGui::Text("Sprites count: %d", Sprite_GetCount());
-            Sprite* current = Sprite_GetSpriteList();
             for (uint32_t i = 0; i < Sprite_GetCount(); i++)
             {
+                Sprite* current = Sprite_GetSpriteList() + i;
                 sprintf(buffer, "Sprite %d", i);
                 if (ImGui::CollapsingHeader(buffer))
                 {
@@ -70,7 +70,6 @@ static void Debug_ShowMisc()
                     ImGui::Text("Sprite z order: %d", current->zOrder);
                     ImGui::Text("Sprite is visible: %d", current->isVisible);
                 }
-                current = current->next;
             }
             ImGui::TreePop();
         }

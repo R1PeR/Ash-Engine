@@ -82,6 +82,12 @@ typedef struct Vector3UInt8
     uint8_t z;
 } Vector3Uuint8;
 
+typedef struct Vector2Float
+{
+    float x;
+    float y;
+} Vector2Float;
+
 typedef void (*GetPositionScoreFunc)(Vector2Int8);
 
 uint32_t Utils_AbsInt32(int32_t value);
@@ -99,7 +105,7 @@ bool        Utils_IsInGridRadius(Vector2Int originalPos, Vector2Int currentPos, 
 float       Utils_Vector2Distance(Vector2 a, Vector2 b);
 uint16_t    Utils_Vector2DistanceInt(Vector2Int a, Vector2Int b);
 uint16_t    Utils_ManhattanDistance(Vector2Int a, Vector2Int b);
-int16_t     Utils_GerRandomInRange(int16_t min, int16_t max);
+int16_t     Utils_GetRandomInRange(int16_t min, int16_t max);
 
 bool Utils_PointInRectangle(Vector2 point, Rectangle rect);
 bool Utils_RectangleOverlap(Rectangle point, Rectangle rect);

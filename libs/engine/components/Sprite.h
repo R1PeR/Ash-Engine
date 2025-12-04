@@ -18,9 +18,10 @@ typedef struct Sprite
     uint8_t    zOrder;
     bool       isVisible;
     Color      tint;
-    Sprite*    next;
+    // Sprite*    next;
 } Sprite;
 
+void Sprite_SetPool(Sprite* pool, size_t poolSize);
 void Sprite_Initialize(Sprite* spr);
 bool Sprite_Add(Sprite* spr);
 bool Sprite_Clear();

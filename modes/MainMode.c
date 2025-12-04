@@ -1,5 +1,6 @@
 #include "MainMode.h"
-
+#include "EndGameMode.h"
+#include "engine/context/Context.h"
 #include "engine/components/Audio.h"
 #include "engine/components/Sprite.h"
 #include "engine/components/Texture.h"
@@ -12,10 +13,10 @@
 #include "engine/misc/Utils.h"
 #include "imgui.h"
 #include "raylib.h"
-#include "rlImGui.h"
 #include "utils/Prefabs.h"
 #include "utils/Stats.h"
 #include "utils/Structs.h"
+#include "utils/UI.h"
 
 #include <stdio.h>
 
@@ -227,8 +228,9 @@ void DrawDebug()
     }
     if (debugData.isVisible)
     {
-        Vector2    mousePos  = { (float)(Input_GetMouseX()), (float)(Input_GetMouseY()) };
-        Vector2    worldPos  = GetScreenToWorld2D(mousePos, *Window_GetCamera());
+        Vector2 mousePos     = { (float)(Input_GetMouseX()), (float)(Input_GetMouseY()) };
+        Vector2 worldPos     = GetScreenToWorld2D(mousePos, *Window_GetCamera());
+        Vector2 worldPosCam  = { worldPos.x - Window_GetCamera()->target.x, worldPos.y - Window_GetCamera()->target.y };
         Vector3Int gridPos   = Utils_WorldToGrid(worldPos, TEXTURE_SIZE * TEXTURE_SCALE);
         gridPos.z            = gameData.currentZPos;
         Vector3Int8 chunkPos = Utils_WorldToChunk(worldPos, TEXTURE_SIZE * TEXTURE_SCALE, CHUNK_SIZE);
@@ -263,14 +265,14 @@ void DrawDebug()
         {
             debugData.currentObject.textureId = debugData.selectedTextureId->id;
             debugData.currentObject.position  = gridPos;
-            Sprite* sprite                    = &gameData.sprites[gameData.spriteCount++];
-            Sprite_Initialize(sprite);
-            sprite->currentTexture = debugData.selectedTextureId;
-            sprite->position       = Utils_GridToWorld(gridPos, TEXTURE_SIZE * TEXTURE_SCALE);
-            sprite->scale          = TEXTURE_SCALE;
-            sprite->isVisible      = true;
-            sprite->tint           = LIGHTGRAY;
-            Sprite_Add(sprite);
+            Sprite sprite;
+            Sprite_Initialize(&sprite);
+            sprite.currentTexture = debugData.selectedTextureId;
+            sprite.position       = Utils_GridToWorld(gridPos, TEXTURE_SIZE * TEXTURE_SCALE);
+            sprite.scale          = TEXTURE_SCALE;
+            sprite.isVisible      = true;
+            sprite.tint           = LIGHTGRAY;
+            Sprite_Add(&sprite);
         }
 
         if (Input_IsKeyPressed(INPUT_KEYCODE_X) && ImGui::GetIO().WantCaptureKeyboard == false)
@@ -458,6 +460,7 @@ void DrawDebug()
 
         ImGui::Text("Mouse Position: (%.1f, %.1f)", mousePos.x, mousePos.y);
         ImGui::Text("World Position: (%.1f, %.1f)", worldPos.x, worldPos.y);
+        ImGui::Text("World Position relative to Camera: (%.1f, %.1f)", worldPosCam.x, worldPosCam.y);
         ImGui::Text("Grid Position: (%d, %d)", gridPos.x, gridPos.y);
         ImGui::Text("Chunk Position: (%d, %d, %d)", chunkPos.x, chunkPos.y, chunkPos.z);
 
@@ -592,6 +595,12 @@ Vector2Int8 GetMoveTowardsPosition(Vector2Int source, Vector2Int target)
 
 void UpdatePlayer(Object* obj)
 {
+    if(obj->entity.entityHealth <= 0)
+    {
+        Mode endGameMode = MODE_FROM_CLASSNAME(EndGameMode);
+        Context_SetMode(&endGameMode);
+        Context_FinishMode();
+    }
     Camera2D* camera   = Window_GetCamera();
     Vector2   worldPos = Utils_GridCenterToWorld(obj->position, TEXTURE_SIZE * TEXTURE_SCALE);
     camera->target.x += (worldPos.x - camera->target.x) * DeltaTime_GetDeltaTime() * 2.0f;
@@ -613,23 +622,23 @@ void UpdatePlayer(Object* obj)
         }
     }
 
-    Sprite* sprite = &gameData.sprites[gameData.spriteCount++];
-    Sprite_Initialize(sprite);
-    sprite->currentTexture = Texture_GetTextureById(obj->textureId);
-    sprite->scale          = TEXTURE_SCALE;
-    sprite->isVisible      = true;
-    sprite->tint           = WHITE;
-    sprite->position       = Utils_GridToWorld(obj->position, TEXTURE_SIZE * TEXTURE_SCALE);
+    Sprite sprite;
+    Sprite_Initialize(&sprite);
+    sprite.currentTexture = Texture_GetTextureById(obj->textureId);
+    sprite.scale          = TEXTURE_SCALE;
+    sprite.isVisible      = true;
+    sprite.tint           = WHITE;
+    sprite.position       = Utils_GridToWorld(obj->position, TEXTURE_SIZE * TEXTURE_SCALE);
     if (!Stopwatch_IsElapsed(&obj->entity.entityMovementTimer))
     {
-        sprite->position.x +=
+        sprite.position.x +=
             float(-obj->entity.entityMovementDirection.x
                   * Stopwatch_GetPercentRemainingTime(&obj->entity.entityMovementTimer) * TEXTURE_SIZE * TEXTURE_SCALE);
-        sprite->position.y +=
+        sprite.position.y +=
             float(-obj->entity.entityMovementDirection.y
                   * Stopwatch_GetPercentRemainingTime(&obj->entity.entityMovementTimer) * TEXTURE_SIZE * TEXTURE_SCALE);
     }
-    Sprite_Add(sprite);
+    Sprite_Add(&sprite);
 }
 
 void UpdateEnemy(Object* obj)
@@ -638,8 +647,11 @@ void UpdateEnemy(Object* obj)
     {
         case EntityState::PATROLLING:
         {
-            if (GetClosestEntityInRange(obj, obj->entity.entityChaseRadius, &obj->entity.entityTarget))
+            Object * target = NULL;
+            GetClosestEntityInRange(obj, obj->entity.entityChaseRadius, &target);
+            if (target != NULL && target->entity.entityHealth > 0)
             {
+                obj->entity.entityTarget = target;
                 obj->entity.entityState = EntityState::CHASING;
                 break;
             }
@@ -647,9 +659,9 @@ void UpdateEnemy(Object* obj)
             {
                 break;
             }
-            int16_t     x    = Utils_GerRandomInRange(-(uint16_t)obj->entity.entityPatrolRadius,
+            int16_t     x    = Utils_GetRandomInRange(-(uint16_t)obj->entity.entityPatrolRadius,
                                                       (uint16_t)obj->entity.entityPatrolRadius);
-            int16_t     y    = Utils_GerRandomInRange(-(uint16_t)obj->entity.entityPatrolRadius,
+            int16_t     y    = Utils_GetRandomInRange(-(uint16_t)obj->entity.entityPatrolRadius,
                                                       (uint16_t)obj->entity.entityPatrolRadius);
             Vector2Int8 move = GetMoveTowardsPosition({ obj->position.x, obj->position.y },
                                                       { obj->position.x + x, obj->position.y + y });
@@ -686,10 +698,22 @@ void UpdateEnemy(Object* obj)
             {
                 if (Stopwatch_IsZero(&obj->entity.entityAttackTimer))
                 {
-                    LOG_INF("Enemy %d attacking target %d", obj->id, obj->entity.entityTarget->id);
-                    obj->entity.entityTarget->entity.entityHealth -= obj->entity.entityDamage;
-                    Stopwatch_Start(&obj->entity.entityAttackTimer,
-                                    Stats_AttackDelay(obj->entity.entityAttackSpeed, obj->entity.entityDexterity));
+                    // LOG_INF("Enemy %d attacking target %d", obj->id, obj->entity.entityTarget->id);
+                    if (obj->entity.entityTarget->entity.entityHealth <= obj->entity.entityDamage
+                        || obj->entity.entityTarget->entity.entityHealth <= 0)
+                    {
+                        obj->entity.entityTarget->entity.entityHealth = 0;
+                        obj->entity.entityExperience += obj->entity.entityTarget->entity.entityExperience;
+                        obj->entity.entityState  = EntityState::PATROLLING;
+                        obj->entity.entityTarget = NULL;
+                        break;
+                    }
+                    else
+                    {
+                        obj->entity.entityTarget->entity.entityHealth -= obj->entity.entityDamage;
+                        Stopwatch_Start(&obj->entity.entityAttackTimer,
+                                        Stats_AttackDelay(obj->entity.entityAttackSpeed, obj->entity.entityDexterity));
+                    }
                 }
                 break;
             }
@@ -716,7 +740,7 @@ void UpdateEnemy(Object* obj)
             }
             Vector2Int8 dir =
                 GetMoveTowardsPosition({ obj->position.x, obj->position.y },
-                        { obj->entity.entityTarget->position.x, obj->entity.entityTarget->position.y });
+                                       { obj->entity.entityTarget->position.x, obj->entity.entityTarget->position.y });
             if (!CheckCollision({ obj->position.x + dir.x, obj->position.y + dir.y, obj->position.z }))
             {
                 obj->position.x += dir.x;
@@ -754,23 +778,23 @@ void UpdateEnemy(Object* obj)
             break;
     }
     // Example: simple enemy AI logic
-    Sprite* sprite = &gameData.sprites[gameData.spriteCount++];
-    Sprite_Initialize(sprite);
-    sprite->currentTexture = Texture_GetTextureById(obj->textureId);
-    sprite->scale          = TEXTURE_SCALE;
-    sprite->isVisible      = true;
-    sprite->tint           = WHITE;
-    sprite->position       = Utils_GridToWorld(obj->position, TEXTURE_SIZE * TEXTURE_SCALE);
+    Sprite sprite;
+    Sprite_Initialize(&sprite);
+    sprite.currentTexture = Texture_GetTextureById(obj->textureId);
+    sprite.scale          = TEXTURE_SCALE;
+    sprite.isVisible      = true;
+    sprite.tint           = WHITE;
+    sprite.position       = Utils_GridToWorld(obj->position, TEXTURE_SIZE * TEXTURE_SCALE);
     if (!Stopwatch_IsElapsed(&obj->entity.entityMovementTimer))
     {
-        sprite->position.x +=
+        sprite.position.x +=
             float(-obj->entity.entityMovementDirection.x
                   * Stopwatch_GetPercentRemainingTime(&obj->entity.entityMovementTimer) * TEXTURE_SIZE * TEXTURE_SCALE);
-        sprite->position.y +=
+        sprite.position.y +=
             float(-obj->entity.entityMovementDirection.y
                   * Stopwatch_GetPercentRemainingTime(&obj->entity.entityMovementTimer) * TEXTURE_SIZE * TEXTURE_SCALE);
     }
-    Sprite_Add(sprite);
+    Sprite_Add(&sprite);
 }
 
 void UpdateProjectile(Object* obj)
@@ -811,8 +835,41 @@ void UpdateItem(Object* obj)
     // Items might not have update logic
 }
 
+void UpdateUI()
+{
+    char buffer[32];
+
+    snprintf(buffer, sizeof(buffer), "FPS: %d", GetFPS());
+    Text text;
+    text.position   = (Vector2Float){ -540.0f, -340.0f };
+    text.buffer     = buffer;
+    text.bounds     = (Rectangle){ 0.0f, 0.0f, 100.0f, 30.0f };
+    text.bufferSize = strlen(buffer);
+    text.scale      = 2.0f;
+    if (UI_Text(&text, "Anikki_square_8x8"))
+    {
+        LOG_INF("Text clicked!");
+    }
+
+    if (gameData.playerObject == NULL)
+    {
+        return;
+    }
+    snprintf(buffer, sizeof(buffer), "Player health: %d", gameData.playerObject->entity.entityHealth);
+    text.position   = (Vector2Float){ -540.0f, -240.0f };
+    text.buffer     = buffer;
+    text.bounds     = (Rectangle){ 0.0f, 0.0f, 100.0f, 30.0f };
+    text.bufferSize = strlen(buffer);
+    text.scale      = 1.0f;
+    if (UI_Text(&text, "Anikki_square_8x8"))
+    {
+        LOG_INF("Text clicked!");
+    }
+}
+
 void MainMode_OnStart()
 {
+    UI_Init(&gameData.cameraEntity);
     Texture_LoadTextureSheet("resources/sprites/Anikki_square_8x8.png", 8, 8, 256);
 
     Window_GetCamera()->target = (Vector2){ 0.0f, 0.0f };
@@ -830,6 +887,7 @@ void MainMode_OnStart()
             }
         }
     }
+    Sprite_SetPool(gameData.sprites, SPRITE_MAX_COUNT);
 }
 
 void MainMode_OnPause()
@@ -839,8 +897,6 @@ void MainMode_OnPause()
 void MainMode_Update()
 {
     Sprite_Clear();
-    gameData.spriteCount = 0;
-
     DrawDebug();
     // check what objects are in view of the camera and draw them
     Vector3Int8 camPosChunk = Utils_WorldToChunk(Window_GetCamera()->target, TEXTURE_SIZE * TEXTURE_SCALE, CHUNK_SIZE);
@@ -865,15 +921,15 @@ void MainMode_Update()
             {
                 case Type::TILE:
                 {
-                    Sprite* sprite = &gameData.sprites[gameData.spriteCount++];
-                    Sprite_Initialize(sprite);
-                    sprite->currentTexture = Texture_GetTextureById(visibleChunks[i]->objects[j].textureId);
-                    sprite->position =
+                    Sprite sprite;
+                    Sprite_Initialize(&sprite);
+                    sprite.currentTexture = Texture_GetTextureById(visibleChunks[i]->objects[j].textureId);
+                    sprite.position =
                         Utils_GridToWorld(visibleChunks[i]->objects[j].position, TEXTURE_SIZE * TEXTURE_SCALE);
-                    sprite->scale     = TEXTURE_SCALE;
-                    sprite->isVisible = true;
-                    sprite->zOrder    = visibleChunks[i]->objects[j].layer;
-                    Sprite_Add(sprite);
+                    sprite.scale     = TEXTURE_SCALE;
+                    sprite.isVisible = true;
+                    sprite.zOrder    = visibleChunks[i]->objects[j].layer;
+                    Sprite_Add(&sprite);
                 }
                 break;
                 case Type::ENTITY:
@@ -882,6 +938,7 @@ void MainMode_Update()
                     if (obj->entity.entityType == EntityType::PLAYER)
                     {
                         UpdatePlayer(obj);
+                        gameData.playerObject = obj;
                     }
                     else if (obj->entity.entityType == EntityType::ENEMY)
                     {
@@ -910,6 +967,9 @@ void MainMode_Update()
             }
         }
     }
+    gameData.cameraEntity.position = Window_GetCamera()->target;
+    gameData.cameraEntity.scale    = 1.0f / Window_GetCamera()->zoom;
+    UpdateUI();
 }
 
 void MainMode_OnStop()

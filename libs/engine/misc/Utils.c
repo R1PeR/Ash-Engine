@@ -128,7 +128,7 @@ uint16_t Utils_ManhattanDistance(Vector2Int a, Vector2Int b)
     return Utils_AbsInt16(a.x - b.x) + Utils_AbsInt16(a.y - b.y);
 }
 
-int16_t Utils_GerRandomInRange(int16_t min, int16_t max)
+int16_t Utils_GetRandomInRange(int16_t min, int16_t max)
 {
     return (rand() % (max - min + 1)) + min;
 }

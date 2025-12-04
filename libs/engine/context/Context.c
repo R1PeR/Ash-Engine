@@ -21,6 +21,9 @@ void Context_SetMode(Mode* mode)
         if (screenCount != 0)
         {
             screen[screenCount - 1]->OnPause();
+            EndMode2D();
+            rlImGuiEnd();
+            EndDrawing();
         }
         screen[screenCount] = mode;
         screenCount += 1;
@@ -45,7 +48,7 @@ void Context_SetMode(Mode* mode)
             }
             screen[screenCount - 1]->Update();
             EndMode2D();
-            DrawFPS(10, 10);
+            // DrawFPS(10, 10);
             rlImGuiEnd();
             EndDrawing();
         }

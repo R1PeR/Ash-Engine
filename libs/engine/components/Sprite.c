@@ -2,7 +2,15 @@
 
 Updatable spriteUpdatable = { Sprite_Update };
 uint32_t  sSpriteCount    = 0;
+uint32_t  sSpriteMaxCount = 0;
 Sprite*   sSpriteList     = NULL;
+
+void Sprite_SetPool(Sprite* pool, size_t poolSize)
+{
+    sSpriteList  = pool;
+    sSpriteMaxCount = (uint32_t)poolSize;
+    sSpriteCount = 0;
+}
 
 void Sprite_Initialize(Sprite* spr)
 {
@@ -14,28 +22,17 @@ void Sprite_Initialize(Sprite* spr)
     spr->rotation       = 0;
     spr->scale          = 1.0f;
     spr->zOrder         = 0;
-    spr->next           = NULL;
     spr->tint           = WHITE;
     spr->parent         = NULL;
 }
 
 bool Sprite_Add(Sprite* spr)
 {
-    if (sSpriteCount == 0)
+    if(sSpriteCount >= sSpriteMaxCount)
     {
-        sSpriteList       = spr;
-        sSpriteList->next = NULL;
+        return false;
     }
-    else
-    {
-        Sprite* current = sSpriteList;
-        while (current->next != NULL)
-        {
-            current = current->next;
-        }
-        current->next = spr;
-        spr->next     = NULL;
-    }
+    sSpriteList[sSpriteCount] = *spr;
     sSpriteCount++;
     return true;
 }
@@ -43,7 +40,6 @@ bool Sprite_Add(Sprite* spr)
 bool Sprite_Clear()
 {
     sSpriteCount = 0;
-    sSpriteList  = NULL;
     return true;
 }
 
@@ -60,11 +56,9 @@ void Sprite_Update()
     // {
     //     qsort(sSprites, sSpriteCount, sizeof(Sprite), Sprite_CompareFunction);
     // }
-    Sprite* current = sSpriteList;
-    while (current != NULL)
+    for (uint32_t i = 0; i < sSpriteCount; i++)
     {
-        Sprite_Draw(current);
-        current = current->next;
+        Sprite_Draw(&sSpriteList[i]);
     }
 }
 

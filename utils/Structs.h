@@ -121,8 +121,10 @@ struct GameData
     Sprite   sprites[SPRITE_MAX_COUNT];
     Chunk    chunks[CHUNK_SIZE * CHUNK_SIZE];
     uint16_t chunkCount;
-    uint16_t spriteCount;
+    // uint16_t spriteCount;
     int      currentZPos;
+    Entity2D cameraEntity;
+    Object*  playerObject;
 };
 
 struct Objects
