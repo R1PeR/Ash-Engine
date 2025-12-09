@@ -1,9 +1,10 @@
 #include "MainMode.h"
+
 #include "EndGameMode.h"
-#include "engine/context/Context.h"
 #include "engine/components/Audio.h"
 #include "engine/components/Sprite.h"
 #include "engine/components/Texture.h"
+#include "engine/context/Context.h"
 #include "engine/io/Input.h"
 #include "engine/io/Window.h"
 #include "engine/misc/AStar.h"
@@ -595,7 +596,7 @@ Vector2Int8 GetMoveTowardsPosition(Vector2Int source, Vector2Int target)
 
 void UpdatePlayer(Object* obj)
 {
-    if(obj->entity.entityHealth <= 0)
+    if (obj->entity.entityHealth <= 0)
     {
         Mode endGameMode = MODE_FROM_CLASSNAME(EndGameMode);
         Context_SetMode(&endGameMode);
@@ -647,12 +648,12 @@ void UpdateEnemy(Object* obj)
     {
         case EntityState::PATROLLING:
         {
-            Object * target = NULL;
+            Object* target = NULL;
             GetClosestEntityInRange(obj, obj->entity.entityChaseRadius, &target);
             if (target != NULL && target->entity.entityHealth > 0)
             {
                 obj->entity.entityTarget = target;
-                obj->entity.entityState = EntityState::CHASING;
+                obj->entity.entityState  = EntityState::CHASING;
                 break;
             }
             if (!Stopwatch_IsZero(&obj->entity.entityMovementTimer))
@@ -843,9 +844,10 @@ void UpdateUI()
     Text text;
     text.position   = (Vector2Float){ -540.0f, -340.0f };
     text.buffer     = buffer;
-    text.bounds     = (Rectangle){ 0.0f, 0.0f, 100.0f, 30.0f };
     text.bufferSize = strlen(buffer);
     text.scale      = 2.0f;
+    text.bounds =
+        (Rectangle){ text.position.x, text.position.y, text.scale * 8.0f * text.bufferSize, text.scale * 8.0f };
     if (UI_Text(&text, "Anikki_square_8x8"))
     {
         LOG_INF("Text clicked!");
@@ -858,13 +860,25 @@ void UpdateUI()
     snprintf(buffer, sizeof(buffer), "Player health: %d", gameData.playerObject->entity.entityHealth);
     text.position   = (Vector2Float){ -540.0f, -240.0f };
     text.buffer     = buffer;
-    text.bounds     = (Rectangle){ 0.0f, 0.0f, 100.0f, 30.0f };
     text.bufferSize = strlen(buffer);
     text.scale      = 1.0f;
+    text.bounds =
+        (Rectangle){ text.position.x, text.position.y, text.scale * 8.0f * text.bufferSize, text.scale * 8.0f };
     if (UI_Text(&text, "Anikki_square_8x8"))
     {
         LOG_INF("Text clicked!");
     }
+
+    ProgressBar progressbar;
+    progressbar.backgroundTexture = NULL;
+    progressbar.progressTexture = Texture_GetTextureByName("Anikki_square_8x8_23");
+    progressbar.position       = (Vector2Float){ -550.0f, -200.0f };
+    progressbar.bounds         = (Rectangle){ 0.0f, 0.0f, 200.0f, 20.0f };
+    progressbar.scale          = 4.0f;
+    progressbar.minValue      = 0.0f;
+    progressbar.maxValue      = 100.0f;
+    progressbar.currentValue  = (float)gameData.playerObject->entity.entityHealth;
+    UI_ProgressBar(&progressbar);
 }
 
 void MainMode_OnStart()

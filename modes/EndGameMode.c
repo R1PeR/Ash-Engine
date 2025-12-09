@@ -1,6 +1,5 @@
 #include "EndGameMode.h"
 
-#include "EndGameMode.h"
 #include "engine/components/Audio.h"
 #include "engine/components/Sprite.h"
 #include "engine/components/Texture.h"
@@ -10,12 +9,12 @@
 #include "raylib.h"
 #include "utils/UI.h"
 
-#include <string.h>
 #include <stdio.h>
+#include <string.h>
 
-Mode endGameMode = MODE_FROM_CLASSNAME(EndGameMode);
+Mode     endGameMode = MODE_FROM_CLASSNAME(EndGameMode);
 Entity2D cameraEntity;
-Sprite sprites[32];
+Sprite   sprites[32];
 
 void EndGameMode_OnStart()
 {
@@ -39,20 +38,22 @@ void EndGameMode_Update()
     Text text;
     text.position   = (Vector2Float){ -540.0f, -340.0f };
     text.buffer     = buffer;
-    text.bounds     = (Rectangle){ 0.0f, 0.0f, 100.0f, 30.0f };
     text.bufferSize = strlen(buffer);
     text.scale      = 2.0f;
+    text.bounds =
+        (Rectangle){ text.position.x, text.position.y, text.scale * 8.0f * text.bufferSize, text.scale * 8.0f };
     if (UI_Text(&text, "Anikki_square_8x8"))
     {
         LOG_INF("Text clicked!");
     }
 
     snprintf(buffer, sizeof(buffer), "GameOver");
-    text.position   = (Vector2Float){ -0.0f, -0.0f };
     text.buffer     = buffer;
-    text.bounds     = (Rectangle){ 0.0f, 0.0f, 100.0f, 30.0f };
     text.bufferSize = strlen(buffer);
     text.scale      = 4.0f;
+    text.position   = (Vector2Float){ -(text.scale * 8.0f * text.bufferSize / 2.0f), -(text.scale * 8.0f / 2.0f) };
+    text.bounds =
+        (Rectangle){ text.position.x, text.position.y, text.scale * 8.0f * text.bufferSize, text.scale * 8.0f };
     if (UI_Text(&text, "Anikki_square_8x8"))
     {
         LOG_INF("Text clicked!");
@@ -61,7 +62,6 @@ void EndGameMode_Update()
 
 void EndGameMode_OnStop()
 {
-
 }
 
 void EndGameMode_OnResume()

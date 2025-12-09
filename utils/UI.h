@@ -1,7 +1,6 @@
 #ifndef LIBS_UTILS_UI_H
 #define LIBS_UTILS_UI_H
-#include "libs/engine/components/Sprite.h"
-#include "libs/engine/components/Texture.h"
+#include "engine/components/Entity2D.h"
 #include "libs/engine/misc/Utils.h"
 
 #include <cstdint>
@@ -33,15 +32,14 @@ struct TextButton
     Rectangle    bounds;
     float        scale;
     bool         isPressed;
-    char*        buffer;
-    size_t       bufferSize;
+    Text         text;
 };
 
 struct SliderFloat
 {
     Vector2Float position;
     Texture2D*   backgroundSprite;
-    Texture2D*   sliderSprite;
+    Texture2D*   sliderTexture;
     Rectangle    bounds;
     float        scale;
     float        minValue;
@@ -53,8 +51,8 @@ struct SliderFloat
 struct SliderInt
 {
     Vector2Float position;
-    Texture2D*   background;
-    Texture2D*   slider;
+    Texture2D*   backgroundTexture;
+    Texture2D*   sliderTexture;
     Rectangle    bounds;
     float        scale;
     int32_t      minValue;
@@ -66,8 +64,8 @@ struct SliderInt
 struct ProgressBar
 {
     Vector2Float position;
-    Texture2D*   background;
-    Texture2D*   slider;
+    Texture2D*   backgroundTexture;
+    Texture2D*   progressTexture;
     Rectangle    bounds;
     float        scale;
     float        minValue;
@@ -78,7 +76,6 @@ struct ProgressBar
 struct Checkbox
 {
     Vector2Float position;
-    Sprite       sprite;
     Texture2D*   onTexture;
     Texture2D*   offTexture;
     Rectangle    bounds;
@@ -89,8 +86,8 @@ struct Checkbox
 struct ItemSlot
 {
     Vector2Float position;
-    Texture2D*   backgroundSprite;
-    Texture2D*   itemSprite;
+    Texture2D*   backgroundTexture;
+    Texture2D*   itemTexture;
     Rectangle    bounds;
     float        scale;
 };

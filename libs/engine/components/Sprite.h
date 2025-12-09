@@ -13,11 +13,15 @@ typedef struct Sprite
     Vector2    position;
     float      scale;
     float      rotation;
-    uint8_t    id;
     Texture2D* currentTexture;
     uint8_t    zOrder;
     bool       isVisible;
     Color      tint;
+
+    bool       extendedDraw;
+    Rectangle  portionRect;
+    // Rectangle  destRect;
+    // Vector2    origin;
     // Sprite*    next;
 } Sprite;
 
