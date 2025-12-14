@@ -56,10 +56,6 @@ int Sprite_CompareFunction(const void* a, const void* b)
 
 void Sprite_Update()
 {
-    // for(uint32_t i = 0; i < sSpriteCount; i++)
-    // {
-    //     qsort(sSprites, sSpriteCount, sizeof(Sprite), Sprite_CompareFunction);
-    // }
     for (uint32_t i = 0; i < sSpriteCount; i++)
     {
         Sprite_Draw(&sSpriteList[i]);

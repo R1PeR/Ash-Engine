@@ -4,6 +4,7 @@
 #include "engine/misc/Stopwatch.h"
 #include "engine/misc/Utils.h"
 
+#include <cstdint>
 #include <stdint.h>
 
 #define MAX_LAYERS        8
@@ -12,6 +13,8 @@
 #define TEXTURE_SCALE     4
 #define TEXTURE_SIZE      8
 #define SPRITE_MAX_COUNT  256
+#define MAX_OBJECT_COUNT  4096
+#define ENTITY_MAX_ITEMS  8
 
 enum Type : uint8_t
 {
@@ -22,11 +25,13 @@ enum Type : uint8_t
     INTERACTIVE,
     ITEM,
 };
+
 enum EntityType : uint8_t
 {
     PLAYER = 0,
     ENEMY,
 };
+
 enum InteractiveType : uint8_t
 {
     CHEST = 0,
@@ -51,6 +56,7 @@ struct Object
     uint32_t   textureId;
     bool       isCollidable;
     Vector3Int position;  // global world position
+    Chunk*     parentChunk;
     union
     {
         struct
@@ -68,7 +74,7 @@ struct Object
             uint16_t entityDexterity;
             uint16_t entityVitality;
             uint16_t entityEnergy;
-            uint16_t entityItems[8];
+            Object*  entityItems[8];
             uint16_t entityRange;
 
             EntityState entityState;
@@ -112,31 +118,23 @@ struct Object
 struct Chunk
 {
     Vector3Int8 chunkPosition;
-    Object      objects[CHUNK_MAX_OBJECTS];
+    Object*     objects[CHUNK_MAX_OBJECTS];
     uint16_t    objectCount;
 };
 
 struct GameData
 {
     Sprite   sprites[SPRITE_MAX_COUNT];
+    Object   objects[MAX_OBJECT_COUNT];
+    uint16_t objectCount;
     Chunk    chunks[CHUNK_SIZE * CHUNK_SIZE];
     uint16_t chunkCount;
     // uint16_t spriteCount;
     int      currentZPos;
     Entity2D cameraEntity;
     Object*  playerObject;
-};
-
-struct Objects
-{
-    Object   objects[MAX_LAYERS];
-    uint16_t count;
-};
-
-struct Chunks
-{
-    Chunk    chunks[CHUNK_SIZE * CHUNK_SIZE];
-    uint16_t count;
+    Object*  draggedObject;
+    bool     isDraggingObject;
 };
 
 struct DebugData

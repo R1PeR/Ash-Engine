@@ -26,6 +26,184 @@ Mode mainMode = MODE_FROM_CLASSNAME(MainMode);
 GameData  gameData;
 DebugData debugData;
 
+uint8_t GetObjectsAtPosition(Vector3Int pos, Object** outObjs)
+{
+    Vector3Int8 chunkPos;
+    chunkPos = Utils_GridToChunk(pos, CHUNK_SIZE);
+
+    uint8_t count = 0;
+    for (uint16_t i = 0; i < gameData.chunkCount; i++)
+    {
+        Chunk* chunk = &gameData.chunks[i];
+        if (chunk->chunkPosition.x == chunkPos.x && chunk->chunkPosition.y == chunkPos.y)
+        {
+            for (uint16_t j = 0; j < chunk->objectCount; j++)
+            {
+                Object* obj = chunk->objects[j];
+                if (obj->position.x == pos.x && obj->position.y == pos.y)
+                {
+                    if (count < MAX_LAYERS)
+                    {
+                        outObjs[count++] = obj;
+                    }
+                    else
+                    {
+                        LOG_ERR("Max layers reached at position (%d, %d) in chunk (%d, %d)", pos.x, pos.y, chunkPos.x,
+                                chunkPos.y);
+                    }
+                }
+            }
+        }
+    }
+    return count;
+}
+
+bool GetClosestEntityInRange(Object* sourceObj, uint8_t range, Object** outObj)
+{
+    Vector2 sourceWorldPos = Utils_GridCenterToWorld(sourceObj->position, TEXTURE_SIZE * TEXTURE_SCALE);
+    float   closestDist    = float(range * TEXTURE_SIZE * TEXTURE_SCALE);
+    Object* closestObj     = NULL;
+    for (uint16_t i = 0; i < gameData.chunkCount; i++)
+    {
+        Chunk* chunk = &gameData.chunks[i];
+        for (uint16_t j = 0; j < chunk->objectCount; j++)
+        {
+            Object* obj = chunk->objects[j];
+            if (obj->type == Type::ENTITY && obj->id != sourceObj->id)
+            {
+                Vector2 targetWorldPos = Utils_GridCenterToWorld(obj->position, TEXTURE_SIZE * TEXTURE_SCALE);
+                float   dist           = Utils_Vector2Distance(sourceWorldPos, targetWorldPos);
+                if (dist < closestDist)
+                {
+                    closestDist = dist;
+                    closestObj  = obj;
+                }
+            }
+        }
+    }
+    if (closestObj != NULL)
+    {
+        *outObj = closestObj;
+        return true;
+    }
+    return false;
+}
+
+
+bool CheckCollision(Vector3Int pos)
+{
+    // Objects objsAtPos = GetObjectsAtPosition(pos);
+    Object* objects[MAX_LAYERS];
+    uint8_t objCount = GetObjectsAtPosition(pos, objects);
+    for (uint16_t i = 0; i < objCount; i++)
+    {
+        if (objects[i]->isCollidable)
+        {
+            // Collision detected
+            // LOG_INF("Collision detected at (%d, %d, %d) with object id %d", pos.x, pos.y, pos.z,
+            //         objsAtPos.objects[i].id);
+            return true;
+        }
+    }
+    return false;
+    // No collision
+}
+
+bool CheckCollision(Vector3Int pos, Object* outObj)
+{
+    // Objects objsAtPos = GetObjectsAtPosition(pos);
+    Object* objects[MAX_LAYERS];
+    uint8_t objCount = GetObjectsAtPosition(pos, objects);
+    for (uint16_t i = 0; i < objCount; i++)
+    {
+        if (objects[i]->isCollidable)
+        {
+            // Collision detected
+            // LOG_INF("Collision detected at (%d, %d, %d) with object id %d", pos.x, pos.y, pos.z,
+            //         objsAtPos.objects[i].id);
+            *outObj = *objects[i];
+            return true;
+        }
+    }
+    return false;
+    // No collision
+}
+
+bool MoveCost(Vector2Int startPos, Vector2Int targetPos, uint16_t& outCost)
+{
+    outCost = Utils_ManhattanDistance(startPos, targetPos);
+    if (!CheckCollision({ startPos.x, startPos.y, 0 }))
+    {
+        return true;
+    }
+    return false;
+}
+
+Vector2Int8 GetMoveTowardsPosition(Vector2Int source, Vector2Int target)
+{
+    Vector2Int8 direction = AStar_GetMoveDirection(source, target, 256, MoveCost);
+    return direction;
+}
+
+void RemoveFromChunk(Object* obj)
+{
+    if (obj->parentChunk == NULL)
+    {
+        LOG_WRN("Object id %d has no parent chunk!", obj->id);
+        return;
+    }
+    for (uint16_t j = 0; j < obj->parentChunk->objectCount; j++)
+    {
+        if (obj->parentChunk->objects[j] == obj)
+        {
+            // Remove from old chunk
+            obj->parentChunk->objects[j] = obj->parentChunk->objects[obj->parentChunk->objectCount - 1];
+            obj->parentChunk->objectCount--;
+            LOG_INF("Removed object id %d from chunk (%d, %d)", obj->id, obj->parentChunk->chunkPosition.x,
+                    obj->parentChunk->chunkPosition.y);
+            obj->parentChunk = NULL;
+            return;
+        }
+    }
+}
+
+void AddToChunk(Object* obj)
+{
+    Vector3Int8 toChunkPos = Utils_GridToChunk(obj->position, CHUNK_SIZE);
+    for (uint16_t i = 0; i < gameData.chunkCount; i++)
+    {
+        if (gameData.chunks[i].chunkPosition.x == toChunkPos.x && gameData.chunks[i].chunkPosition.y == toChunkPos.y)
+        {
+            // Add to new chunk
+            if (gameData.chunks[i].objectCount < CHUNK_MAX_OBJECTS)
+            {
+                obj->parentChunk                                             = &gameData.chunks[i];
+                gameData.chunks[i].objects[gameData.chunks[i].objectCount++] = obj;
+                LOG_INF("Added object id %d to chunk (%d, %d)", obj->id, toChunkPos.x, toChunkPos.y);
+            }
+            else
+            {
+                LOG_ERR("Max object count reached in chunk (%d, %d)!", toChunkPos.x, toChunkPos.y);
+            }
+            return;
+        }
+    }
+    // Chunk not found, create new chunk
+    if (gameData.chunkCount < (CHUNK_SIZE * CHUNK_SIZE))
+    {
+        Chunk* chunk                         = &gameData.chunks[gameData.chunkCount++];
+        chunk->chunkPosition                 = toChunkPos;
+        chunk->objectCount                   = 0;
+        chunk->objects[chunk->objectCount++] = obj;
+        obj->parentChunk                     = chunk;
+        LOG_INF("Created new chunk (%d, %d) and added object id %d", toChunkPos.x, toChunkPos.y, obj->id);
+    }
+    else
+    {
+        LOG_ERR("Max chunk count reached!");
+    }
+}
+
 void SaveChunksToFile(Chunk* chunks, uint16_t chunkCount)
 {
     if (chunkCount == 0)
@@ -76,133 +254,48 @@ uint16_t LoadChunksFromFile(Chunk* chunks)
     return count;
 }
 
-uint16_t LoadWorldMap(char* worldMap, size_t rows, size_t cols, Chunk* chunks)
+void LoadWorldMap(char* worldMap, size_t rows, size_t cols, Chunk* chunks)
 {
-    uint16_t count  = 0;
     uint16_t lastId = 0;
     for (size_t i = 0; i < rows; i++)
     {
         for (size_t j = 0; j < cols; j++)
         {
-            char        tile     = worldMap[i * cols + j];
-            Vector3Int  pos      = { (int)j, (int)i, 0 };
-            Chunk*      chunk    = NULL;
-            Vector3Int8 chunkPos = Utils_GridToChunk(pos, CHUNK_SIZE);
-            // Find or create chunk
-            for (uint16_t k = 0; k < gameData.chunkCount; k++)
-            {
-                if (gameData.chunks[k].chunkPosition.x == chunkPos.x
-                    && gameData.chunks[k].chunkPosition.y == chunkPos.y)
-                {
-                    chunk = &gameData.chunks[k];
-                    break;
-                }
-            }
-            if (chunk == NULL)
-            {
-                chunk                = &gameData.chunks[gameData.chunkCount++];
-                chunk->chunkPosition = chunkPos;
-                chunk->objectCount   = 0;
-                count++;
-            }
+            char       tile = worldMap[i * cols + j];
+            Vector3Int pos  = { (int)j, (int)i, 0 };
             // Create object based on tile type
-            Object obj;
+            Object* obj = &gameData.objects[gameData.objectCount++];
             switch (tile)
             {
                 case '0':
-                    obj                                  = emptyTilePrefab;
-                    obj.position                         = pos;
-                    obj.id                               = lastId++;
-                    chunk->objects[chunk->objectCount++] = obj;
+                    *obj = emptyTilePrefab;
                     break;
                 case '1':
-                    obj                                  = wallTilePrefab;
-                    obj.position                         = pos;
-                    obj.id                               = lastId++;
-                    chunk->objects[chunk->objectCount++] = obj;
+                    *obj = wallTilePrefab;
                     break;
                 case 'p':
-                    obj                                  = playerPrefab;
-                    obj.position                         = pos;
-                    obj.id                               = lastId++;
-                    chunk->objects[chunk->objectCount++] = obj;
+                    *obj = playerPrefab;
+                    for (size_t k = 0; k < ENTITY_MAX_ITEMS; k++)
+                    {
+                        obj->entity.entityItems[k] = NULL;
+                    }
+                    gameData.playerObject = obj;
                     break;
                 case 'r':
-                    obj                                  = enemyRatPrefab;
-                    obj.position                         = pos;
-                    obj.id                               = lastId++;
-                    obj.entity.entityOriginalPosition    = { pos.x, pos.y };
-                    chunk->objects[chunk->objectCount++] = obj;
+                    *obj = enemyRatPrefab;
+                    break;
+                case 'i':
+                    *obj = itemSwordPrefab;
                     break;
                 default:
                     break;
             }
+            obj->position                      = pos;
+            obj->id                            = lastId++;
+            obj->entity.entityOriginalPosition = { pos.x, pos.y };
+            AddToChunk(obj);
         }
     }
-    return count;
-}
-Objects GetObjectsAtPosition(Vector3Int pos)
-{
-    Vector3Int8 chunkPos;
-    chunkPos = Utils_GridToChunk(pos, CHUNK_SIZE);
-
-    Objects objs;
-    objs.count = 0;
-    for (uint16_t i = 0; i < gameData.chunkCount; i++)
-    {
-        Chunk* chunk = &gameData.chunks[i];
-        if (chunk->chunkPosition.x == chunkPos.x && chunk->chunkPosition.y == chunkPos.y)
-        {
-            for (uint16_t j = 0; j < chunk->objectCount; j++)
-            {
-                Object* obj = &chunk->objects[j];
-                if (obj->position.x == pos.x && obj->position.y == pos.y)
-                {
-                    if (objs.count < MAX_LAYERS)
-                    {
-                        objs.objects[objs.count++] = *obj;
-                    }
-                    else
-                    {
-                        LOG_ERR("Max layers reached at position (%d, %d) in chunk (%d, %d)", pos.x, pos.y, chunkPos.x,
-                                chunkPos.y);
-                    }
-                }
-            }
-        }
-    }
-    return objs;
-}
-
-bool GetClosestEntityInRange(Object* sourceObj, uint8_t range, Object** outObj)
-{
-    Vector2 sourceWorldPos = Utils_GridCenterToWorld(sourceObj->position, TEXTURE_SIZE * TEXTURE_SCALE);
-    float   closestDist    = float(range * TEXTURE_SIZE * TEXTURE_SCALE);
-    Object* closestObj     = NULL;
-    for (uint16_t i = 0; i < gameData.chunkCount; i++)
-    {
-        Chunk* chunk = &gameData.chunks[i];
-        for (uint16_t j = 0; j < chunk->objectCount; j++)
-        {
-            Object* obj = &chunk->objects[j];
-            if (obj->type == Type::ENTITY && obj->id != sourceObj->id)
-            {
-                Vector2 targetWorldPos = Utils_GridCenterToWorld(obj->position, TEXTURE_SIZE * TEXTURE_SCALE);
-                float   dist           = Utils_Vector2Distance(sourceWorldPos, targetWorldPos);
-                if (dist < closestDist)
-                {
-                    closestDist = dist;
-                    closestObj  = obj;
-                }
-            }
-        }
-    }
-    if (closestObj != NULL)
-    {
-        *outObj = closestObj;
-        return true;
-    }
-    return false;
 }
 
 void DrawDebug()
@@ -280,13 +373,15 @@ void DrawDebug()
         {
             // Check if object exists at position
             // If so, delete it
-            Objects objsAtPos = GetObjectsAtPosition(gridPos);
-            int     topLayer  = 0;
-            for (uint16_t i = 0; i < objsAtPos.count; i++)
+            Object* objects[MAX_LAYERS];
+            uint8_t objCount = GetObjectsAtPosition(gridPos, objects);
+            // Objects objsAtPos = GetObjectsAtPosition(gridPos);
+            int topLayer = 0;
+            for (uint16_t i = 0; i < objCount; i++)
             {
-                if (objsAtPos.objects[i].layer > topLayer)
+                if (objects[i]->layer > topLayer)
                 {
-                    topLayer = objsAtPos.objects[i].layer;
+                    topLayer = objects[i]->layer;
                 }
             }
             // Find chunk
@@ -305,8 +400,8 @@ void DrawDebug()
                 // Find object in chunk
                 for (uint16_t j = 0; j < chunk->objectCount; j++)
                 {
-                    if (chunk->objects[j].position.x == gridPos.x && chunk->objects[j].position.y == gridPos.y
-                        && chunk->objects[j].layer == topLayer)
+                    if (chunk->objects[j]->position.x == gridPos.x && chunk->objects[j]->position.y == gridPos.y
+                        && chunk->objects[j]->layer == topLayer)
                     {
                         // Delete object by shifting array
                         for (uint16_t k = j; k < chunk->objectCount - 1; k++)
@@ -325,17 +420,19 @@ void DrawDebug()
         {
             LOG_INF("Selecting object at position");
             // Select top object at position
-            Objects objsAtPos = GetObjectsAtPosition(gridPos);
-            int     topLayer  = -1;
-            if (objsAtPos.count != 0)
+            // Objects objsAtPos = GetObjectsAtPosition(gridPos);
+            Object* objects[MAX_LAYERS];
+            uint8_t objCount = GetObjectsAtPosition(gridPos, objects);
+            int     topLayer = -1;
+            if (objCount != 0)
             {
                 LOG_INF("No objects at position");
-                for (uint16_t i = 0; i < objsAtPos.count; i++)
+                for (uint16_t i = 0; i < objCount; i++)
                 {
-                    if (objsAtPos.objects[i].layer > topLayer)
+                    if (objects[i]->layer > topLayer)
                     {
-                        topLayer                    = objsAtPos.objects[i].layer;
-                        debugData.currentObject     = objsAtPos.objects[i];
+                        topLayer                    = objects[i]->layer;
+                        debugData.currentObject     = *objects[i];
                         debugData.selectedTextureId = Texture_GetTextureById(debugData.currentObject.textureId);
                     }
                 }
@@ -354,9 +451,9 @@ void DrawDebug()
                 Chunk* chunk = &gameData.chunks[i];
                 for (uint16_t j = 0; j < chunk->objectCount; j++)
                 {
-                    if (chunk->objects[j].id > maxId)
+                    if (chunk->objects[j]->id > maxId)
                     {
-                        maxId = chunk->objects[j].id;
+                        maxId = chunk->objects[j]->id;
                     }
                 }
             }
@@ -365,53 +462,20 @@ void DrawDebug()
             // Check if object already exists at position
             // If so, replace it
             // Else, add it
-            Objects objsAtPos = GetObjectsAtPosition(gridPos);
-            for (uint16_t i = 0; i < objsAtPos.count; i++)
+            // Objects objsAtPos = GetObjectsAtPosition(gridPos);
+            Object* objects[MAX_LAYERS];
+            uint8_t objCount = GetObjectsAtPosition(gridPos, objects);
+            for (uint16_t i = 0; i < objCount; i++)
             {
-                if (objsAtPos.objects[i].layer == debugData.currentObject.layer)
+                if (objects[i]->layer == debugData.currentObject.layer)
                 {
-                    objsAtPos.objects[i] = debugData.currentObject;
+                    objects[i] = &debugData.currentObject;
                     LOG_INF("Replacing object at layer %d", debugData.currentObject.layer);
                     return;
                 }
             }
-            // Add object to chunk
-            LOG_INF("Grid Pos: (%d, %d), ChunkPos: (%d, %d)", gridPos.x, gridPos.y, chunkPos.x, chunkPos.y);
-            Chunk* chunk = NULL;
-            for (uint16_t i = 0; i < gameData.chunkCount; i++)
-            {
-                if (gameData.chunks[i].chunkPosition.x == chunkPos.x
-                    && gameData.chunks[i].chunkPosition.y == chunkPos.y)
-                {
-                    chunk = &gameData.chunks[i];
-                    break;
-                }
-            }
-
-            if (chunk == NULL)
-            {
-                if (gameData.chunkCount < (CHUNK_SIZE * CHUNK_SIZE))
-                {
-                    chunk                = &gameData.chunks[gameData.chunkCount++];
-                    chunk->chunkPosition = chunkPos;
-                    chunk->objectCount   = 0;
-                }
-                else
-                {
-                    LOG_ERR("Max chunk count reached!");
-                    return;
-                }
-            }
-            if (chunk->objectCount < CHUNK_MAX_OBJECTS)
-            {
-                chunk->objects[chunk->objectCount++] = debugData.currentObject;
-                LOG_INF("Placing object at chunk (%d, %d) pos (%d, %d)", chunkPos.x, chunkPos.y,
-                        debugData.currentObject.position.x, debugData.currentObject.position.y);
-            }
-            else
-            {
-                LOG_ERR("Max object count reached in chunk!");
-            }
+            gameData.objects[gameData.objectCount++] = debugData.currentObject;
+            AddToChunk(&gameData.objects[gameData.objectCount - 1]);
         }
 
         if (Input_IsKeyPressed(INPUT_KEYCODE_UP) && ImGui::GetIO().WantCaptureKeyboard == false)
@@ -437,7 +501,7 @@ void DrawDebug()
             return;
         }
 
-        const char* prefabs[] = { "EMPTY_TILE", "WALL_TILE", "PLAYER", "ENEMY_RAT" };
+        const char* prefabs[] = { "EMPTY_TILE", "WALL_TILE", "PLAYER", "ENEMY_RAT", "SWORD_ITEM" };
         ImGui::ListBox("Prefab", &debugData.currentPrefab, prefabs, IM_ARRAYSIZE(prefabs), 5);
         switch (debugData.currentPrefab)
         {
@@ -452,6 +516,9 @@ void DrawDebug()
                 break;
             case 3:
                 debugData.currentObject = enemyRatPrefab;
+                break;
+            case 4:
+                debugData.currentObject = itemSwordPrefab;
                 break;
             default:
                 break;
@@ -470,135 +537,97 @@ void DrawDebug()
 
 
         ImGui::Text("Objects in Memory:");
-        for (uint16_t i = 0; i < gameData.chunkCount; i++)
+        for (uint16_t i = 0; i < gameData.objectCount; i++)
         {
-            Chunk* chunk = &gameData.chunks[i];
-            ImGui::Text("Chunk (%d, %d):", chunk->chunkPosition.x, chunk->chunkPosition.y);
-            for (uint16_t j = 0; j < chunk->objectCount; j++)
+            ImGui::PushID(i);
+            Object* obj = &gameData.objects[i];
+            if (obj->type != Type::ENTITY)
             {
-                if (chunk->objects[j].type != Type::ENTITY)
+                ImGui::PopID();
+                continue;
+            }
+            if (ImGui::TreeNode("Entity"))
+            {
+                ImGui::Text("Object ID: %d", obj->id);
+                ImGui::Text("Type: %d", (int)obj->type);
+                ImGui::Text("Layer: %d", obj->layer);
+                ImGui::Text("Texture ID: %d", obj->textureId);
+                ImGui::Text("Is Collidable: %d", obj->isCollidable);
+                ImGui::Text("Position: (%d, %d, %d)", obj->position.x, obj->position.y, obj->position.z);
+                if (obj->type == Type::ENTITY)
                 {
-                    continue;
-                }
-                ImGui::PushID(j);
-                Object* obj = &chunk->objects[j];
-                if (ImGui::TreeNode("Entity"))
-                {
-                    ImGui::Text("Object ID: %d", obj->id);
-                    ImGui::Text("Type: %d", (int)obj->type);
-                    ImGui::Text("Layer: %d", obj->layer);
-                    ImGui::Text("Texture ID: %d", obj->textureId);
-                    ImGui::Text("Is Collidable: %d", obj->isCollidable);
-                    ImGui::Text("Position: (%d, %d, %d)", obj->position.x, obj->position.y, obj->position.z);
-                    if (obj->type == Type::ENTITY)
+                    ImGui::Text("Entity Type: %d", (int)obj->entity.entityType);
+                    ImGui::Text("Health: %d", obj->entity.entityHealth);
+                    ImGui::Text("Experience: %d", obj->entity.entityExperience);
+                    ImGui::Text("Level: %d", obj->entity.entityLevel);
+                    ImGui::Text("Speed: %d", obj->entity.entitySpeed);
+                    ImGui::Text("Damage: %d", obj->entity.entityDamage);
+                    if (obj->entity.entityType == EntityType::ENEMY)
                     {
-                        ImGui::Text("Entity Type: %d", (int)obj->entity.entityType);
-                        ImGui::Text("Health: %d", obj->entity.entityHealth);
-                        ImGui::Text("Experience: %d", obj->entity.entityExperience);
-                        ImGui::Text("Level: %d", obj->entity.entityLevel);
-                        ImGui::Text("Speed: %d", obj->entity.entitySpeed);
-                        ImGui::Text("Damage: %d", obj->entity.entityDamage);
-                        if (obj->entity.entityType == EntityType::ENEMY)
+                        // ImGui::Text("Entity State: %d", (int)obj->entity.entityState);
+                        switch (obj->entity.entityState)
                         {
-                            // ImGui::Text("Entity State: %d", (int)obj->entity.entityState);
-                            switch (obj->entity.entityState)
-                            {
-                                case EntityState::PATROLLING:
-                                    ImGui::Text("Entity State: PATROLLING");
-                                    break;
-                                case EntityState::CHASING:
-                                    ImGui::Text("Entity State: CHASING");
-                                    break;
-                                case EntityState::GOING_BACK:
-                                    ImGui::Text("Entity State: GOING_BACK");
-                                    break;
-                                default:
-                                    ImGui::Text("Entity State: UNKNOWN");
-                                    break;
-                            }
-                            if (obj->entity.entityState == EntityState::CHASING && obj->entity.entityTarget != NULL)
-                            {
-                                ImGui::Text("Chasing Target ID: %d", obj->entity.entityTarget->id);
-                            }
-                            ImGui::Text("Original Position: (%d, %d)", obj->entity.entityOriginalPosition.x,
-                                        obj->entity.entityOriginalPosition.y);
-                            ImGui::Text("Patrol Radius: %d", obj->entity.entityPatrolRadius);
+                            case EntityState::PATROLLING:
+                                ImGui::Text("Entity State: PATROLLING");
+                                break;
+                            case EntityState::CHASING:
+                                ImGui::Text("Entity State: CHASING");
+                                break;
+                            case EntityState::GOING_BACK:
+                                ImGui::Text("Entity State: GOING_BACK");
+                                break;
+                            default:
+                                ImGui::Text("Entity State: UNKNOWN");
+                                break;
                         }
-                        if (obj->entity.entityType == EntityType::PLAYER)
+                        if (obj->entity.entityState == EntityState::CHASING && obj->entity.entityTarget != NULL)
                         {
-                            ImGui::Text("Items:");
-                            for (uint8_t k = 0; k < 8; k++)
+                            ImGui::Text("Chasing Target ID: %d", obj->entity.entityTarget->id);
+                        }
+                        ImGui::Text("Original Position: (%d, %d)", obj->entity.entityOriginalPosition.x,
+                                    obj->entity.entityOriginalPosition.y);
+                        ImGui::Text("Patrol Radius: %d", obj->entity.entityPatrolRadius);
+                    }
+                    if (obj->entity.entityType == EntityType::PLAYER)
+                    {
+                        ImGui::Text("Items:");
+                        for (uint8_t k = 0; k < ENTITY_MAX_ITEMS; k++)
+                        {
+                            if (obj->entity.entityItems[k] != NULL)
                             {
-                                ImGui::Text("Item %d: %d", k, obj->entity.entityItems[k]);
+                                ImGui::Text("Item %d: %d", k, obj->entity.entityItems[k]->id);
                             }
                         }
                     }
-                    ImGui::TreePop();
                 }
-                ImGui::PopID();
+                ImGui::TreePop();
             }
+            ImGui::PopID();
         }
 
         ImGui::End();
     }
 }
-
-bool CheckCollision(Vector3Int pos)
+void UpdateObjectChunk(Object* obj)
 {
-    Objects objsAtPos = GetObjectsAtPosition(pos);
-    for (uint16_t i = 0; i < objsAtPos.count; i++)
+    if (obj == NULL)
     {
-        if (objsAtPos.objects[i].isCollidable)
-        {
-            // Collision detected
-            // LOG_INF("Collision detected at (%d, %d, %d) with object id %d", pos.x, pos.y, pos.z,
-            //         objsAtPos.objects[i].id);
-            return true;
-        }
+        LOG_ERR("UpdateObjectChunk called with NULL object!");
+        return;
     }
-    return false;
-    // No collision
-}
-
-bool CheckCollision(Vector3Int pos, Object* outObj)
-{
-    Objects objsAtPos = GetObjectsAtPosition(pos);
-    for (uint16_t i = 0; i < objsAtPos.count; i++)
+    Vector3Int8 currentChunkPos = Utils_GridToChunk(obj->position, CHUNK_SIZE);
+    if (obj->parentChunk == NULL || obj->parentChunk->chunkPosition.x != currentChunkPos.x
+        || obj->parentChunk->chunkPosition.y != currentChunkPos.y)
     {
-        if (objsAtPos.objects[i].isCollidable)
-        {
-            // Collision detected
-            // LOG_INF("Collision detected at (%d, %d, %d) with object id %d", pos.x, pos.y, pos.z,
-            //         objsAtPos.objects[i].id);
-            *outObj = objsAtPos.objects[i];
-            return true;
-        }
+        RemoveFromChunk(obj);
+        AddToChunk(obj);
     }
-    return false;
-    // No collision
-}
-
-bool MoveCost(Vector2Int startPos, Vector2Int targetPos, uint16_t& outCost)
-{
-    outCost = Utils_ManhattanDistance(startPos, targetPos);
-    if (!CheckCollision({ startPos.x, startPos.y, 0 }))
-    {
-        return true;
-    }
-    return false;
-}
-
-Vector2Int8 GetMoveTowardsPosition(Vector2Int source, Vector2Int target)
-{
-    Vector2Int8 direction = AStar_GetMoveDirection(source, target, 256, MoveCost);
-    return direction;
 }
 
 void UpdatePlayer(Object* obj)
 {
     if (obj->entity.entityHealth <= 0)
     {
-        Mode endGameMode = MODE_FROM_CLASSNAME(EndGameMode);
         Context_SetMode(&endGameMode);
         Context_FinishMode();
     }
@@ -832,8 +861,14 @@ void UpdateInteractive(Object* obj)
 
 void UpdateItem(Object* obj)
 {
-    // Example: item logic
-    // Items might not have update logic
+    Sprite sprite;
+    Sprite_Initialize(&sprite);
+    sprite.currentTexture = Texture_GetTextureById(obj->textureId);
+    sprite.scale          = TEXTURE_SCALE;
+    sprite.isVisible      = true;
+    sprite.tint           = WHITE;
+    sprite.position       = Utils_GridToWorld(obj->position, TEXTURE_SIZE * TEXTURE_SCALE);
+    Sprite_Add(&sprite);
 }
 
 void UpdateUI()
@@ -850,7 +885,7 @@ void UpdateUI()
         (Rectangle){ text.position.x, text.position.y, text.scale * 8.0f * text.bufferSize, text.scale * 8.0f };
     if (UI_Text(&text, "Anikki_square_8x8"))
     {
-        LOG_INF("Text clicked!");
+        // LOG_INF("Text clicked!");
     }
 
     if (gameData.playerObject == NULL)
@@ -871,14 +906,114 @@ void UpdateUI()
 
     ProgressBar progressbar;
     progressbar.backgroundTexture = NULL;
-    progressbar.progressTexture = Texture_GetTextureByName("Anikki_square_8x8_23");
-    progressbar.position       = (Vector2Float){ -550.0f, -200.0f };
-    progressbar.bounds         = (Rectangle){ 0.0f, 0.0f, 200.0f, 20.0f };
-    progressbar.scale          = 4.0f;
-    progressbar.minValue      = 0.0f;
-    progressbar.maxValue      = 100.0f;
-    progressbar.currentValue  = (float)gameData.playerObject->entity.entityHealth;
+    progressbar.progressTexture   = Texture_GetTextureByName("Anikki_square_8x8_23");
+    progressbar.position          = (Vector2Float){ -550.0f, -200.0f };
+    progressbar.scale             = 4.0f;
+    progressbar.bounds       = (Rectangle){ progressbar.position.x, progressbar.position.y, 8.0f * progressbar.scale,
+                                            8.0f * progressbar.scale };
+    progressbar.minValue     = 0.0f;
+    progressbar.maxValue     = 100.0f;
+    progressbar.currentValue = (float)gameData.playerObject->entity.entityHealth;
     UI_ProgressBar(&progressbar);
+
+    ItemSlot itemSlot;
+    for (uint8_t i = 0; i < ENTITY_MAX_ITEMS; i++)
+    {
+        itemSlot.position = (Vector2Float){ -550.0f + i % 4 * 34.0f, -150.0f + (i / 4 * 34.0f) };//integer division on purpose
+        itemSlot.scale    = 4.0f;
+        itemSlot.bounds =
+            (Rectangle){ itemSlot.position.x, itemSlot.position.y, 8.0f * itemSlot.scale, 8.0f * itemSlot.scale };
+        itemSlot.backgroundTexture = Texture_GetTextureByName("Anikki_square_8x8_211");
+        if (gameData.playerObject->entity.entityItems[i] == NULL)
+        {
+            itemSlot.itemTexture = NULL;
+        }
+        else
+        {
+            itemSlot.itemTexture = Texture_GetTextureById(gameData.playerObject->entity.entityItems[i]->textureId);
+        }
+        if (UI_ItemSlot(&itemSlot))
+        {
+            if (Input_IsMouseButtonPressed(INPUT_MOUSE_BUTTON_LEFT))
+            {
+                LOG_INF("Item slot %d clicked!", i);
+                // if(gameData.playerObject->entity.entityItems[i] != NULL)
+                // {
+                //     gameData.isDraggingObject = true;
+                //     gameData.draggedObject = gameData.playerObject->entity.entityItems[i];
+                // }
+            }
+            if (Input_IsMouseButtonReleased(INPUT_MOUSE_BUTTON_LEFT))
+            {
+                LOG_INF("Item slot %d released!", i);
+                // Pick up item if dragging
+                if (gameData.isDraggingObject && gameData.draggedObject != NULL)
+                {
+                    LOG_INF("Picking up item id %d", gameData.draggedObject->id);
+                    gameData.playerObject->entity.entityItems[i] = gameData.draggedObject;
+                    RemoveFromChunk(gameData.draggedObject);
+                    gameData.isDraggingObject = false;
+                    gameData.draggedObject    = NULL;
+                }
+            }
+        }
+    }
+}
+
+void UpdateDragItems()
+{
+    if (Input_IsMouseButtonPressed(INPUT_MOUSE_BUTTON_LEFT))
+    {
+        // LOG_INF("Mouse button down");
+        Vector2    mousePos = { (float)(Input_GetMouseX()), (float)(Input_GetMouseY()) };
+        Vector2    worldPos = GetScreenToWorld2D(mousePos, *Window_GetCamera());
+        Vector3Int gridPos  = Utils_WorldToGrid(worldPos, TEXTURE_SIZE * TEXTURE_SCALE);
+        Object*    objects[MAX_LAYERS];
+        uint8_t    objCount = GetObjectsAtPosition(gridPos, objects);
+        if (objCount > 0)
+        {
+            for (uint16_t i = objCount; i > 0; i--)
+            {
+                if (objects[i - 1]->type != Type::ITEM)
+                {
+                    continue;  // Skip items
+                }
+                Vector2Int playerPos = { gameData.playerObject->position.x, gameData.playerObject->position.y };
+                Vector2Int objectPos = { objects[i - 1]->position.x, objects[i - 1]->position.y };
+                if (Utils_ManhattanDistance(playerPos, objectPos) > 5)
+                {
+                    continue;  // Too far away
+                }
+                gameData.draggedObject    = objects[i - 1];  // Drag the topmost object
+                gameData.isDraggingObject = true;
+                LOG_INF("Dragging object id %d", gameData.draggedObject->id);
+                break;
+            }
+        }
+    }
+    if (Input_IsMouseButtonReleased(INPUT_MOUSE_BUTTON_LEFT))
+    {
+        // LOG_INF("Mouse button released");
+        if (gameData.isDraggingObject)
+        {
+            Vector2Int playerPos = { gameData.playerObject->position.x, gameData.playerObject->position.y };
+            Vector2Int objectPos = { gameData.draggedObject->position.x, gameData.draggedObject->position.y };
+            if (Utils_ManhattanDistance(playerPos, objectPos) > 5)
+            {
+                LOG_INF("Cannot drop object id %d, too far from player", gameData.draggedObject->id);
+                gameData.isDraggingObject = false;
+                gameData.draggedObject    = NULL;
+                return;  // Too far away
+            }
+            LOG_INF("Dropping dragged object id %d", gameData.draggedObject->id);
+            Vector2    mousePos              = { (float)(Input_GetMouseX()), (float)(Input_GetMouseY()) };
+            Vector2    worldPos              = GetScreenToWorld2D(mousePos, *Window_GetCamera());
+            Vector3Int gridPos               = Utils_WorldToGrid(worldPos, TEXTURE_SIZE * TEXTURE_SCALE);
+            gameData.draggedObject->position = gridPos;
+            gameData.isDraggingObject        = false;
+            gameData.draggedObject           = NULL;
+        }
+    }
 }
 
 void MainMode_OnStart()
@@ -887,18 +1022,14 @@ void MainMode_OnStart()
     Texture_LoadTextureSheet("resources/sprites/Anikki_square_8x8.png", 8, 8, 256);
 
     Window_GetCamera()->target = (Vector2){ 0.0f, 0.0f };
-    gameData.chunkCount        = LoadWorldMap((char*)worldMap, WORLD_MAP_SIZE, WORLD_MAP_SIZE, gameData.chunks);
-    for (uint16_t i = 0; i < gameData.chunkCount; i++)
+    LoadWorldMap((char*)worldMap, WORLD_MAP_SIZE, WORLD_MAP_SIZE, gameData.chunks);
+    for (uint16_t i = 0; i < gameData.objectCount; i++)
     {
-        Chunk* chunk = &gameData.chunks[i];
-        for (uint16_t j = 0; j < chunk->objectCount; j++)
+        Object* obj = &gameData.objects[i];
+        if (obj->type == Type::ENTITY)
         {
-            Object* obj = &chunk->objects[j];
-            if (obj->type == Type::ENTITY)
-            {
-                Stopwatch_Stop(&obj->entity.entityMovementTimer);
-                Stopwatch_Stop(&obj->entity.entityAttackTimer);
-            }
+            Stopwatch_Stop(&obj->entity.entityMovementTimer);
+            Stopwatch_Stop(&obj->entity.entityAttackTimer);
         }
     }
     Sprite_SetPool(gameData.sprites, SPRITE_MAX_COUNT);
@@ -913,8 +1044,9 @@ void MainMode_Update()
     Sprite_Clear();
     DrawDebug();
     // check what objects are in view of the camera and draw them
-    Vector3Int8 camPosChunk = Utils_WorldToChunk(Window_GetCamera()->target, TEXTURE_SIZE * TEXTURE_SCALE, CHUNK_SIZE);
-    camPosChunk.z           = gameData.currentZPos;
+    Vector3Int8 camPosChunk =
+        Utils_WorldToChunk(gameData.cameraEntity.position, TEXTURE_SIZE * TEXTURE_SCALE, CHUNK_SIZE);
+    camPosChunk.z = gameData.currentZPos;
     Chunk*   visibleChunks[15];
     uint16_t visibleChunkCount = 0;
     for (uint16_t i = 0; i < gameData.chunkCount; i++)
@@ -931,28 +1063,27 @@ void MainMode_Update()
     {
         for (uint16_t j = 0; j < visibleChunks[i]->objectCount; j++)
         {
-            switch (visibleChunks[i]->objects[j].type)
+            switch (visibleChunks[i]->objects[j]->type)
             {
                 case Type::TILE:
                 {
                     Sprite sprite;
                     Sprite_Initialize(&sprite);
-                    sprite.currentTexture = Texture_GetTextureById(visibleChunks[i]->objects[j].textureId);
+                    sprite.currentTexture = Texture_GetTextureById(visibleChunks[i]->objects[j]->textureId);
                     sprite.position =
-                        Utils_GridToWorld(visibleChunks[i]->objects[j].position, TEXTURE_SIZE * TEXTURE_SCALE);
+                        Utils_GridToWorld(visibleChunks[i]->objects[j]->position, TEXTURE_SIZE * TEXTURE_SCALE);
                     sprite.scale     = TEXTURE_SCALE;
                     sprite.isVisible = true;
-                    sprite.zOrder    = visibleChunks[i]->objects[j].layer;
+                    sprite.zOrder    = visibleChunks[i]->objects[j]->layer;
                     Sprite_Add(&sprite);
                 }
                 break;
                 case Type::ENTITY:
                 {
-                    Object* obj = &visibleChunks[i]->objects[j];
+                    Object* obj = visibleChunks[i]->objects[j];
                     if (obj->entity.entityType == EntityType::PLAYER)
                     {
                         UpdatePlayer(obj);
-                        gameData.playerObject = obj;
                     }
                     else if (obj->entity.entityType == EntityType::ENEMY)
                     {
@@ -961,29 +1092,32 @@ void MainMode_Update()
                 }
                 break;
                 case Type::PROJECTILE:
-                    UpdateProjectile(&visibleChunks[i]->objects[j]);
+                    UpdateProjectile(visibleChunks[i]->objects[j]);
                     // Update projectile logic here
                     break;
                 case Type::EFFECT:
-                    UpdateEffect(&visibleChunks[i]->objects[j]);
+                    UpdateEffect(visibleChunks[i]->objects[j]);
                     // Update effect logic here
                     break;
                 case Type::INTERACTIVE:
-                    UpdateInteractive(&visibleChunks[i]->objects[j]);
+                    UpdateInteractive(visibleChunks[i]->objects[j]);
                     // Update interactive logic here
                     break;
                 case Type::ITEM:
-                    UpdateItem(&visibleChunks[i]->objects[j]);
+                    UpdateItem(visibleChunks[i]->objects[j]);
                     // Update item logic here
                     break;
                 default:
                     break;
             }
+            UpdateObjectChunk(visibleChunks[i]->objects[j]);
         }
     }
+    UpdateUI();
+    UpdateDragItems();
+    // update camera for sprite rendering
     gameData.cameraEntity.position = Window_GetCamera()->target;
     gameData.cameraEntity.scale    = 1.0f / Window_GetCamera()->zoom;
-    UpdateUI();
 }
 
 void MainMode_OnStop()

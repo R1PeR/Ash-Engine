@@ -230,3 +230,13 @@ Texture2D* Texture_GetTextureById(uint32_t textureId)
     LOG_ERR("Texture: Texture_GetTextureByName() failed, texture of id `%d` not found", textureId);
     return NULL;
 }
+
+Texture2D* Texture_GetTextureByPosition(uint32_t index)
+{
+    if (index - 1 > sTextureCount)
+    {
+        LOG_ERR("Texture: Texture_GetTextureByPosition() failed, texture at position `%d` not found", index);
+        return NULL;
+    }
+    return &sTextures[index].texture;
+}

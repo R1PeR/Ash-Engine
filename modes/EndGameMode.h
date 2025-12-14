@@ -5,7 +5,7 @@
 
 #include <stdint.h>
 
-extern Mode EndGameMode;
+extern Mode endGameMode;
 
 void EndGameMode_OnStart();
 void EndGameMode_OnPause();

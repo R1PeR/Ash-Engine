@@ -4,7 +4,7 @@
 
 char worldMap[WORLD_MAP_SIZE][WORLD_MAP_SIZE] = {
     { '1', '1', '1', '1', '1', '1', '0' }, { '1', '0', '0', '0', '0', '1', '0' }, { '1', '0', '0', '0', 'r', '1', '0' },
-    { '1', '0', '0', '0', '0', '1', '0' }, { '1', '0', 'p', '0', '0', '1', '0' }, { '1', '1', '0', '1', '1', '1', '0' },
+    { '1', '0', '0', 'i', '0', '1', '0' }, { '1', '0', 'p', '0', '0', '1', '0' }, { '1', '1', '0', '1', '1', '1', '0' },
     { '0', '1', '0', '1', '0', '0', '0' }
 };
 
@@ -15,6 +15,7 @@ Object emptyTilePrefab = {
     .textureId    = TEX_ID_EMPTY_TILE,
     .isCollidable = false,
     .position     = { 0, 0, 0 },
+    .parentChunk = NULL,
 };
 
 Object wallTilePrefab = {
@@ -24,6 +25,7 @@ Object wallTilePrefab = {
     .textureId    = TEX_ID_WALL_TILE,
     .isCollidable = true,
     .position     = { 0, 0, 0 },
+    .parentChunk = NULL,
 };
 
 Object playerPrefab = {
@@ -33,6 +35,7 @@ Object playerPrefab = {
     .textureId    = TEX_ID_PLAYER,
     .isCollidable = true,
     .position     = { 0, 0, 0 },
+    .parentChunk = NULL,
     .entity       = {
         .entityType            = EntityType::PLAYER,
         .entityHealth          = 100,
@@ -58,6 +61,7 @@ Object enemyRatPrefab = {
     .textureId    = TEX_ID_ENEMY_RAT,
     .isCollidable = true,
     .position     = { 0, 0, 0 },
+    .parentChunk = NULL,
     .entity       = {
         .entityType            = EntityType::ENEMY,
         .entityHealth          = 50,
@@ -78,5 +82,18 @@ Object enemyRatPrefab = {
         .entityPatrolRadius      = 4,
         .entityChaseRadius       = 6,
         .entityMovementDirection = { 0, 0 },
+    },
+};
+
+Object itemSwordPrefab = {
+    .id           = 0,
+    .type         = Type::ITEM,
+    .layer        = 0,
+    .textureId    = TEX_ID_ITEM_SWORD,
+    .isCollidable = false,
+    .position     = { 0, 0, 0 },
+    .parentChunk = NULL,
+    .item         = {
+        .itemId = 1,
     },
 };

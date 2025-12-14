@@ -65,7 +65,7 @@ static void Debug_ShowMisc()
                     ImGui::Text("Sprite position: {%f, %f }", current->position.x, current->position.y);
                     ImGui::Text("Sprite scale: %f", current->scale);
                     ImGui::Text("Sprite rotation: %f", current->rotation);
-                    ImGui::Text("Sprite id: %d", current->id);
+                    // ImGui::Text("Sprite id: %d", current->id);
                     ImGui::Image((ImTextureID)current->currentTexture->id, { 128, 128 });
                     ImGui::Text("Sprite z order: %d", current->zOrder);
                     ImGui::Text("Sprite is visible: %d", current->isVisible);
@@ -117,7 +117,7 @@ static void Debug_ShowMisc()
                 sprintf(buffer, "AnimatedSprite %d", i);
                 if (ImGui::CollapsingHeader(buffer))
                 {
-                    ImGui::Text("AnimatedSprite Sprite id: %d", current->sprite.id);
+                    // ImGui::Text("AnimatedSprite Sprite id: %d", current->sprite.id);
                     ImGui::Text("AnimatedSprite AnimationData: %p", current->currentAnimation);
                     ImGui::Text("AnimatedSprite id: %d", current->id);
                     ImGui::Text("AnimatedSprite frameTime: %d", current->frameTime);

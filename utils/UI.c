@@ -21,12 +21,9 @@ bool UI_CheckBounds(Rectangle bounds)
     DrawRectangleLines(bounds.x, bounds.y, bounds.width, bounds.height, RED);
 #endif
 
-    if (Input_IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+    if (Utils_PointInRectangle(worldPos, bounds))
     {
-        if (Utils_PointInRectangle(worldPos, bounds))
-        {
-            return true;
-        }
+        return true;
     }
     return false;
 }
@@ -37,6 +34,11 @@ void UI_Init(Entity2D* parentEntity)
 
 bool UI_TextureButton(Button* button)
 {
+    button->bounds.x *= uiParentEntity->scale;
+    button->bounds.y *= uiParentEntity->scale;
+    button->bounds.width *= uiParentEntity->scale;
+    button->bounds.height *= uiParentEntity->scale;
+
     button->bounds.x += uiParentEntity->position.x;
     button->bounds.y += uiParentEntity->position.y;
 
@@ -61,6 +63,11 @@ bool UI_TextureButton(Button* button)
 
 bool UI_TextButton(TextButton* textButton, const char* fontName)
 {
+    textButton->bounds.x *= uiParentEntity->scale;
+    textButton->bounds.y *= uiParentEntity->scale;
+    textButton->bounds.width *= uiParentEntity->scale;
+    textButton->bounds.height *= uiParentEntity->scale;
+
     textButton->bounds.x += uiParentEntity->position.x;
     textButton->bounds.y += uiParentEntity->position.y;
 
@@ -87,12 +94,13 @@ bool UI_TextButton(TextButton* textButton, const char* fontName)
 
 bool UI_Text(Text* uiText, const char* fontName)
 {
-
-    // TOIDO: fix camera scaling
-    uiText->bounds.x += uiParentEntity->position.x;
-    uiText->bounds.y += uiParentEntity->position.y;
+    uiText->bounds.x *= uiParentEntity->scale;
+    uiText->bounds.y *= uiParentEntity->scale;
     uiText->bounds.width *= uiParentEntity->scale;
     uiText->bounds.height *= uiParentEntity->scale;
+
+    uiText->bounds.x += uiParentEntity->position.x;
+    uiText->bounds.y += uiParentEntity->position.y;
 
     for (size_t i = 0; i < uiText->bufferSize; i++)
     {
@@ -115,6 +123,11 @@ bool UI_Text(Text* uiText, const char* fontName)
 
 bool UI_SliderFloat(SliderFloat* slider)
 {
+    slider->bounds.x *= uiParentEntity->scale;
+    slider->bounds.y *= uiParentEntity->scale;
+    slider->bounds.width *= uiParentEntity->scale;
+    slider->bounds.height *= uiParentEntity->scale;
+
     slider->bounds.x += uiParentEntity->position.x;
     slider->bounds.y += uiParentEntity->position.y;
 
@@ -147,6 +160,11 @@ bool UI_SliderFloat(SliderFloat* slider)
 
 bool UI_SliderInt(SliderInt* slider)
 {
+    slider->bounds.x *= uiParentEntity->scale;
+    slider->bounds.y *= uiParentEntity->scale;
+    slider->bounds.width *= uiParentEntity->scale;
+    slider->bounds.height *= uiParentEntity->scale;
+
     slider->bounds.x += uiParentEntity->position.x;
     slider->bounds.y += uiParentEntity->position.y;
 
@@ -180,6 +198,15 @@ bool UI_SliderInt(SliderInt* slider)
 
 bool UI_ProgressBar(ProgressBar* progressBar)
 {
+
+    progressBar->bounds.x *= uiParentEntity->scale;
+    progressBar->bounds.y *= uiParentEntity->scale;
+    progressBar->bounds.width *= uiParentEntity->scale;
+    progressBar->bounds.height *= uiParentEntity->scale;
+
+    progressBar->bounds.x += uiParentEntity->position.x;
+    progressBar->bounds.y += uiParentEntity->position.y;
+
     if (progressBar->backgroundTexture != NULL)
     {
         Sprite backgroundSprite;
@@ -194,21 +221,18 @@ bool UI_ProgressBar(ProgressBar* progressBar)
 
     Sprite sliderSprite;
     Sprite_Initialize(&sliderSprite);
-    sliderSprite.currentTexture   = progressBar->progressTexture;
-    sliderSprite.scale            = progressBar->scale;
-    sliderSprite.position.x       = progressBar->position.x;
-    sliderSprite.position.y       = progressBar->position.y;
-    sliderSprite.parent           = uiParentEntity;
-    sliderSprite.extendedDraw     = true;
+    sliderSprite.currentTexture    = progressBar->progressTexture;
+    sliderSprite.scale             = progressBar->scale;
+    sliderSprite.position.x        = progressBar->position.x;
+    sliderSprite.position.y        = progressBar->position.y;
+    sliderSprite.parent            = uiParentEntity;
+    sliderSprite.extendedDraw      = true;
     sliderSprite.portionRect.x     = 0;
     sliderSprite.portionRect.y     = 0;
     sliderSprite.portionRect.width = (progressBar->currentValue - progressBar->minValue)
-                                    / (progressBar->maxValue - progressBar->minValue)
-                                    * progressBar->progressTexture->width;
+                                     / (progressBar->maxValue - progressBar->minValue)
+                                     * progressBar->progressTexture->width;
     sliderSprite.portionRect.height = progressBar->progressTexture->height;
-
-    progressBar->bounds.x += uiParentEntity->position.x;
-    progressBar->bounds.y += uiParentEntity->position.y;
 
     Sprite_Add(&sliderSprite);
 
@@ -217,6 +241,11 @@ bool UI_ProgressBar(ProgressBar* progressBar)
 
 bool UI_Checkbox(Checkbox* checkbox)
 {
+    checkbox->bounds.x *= uiParentEntity->scale;
+    checkbox->bounds.y *= uiParentEntity->scale;
+    checkbox->bounds.width *= uiParentEntity->scale;
+    checkbox->bounds.height *= uiParentEntity->scale;
+
     checkbox->bounds.x += uiParentEntity->position.x;
     checkbox->bounds.y += uiParentEntity->position.y;
 
@@ -241,8 +270,14 @@ bool UI_Checkbox(Checkbox* checkbox)
 
 bool UI_ItemSlot(ItemSlot* itemSlot)
 {
+    itemSlot->bounds.x *= uiParentEntity->scale;
+    itemSlot->bounds.y *= uiParentEntity->scale;
+    itemSlot->bounds.width *= uiParentEntity->scale;
+    itemSlot->bounds.height *= uiParentEntity->scale;
+
     itemSlot->bounds.x += uiParentEntity->position.x;
     itemSlot->bounds.y += uiParentEntity->position.y;
+
     if (itemSlot->backgroundTexture != NULL)
     {
         Sprite backgroundSprite;
