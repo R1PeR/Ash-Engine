@@ -1,8 +1,7 @@
 #ifndef UTILS_STRUCTS_H
 #define UTILS_STRUCTS_H
-#include "engine/components/Sprite.h"
-#include "engine/misc/Stopwatch.h"
-#include "engine/misc/Utils.h"
+#include "ashes/ash_components.h"
+#include "ashes/ash_misc.h"
 
 #include <cstdint>
 #include <stdint.h>
@@ -74,7 +73,7 @@ struct Object
             uint16_t entityDexterity;
             uint16_t entityVitality;
             uint16_t entityEnergy;
-            Object*  entityItems[8];
+            Object*  entityItems[ENTITY_MAX_ITEMS];
             uint16_t entityRange;
 
             EntityState entityState;

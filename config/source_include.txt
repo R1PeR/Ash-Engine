@@ -1,10 +1,6 @@
 ./
 modes/
-libs/engine/components/
-libs/engine/misc/
-libs/engine/context/
-libs/engine/io/
-libs/engine/prefabs/
+libs/ashes/
 libs/rlImGui/
 libs/imgui/
 utils/

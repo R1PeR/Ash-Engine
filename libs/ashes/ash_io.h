@@ -1,8 +1,11 @@
-#ifndef LIBS_ENGINE_INPUT_H
-#define LIBS_ENGINE_INPUT_H
-#include <stdbool.h>
-#include <stdint.h>
+#ifndef ASH_IO_H
+#define ASH_IO_H
 
+/* Includes */
+#include <stdint.h>
+#include <raylib.h>
+
+/* Structs, Enums, and Unions */
 enum
 {
     INPUT_KEYCODE_NULL = 0,  // Key: NULL, used for no key pressed
@@ -120,7 +123,6 @@ enum
     INPUT_KEYCODE_VOLUME_UP   = 24,  // Key: Android volume up button
     INPUT_KEYCODE_VOLUME_DOWN = 25   // Key: Android volume down button
 };
-
 enum
 {
     INPUT_MOUSE_BUTTON_LEFT    = 0,  // Mouse button left
@@ -132,7 +134,7 @@ enum
     INPUT_MOUSE_BUTTON_BACK    = 6,  // Mouse button back (advanced mouse device)
 };
 
-
+/* Function Prototypes */
 bool Input_IsKeyPressed(uint16_t key);
 bool Input_IsKeyDown(uint16_t key);
 bool Input_IsKeyReleased(uint16_t key);
@@ -146,4 +148,11 @@ int16_t Input_GetMouseX(void);
 int16_t Input_GetMouseY(void);
 int16_t Input_GetMouseDeltaX(void);
 int16_t Input_GetMouseDeltaY(void);
-#endif
+
+void      Window_Init(uint16_t width, uint16_t height, const char* title);
+void      Window_Deinit();
+Camera2D* Window_GetCamera();
+uint32_t  Window_GetWidth();
+uint32_t  Window_GetHeight();
+
+#endif  // ASH_IO_H

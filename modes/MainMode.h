@@ -1,6 +1,6 @@
 #ifndef LIBS_ENGINE_MAINMODE_H
 #define LIBS_ENGINE_MAINMODE_H
-#include "engine/context/Mode.h"
+#include "ashes/ash_context.h"
 
 #include <stdint.h>
 

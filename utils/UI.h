@@ -1,7 +1,7 @@
 #ifndef LIBS_UTILS_UI_H
 #define LIBS_UTILS_UI_H
-#include "engine/components/Entity2D.h"
-#include "libs/engine/misc/Utils.h"
+#include "ashes/ash_components.h"
+#include "ashes/ash_misc.h"
 
 #include <cstdint>
 

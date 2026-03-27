@@ -1,24 +1,16 @@
 #include "MainMode.h"
 
 #include "EndGameMode.h"
-#include "engine/components/Audio.h"
-#include "engine/components/Sprite.h"
-#include "engine/components/Texture.h"
-#include "engine/context/Context.h"
-#include "engine/io/Input.h"
-#include "engine/io/Window.h"
-#include "engine/misc/AStar.h"
-#include "engine/misc/DeltaTime.h"
-#include "engine/misc/Logger.h"
-#include "engine/misc/Stopwatch.h"
-#include "engine/misc/Utils.h"
+#include "ashes/ash_components.h"
+#include "ashes/ash_context.h"
+#include "ashes/ash_io.h"
+#include "ashes/ash_misc.h"
 #include "imgui.h"
 #include "raylib.h"
 #include "utils/Prefabs.h"
 #include "utils/Stats.h"
 #include "utils/Structs.h"
 #include "utils/UI.h"
-
 #include <stdio.h>
 
 Mode mainMode = MODE_FROM_CLASSNAME(MainMode);

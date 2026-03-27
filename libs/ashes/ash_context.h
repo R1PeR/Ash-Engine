@@ -1,8 +1,15 @@
-#ifndef LIBS_ENGINE_MODE_H
-#define LIBS_ENGINE_MODE_H
+#ifndef ASH_CONTEXT_H
+#define ASH_CONTEXT_H
 
+/* Defines */
+#define MAX_MODES      8
+#define MAX_UPDATABLES 8
+#define LIBS_ENGINE_UPDATABLE_H
 #define MODE_FROM_CLASSNAME(className) \
     { className##_OnStart, className##_OnPause, className##_Update, className##_OnStop, className##_OnResume }
+
+/* Structs, Enums, and Unions */
+typedef struct Updatable Updatable;
 
 typedef struct Mode
 {
@@ -17,4 +24,17 @@ typedef struct Mode
     // OnResume runs once when mode is resumed
     void (*OnResume)();
 } Mode;
-#endif
+
+typedef struct Updatable
+{
+    void (*Update)();
+} Updatable;
+
+/* Function Prototypes */
+
+void Context_SetMode(Mode* mode);
+void Context_ClearUpdatables();
+bool Context_AddUpdatable(Updatable* updatable);
+void Context_FinishMode();
+
+#endif  // ASH_CONTEXT_H

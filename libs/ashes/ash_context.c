@@ -1,11 +1,10 @@
-#include "Context.h"
+#include "ash_context.h"
+#include "ash_io.h"
+#include "ash_misc.h"
+#include <stdint.h>
 
-#include "engine/io/Window.h"
-#include "engine/misc/Logger.h"
 #include "raylib.h"
 #include "rlImGui.h"
-
-#include <stdio.h>
 
 Mode*      screen[MAX_MODES];
 Updatable* updatables[MAX_UPDATABLES];
@@ -90,3 +89,5 @@ void Context_FinishMode()
 {
     currentFinished = true;
 }
+
+
