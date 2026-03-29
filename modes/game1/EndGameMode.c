@@ -1,11 +1,8 @@
 #include "EndGameMode.h"
 
-#include "engine/components/Audio.h"
-#include "engine/components/Sprite.h"
-#include "engine/components/Texture.h"
-#include "engine/io/Window.h"
-#include "engine/misc/Logger.h"
-#include "engine/misc/Utils.h"
+#include "ashes/ash_components.h"
+#include "ashes/ash_io.h"
+#include "ashes/ash_misc.h"
 #include "raylib.h"
 #include "utils/UI.h"
 

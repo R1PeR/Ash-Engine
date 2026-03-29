@@ -1,0 +1,16 @@
+
+#ifndef LIBS_ENGINE_ENDGAMEMODE_H
+#define LIBS_ENGINE_ENDGAMEMODE_H
+#include "ashes/ash_context.h"
+
+#include <stdint.h>
+
+extern Mode endGameMode;
+
+void EndGameMode_OnStart();
+void EndGameMode_OnPause();
+void EndGameMode_Update();
+void EndGameMode_OnStop();
+void EndGameMode_OnResume();
+
+#endif

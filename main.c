@@ -1,13 +1,8 @@
-#include "engine/components/AnimatedSprite.h"
-#include "engine/components/Audio.h"
-#include "engine/components/Collider2D.h"
-#include "engine/components/Sprite.h"
-#include "engine/context/Context.h"
-#include "engine/io/Window.h"
-#include "engine/misc/Debug.h"
-#include "engine/misc/DeltaTime.h"
-#include "engine/misc/Logger.h"
-#include "modes/MainMode.h"
+#include "ashes/ash_components.h"
+#include "ashes/ash_context.h"
+#include "ashes/ash_io.h"
+#include "ashes/ash_misc.h"
+#include "modes/game2/MainMode.h"
 
 #include <cstdint>
 

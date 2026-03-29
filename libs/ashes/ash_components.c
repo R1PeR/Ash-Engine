@@ -1,17 +1,25 @@
 #include "ash_components.h"
-#include <stdio.h>
-#include <cstring>
-// #include <cstdlib>
+
 #include "ash_misc.h"
 
-#define DEFAULT_ANIMATION_SPEED 33
+#include <cstring>
+#include <stdio.h>
+
 Updatable       animatedSpriteUpdatable = { AnimatedSprite_Update };
 uint32_t        sAnimatedSpriteCount    = 0;
-AnimatedSprite* sAnimatedSpriteList;  //[ANIMATEDSPRITE_MAX_COUNT];
+uint32_t        sAnimatedSpriteMaxCount = 0;
+AnimatedSprite* sAnimatedSpriteArray;
+
+void AnimatedSprite_SetPool(AnimatedSprite* pool, size_t poolSize)
+{
+    sAnimatedSpriteArray    = pool;
+    sAnimatedSpriteMaxCount = poolSize;
+    sAnimatedSpriteCount    = 0;
+}
 
 void AnimatedSprite_Initialize(AnimatedSprite* animatedSprite)
 {
-    animatedSprite->frameTime        = DEFAULT_ANIMATION_SPEED;
+    animatedSprite->frameTime        = ANIMATEDSPRITE_DEFAULT_ANIMATION_SPEED;
     animatedSprite->currentAnimation = NULL;
     animatedSprite->isPlaying        = false;
     animatedSprite->repeat           = false;
@@ -21,21 +29,12 @@ void AnimatedSprite_Initialize(AnimatedSprite* animatedSprite)
 
 bool AnimatedSprite_Add(AnimatedSprite* animatedSprite)
 {
-    if (sAnimatedSpriteCount == 0)
+    if (sAnimatedSpriteCount >= sAnimatedSpriteMaxCount)
     {
-        sAnimatedSpriteList       = animatedSprite;
-        sAnimatedSpriteList->next = NULL;
+        LOG_ERR("Max AnimatedSprite count reached! Cannot add more AnimatedSprites.");
+        return false;
     }
-    else
-    {
-        AnimatedSprite* current = sAnimatedSpriteList;
-        while (current->next != NULL)
-        {
-            current = current->next;
-        }
-        current->next        = animatedSprite;
-        animatedSprite->next = NULL;
-    }
+    sAnimatedSpriteArray[sAnimatedSpriteCount] = *animatedSprite;
     sAnimatedSpriteCount++;
     return true;
 }
@@ -43,7 +42,6 @@ bool AnimatedSprite_Add(AnimatedSprite* animatedSprite)
 bool AnimatedSprite_Clear()
 {
     sAnimatedSpriteCount = 0;
-    sAnimatedSpriteList  = NULL;
     return true;
 }
 
@@ -62,26 +60,26 @@ void AnimatedSprite_Stop(AnimatedSprite* animatedSprite)
 
 void AnimatedSprite_Update()
 {
-    AnimatedSprite* current = sAnimatedSpriteList;
-    while (current != NULL)
+    for (int i = 0; i < sAnimatedSpriteCount; i++)
     {
-        if (current->isPlaying && current->currentAnimation && Stopwatch_IsZero(&current->stopwatch))
+        if (sAnimatedSpriteArray[i].isPlaying && sAnimatedSpriteArray[i].currentAnimation
+            && Stopwatch_IsZero(&sAnimatedSpriteArray[i].stopwatch))
         {
-            current->sprite.currentTexture = current->currentAnimation->animationFrames[current->currentFrame++];
-            if (current->currentFrame >= current->currentAnimation->animationFrameCount)
+            sAnimatedSpriteArray[i].sprite.currentTexture =
+                sAnimatedSpriteArray[i].currentAnimation->animationFrames[sAnimatedSpriteArray[i].currentFrame++];
+            if (sAnimatedSpriteArray[i].currentFrame >= sAnimatedSpriteArray[i].currentAnimation->animationFrameCount)
             {
-                if (current->repeat)
+                if (sAnimatedSpriteArray[i].repeat)
                 {
-                    current->currentFrame = 0;
+                    sAnimatedSpriteArray[i].currentFrame = 0;
                 }
                 else
                 {
-                    current->isPlaying = false;
+                    sAnimatedSpriteArray[i].isPlaying = false;
                 }
             }
-            Stopwatch_Start(&current->stopwatch, current->frameTime);
+            Stopwatch_Start(&sAnimatedSpriteArray[i].stopwatch, sAnimatedSpriteArray[i].frameTime);
         }
-        current = current->next;
     }
 }
 
@@ -103,9 +101,9 @@ uint32_t AnimatedSprite_GetCount()
     return sAnimatedSpriteCount;
 }
 
-AnimatedSprite* AnimatedSprite_GetAnimatedSpriteList()
+AnimatedSprite* AnimatedSprite_GetAnimatedSpriteArray()
 {
-    return sAnimatedSpriteList;
+    return sAnimatedSpriteArray;
 }
 
 Updatable* AnimatedSprite_GetUpdatable()
@@ -267,8 +265,16 @@ void AsciiWindow_DrawString(AsciiWindow* window, uint8_t x, uint8_t y, const cha
     }
 }
 
-uint32_t  sAudioCount;
-AudioData sAudios[AUDIO_MAX_COUNT];
+uint32_t   sAudioCount    = 0;
+uint32_t   sAudioMaxCount = 0;
+AudioData* sAudios        = NULL;
+
+void Audio_SetPool(AudioData* pool, size_t poolSize)
+{
+    sAudios        = pool;
+    sAudioMaxCount = poolSize;
+    sAudioCount    = 0;
+}
 
 bool Audio_Init()
 {
@@ -283,16 +289,16 @@ void Audio_Deinit()
 
 bool Audio_AddSound(Sound sound, const char* soundName)
 {
-    if (sAudioCount + 1 < AUDIO_MAX_COUNT)
+    if (sAudioCount > sAudioMaxCount)
     {
-        sAudios[sAudioCount].sound = sound;
-        sAudios[sAudioCount].id    = sAudioCount;
-        strcpy(sAudios[sAudioCount].soundName, soundName);
-        sAudioCount++;
-        return true;
+        LOG_ERR("Audio: Audio_AddSound() failed, not enough space");
+        return false;
     }
-    LOG_ERR("Audio: Texture_AddSound() failed, not enough space");
-    return false;
+    sAudios[sAudioCount].sound = sound;
+    sAudios[sAudioCount].id    = sAudioCount;
+    strcpy(sAudios[sAudioCount].soundName, soundName);
+    sAudioCount++;
+    return true;
 }
 
 
@@ -340,7 +346,7 @@ void Audio_UnloadAudios()
 {
     for (uint32_t i = 0; i < sAudioCount; i++)
     {
-        UnloadSound(sAudios->sound);
+        UnloadSound(sAudios[i].sound);
     }
     sAudioCount = 0;
 }
@@ -355,12 +361,20 @@ AudioData* Audio_GetAudios()
     return sAudios;
 }
 
-uint32_t        sAudioPlayerCount = 0;
-AudioPlayerData sAudioPlayers[AUDIOPLAYER_MAX_COUNT];
+uint32_t         sAudioPlayerCount    = 0;
+uint32_t         sAudioPlayerMaxCount = 0;
+AudioPlayerData* sAudioPlayers        = NULL;
+
+void AudioPlayer_SetPool(AudioPlayerData* pool, size_t poolSize)
+{
+    sAudioPlayers        = pool;
+    sAudioPlayerMaxCount = poolSize;
+    sAudioPlayerCount    = 0;
+}
 
 int32_t AudioPlayer_PlaySoundByName(const char* audioName)
 {
-    if (sAudioPlayerCount >= AUDIOPLAYER_MAX_COUNT)
+    if (sAudioPlayerCount >= sAudioPlayerMaxCount)
     {
         return -1;
     }
@@ -381,7 +395,7 @@ int32_t AudioPlayer_PlaySoundByName(const char* audioName)
 
 int32_t AudioPlayer_PlaySoundById(uint32_t id)
 {
-    if (sAudioPlayerCount >= AUDIOPLAYER_MAX_COUNT)
+    if (sAudioPlayerCount >= sAudioPlayerMaxCount)
     {
         return -1;
     }
@@ -433,7 +447,15 @@ void AudioPlayer_StopAll()
 
 Updatable   collider2DUpdatable = { Collider2D_Update };
 uint32_t    sCollider2DCount    = 0;
-Collider2D* sCollider2DList     = NULL;
+uint32_t    sCollider2DMaxCount = 0;
+Collider2D* sCollider2DArray    = NULL;
+
+void Collider2D_SetPool(Collider2D* pool, size_t poolSize)
+{
+    sCollider2DArray    = pool;
+    sCollider2DCount    = 0;
+    sCollider2DMaxCount = poolSize;
+}
 
 void Collider2D_Initialize(Collider2D* col)
 {
@@ -445,26 +467,16 @@ void Collider2D_Initialize(Collider2D* col)
     col->isEnabled                = true;
     col->id                       = 0;
     col->collision.collisionCount = 0;
-    col->next                     = NULL;
 }
 
 bool Collider2D_Add(Collider2D* col)
 {
-    if (sCollider2DCount == 0)
+    if (sCollider2DCount >= sCollider2DMaxCount)
     {
-        sCollider2DList       = col;
-        sCollider2DList->next = NULL;
+        LOG_ERR("Collider2D: AddCollider(), failed to add collider, not enough space");
+        return false;
     }
-    else
-    {
-        Collider2D* current = sCollider2DList;
-        while (current->next != NULL)
-        {
-            current = current->next;
-        }
-        current->next = col;
-        col->next     = NULL;
-    }
+    sCollider2DArray[sCollider2DCount] = *col;
     sCollider2DCount++;
     return true;
 }
@@ -472,30 +484,25 @@ bool Collider2D_Add(Collider2D* col)
 bool Collider2D_Clear()
 {
     sCollider2DCount = 0;
-    sCollider2DList  = NULL;
     return true;
 }
 
 void Collider2D_Update()
 {
-
-    Collider2D* current = sCollider2DList;
-    while (current != NULL)
+    for (int i = 0; i < sCollider2DCount; i++)
     {
-        current->collision.collisionCount = 0;
-        current                           = current->next;
+        sCollider2DArray[i].collision.collisionCount = 0;
     }
 
-
-    Collider2D* currentA = sCollider2DList;
-    while (currentA != NULL)
+    for (int i = 0; i < sCollider2DCount; i++)
     {
+        Collider2D* currentA = &sCollider2DArray[i];
 #ifdef DEBUG
         Collider2D_DrawDebug(currentA);
 #endif
-        Collider2D* currentB = sCollider2DList;
-        while (currentB != NULL)
+        for (int j = 0; j < sCollider2DCount; j++)
         {
+            Collider2D* currentB = &sCollider2DArray[j];
             if (currentA != currentB)
             {
                 if (currentA->isEnabled && currentB->isEnabled)
@@ -554,9 +561,7 @@ void Collider2D_Update()
                     // }
                 }
             }
-            currentB = currentB->next;
         }
-        currentA = currentA->next;
     }
 }
 
@@ -677,7 +682,7 @@ uint32_t Collider2D_GetCount()
 
 Collider2D* Collider2D_GetCollider2DList()
 {
-    return sCollider2DList;
+    return sCollider2DArray;
 }
 
 Updatable* Collider2D_GetUpdatable()
@@ -685,8 +690,16 @@ Updatable* Collider2D_GetUpdatable()
     return &collider2DUpdatable;
 }
 
-uint32_t  sEntityCount = 0;
-Entity2D* sEntityList  = NULL;
+uint32_t  sEntityCount    = 0;
+uint32_t  sEntityMaxCount = 0;
+Entity2D* sEntityList     = NULL;
+
+void Entity2D_SetPool(Entity2D* pool, size_t poolSize)
+{
+    sEntityList     = pool;
+    sEntityMaxCount = poolSize;
+    sEntityCount    = 0;
+}
 
 void Entity2D_Initialize(Entity2D* ent)
 {
@@ -695,26 +708,16 @@ void Entity2D_Initialize(Entity2D* ent)
     ent->position.y = 0;
     ent->rotation   = 0;
     ent->scale      = 1.0f;
-    ent->next       = NULL;
 }
 
 bool Entity2D_Add(Entity2D* ent)
 {
-    if (sEntityCount == 0)
+    if (sEntityCount >= sEntityMaxCount)
     {
-        sEntityList       = ent;
-        sEntityList->next = NULL;
+        LOG_ERR("Entity2D: Entity2D_Add() failed, not enough space");
+        return false;
     }
-    else
-    {
-        Entity2D* current = sEntityList;
-        while (current->next != NULL)
-        {
-            current = current->next;
-        }
-        current->next = ent;
-        ent->next     = NULL;
-    }
+    sEntityList[sEntityCount] = *ent;
     sEntityCount++;
     return true;
 }
@@ -722,7 +725,6 @@ bool Entity2D_Add(Entity2D* ent)
 bool Entity2D_Clear()
 {
     sEntityCount = 0;
-    sEntityList  = NULL;
     return true;
 }
 
@@ -736,271 +738,6 @@ Entity2D* Entitiy2D_GetEntityList()
     return sEntityList;
 }
 
-void NavigationMap2D_Initialize(NavigationMap2D* map, float squareSize)
-{
-    for (uint8_t y = 0; y < NAVIGATIONMAP2D_MAX_SIZE; y++)
-    {
-        for (uint8_t x = 0; x < NAVIGATIONMAP2D_MAX_SIZE; x++)
-        {
-            NavigationMap2D_SetPosition(map, x, y, UINT32_MAX);
-        }
-    }
-    map->sNavigation2DSquareSize = squareSize;
-}
-
-uint32_t NavigationMap2D_GetPosition(NavigationMap2D* map, uint8_t x, uint8_t y)
-{
-    if (x < NAVIGATIONMAP2D_MAX_SIZE && y < NAVIGATIONMAP2D_MAX_SIZE)
-    {
-        return map->square[x][y];
-    }
-    LOG_WRN("NavigationMap2D: GetPosition(), position {%d, %d} is bigger than max map size", x, y);
-    return 0;
-}
-
-void NavigationMap2D_SetPosition(NavigationMap2D* map, uint8_t x, uint8_t y, uint32_t state)
-{
-    if (x < NAVIGATIONMAP2D_MAX_SIZE && y < NAVIGATIONMAP2D_MAX_SIZE)
-    {
-        map->square[x][y] = state;
-    }
-    else
-    {
-        LOG_WRN("NavigationMap2D: SetPosition(), position {%d, %d} is bigger than max map size", x, y);
-    }
-}
-
-void NavigationMap2D_FillSurroundingWeights(NavigationMap2D* map,
-                                            uint8_t weightMap[NAVIGATIONMAP2D_MAX_SIZE][NAVIGATIONMAP2D_MAX_SIZE],
-                                            uint8_t currentX, uint8_t currentY, uint8_t stopX, uint8_t stopY)
-{
-    for (uint8_t y = 0; y < NAVIGATIONMAP2D_MAX_SIZE; y++)
-    {
-        for (uint8_t x = 0; x < NAVIGATIONMAP2D_MAX_SIZE; x++)
-        {
-            if (map->square[x][y] != UINT32_MAX)
-            {
-                weightMap[x][y] = UINT8_MAX;
-            }
-            else
-            {
-                weightMap[x][y] = (Utils_AbsInt16(x - stopX) + Utils_AbsInt16(y - stopY));
-            }
-        }
-    }
-    // for(uint8_t y = 0; y < 3; y++)
-    // {
-    //     for(uint8_t x = 0; x < 3; x++)
-    //     {
-    //         if(x != 1 && y != 1)
-    //         {
-    //             if(map->square[currentX + x - 1][currentY + y - 1] == UINT32_MAX && ((currentX + x - 1) >= 0 &&
-    //             (currentY + y - 1) >= 0))
-    //             {
-    //                 weightMap[currentX + x - 1][currentY + y - 1] = (abs(currentX - stopX) + abs(currentY - stopY));
-    //             }
-    //             else
-    //             {
-    //                 weightMap[currentX + x - 1][currentY + y - 1] = 0;
-    //             }
-    //         }
-    //     }
-    // }
-}
-
-void NavigationMap2D_GetNextMove(NavigationMap2D* map,
-                                 uint8_t          weightMap[NAVIGATIONMAP2D_MAX_SIZE][NAVIGATIONMAP2D_MAX_SIZE],
-                                 uint8_t* currentX, uint8_t* currentY)
-{
-    uint8_t bestMoveX   = UINT8_MAX;
-    uint8_t bestMoveY   = UINT8_MAX;
-    uint8_t currentBest = UINT8_MAX;
-    for (uint8_t y = 0; y < 3; y++)
-    {
-        for (uint8_t x = 0; x < 3; x++)
-        {
-            int8_t xPos = *currentX + x - 1;
-            int8_t yPos = *currentY + y - 1;
-            if (x == 1 && y == 1)
-                continue;
-            if (xPos < 0 || yPos < 0 || xPos > NAVIGATIONMAP2D_MAX_SIZE || yPos > NAVIGATIONMAP2D_MAX_SIZE)
-                continue;
-            if (weightMap[xPos][yPos] != UINT8_MAX && weightMap[xPos][yPos] < currentBest)
-            {
-                currentBest = weightMap[xPos][yPos];
-                bestMoveX   = *currentX + x - 1;
-                bestMoveY   = *currentY + y - 1;
-            }
-        }
-    }
-    if (bestMoveX != UINT8_MAX && bestMoveY != UINT8_MAX)
-    {
-        *currentX = bestMoveX;
-        *currentY = bestMoveY;
-    }
-}
-
-NavigationMap2DPath NavigationMap2D_CalculatePath(NavigationMap2D* map, uint8_t startX, uint8_t startY, uint8_t stopX,
-                                                  uint8_t stopY)
-{
-    uint8_t weightMap[NAVIGATIONMAP2D_MAX_SIZE][NAVIGATIONMAP2D_MAX_SIZE];
-    for (uint8_t y = 0; y < NAVIGATIONMAP2D_MAX_SIZE; y++)
-    {
-        for (uint8_t x = 0; x < NAVIGATIONMAP2D_MAX_SIZE; x++)
-        {
-            weightMap[x][y] = 0;
-        }
-    }
-    uint8_t             position = 0;
-    NavigationMap2DPath path;
-    uint8_t             currentX = startX;
-    uint8_t             currentY = startY;
-    while (position < NAVIGATIONMAP2D_MAX_PATH)
-    {
-        NavigationMap2D_FillSurroundingWeights(map, weightMap, currentX, currentY, stopX, stopY);
-        NavigationMap2D_GetNextMove(map, weightMap, &currentX, &currentY);
-        path.path[position].x = currentX;
-        path.path[position].y = currentY;
-        position++;
-        if (currentX == stopX && currentY == stopY)
-        {
-            break;
-        }
-    }
-    path.count = position;
-    for (int i = 0; i < position - 1; i++)
-    {
-        DrawLine(path.path[i].x * map->sNavigation2DSquareSize
-                     - (NAVIGATIONMAP2D_MAX_SIZE / 2) * map->sNavigation2DSquareSize,
-                 path.path[i].y * map->sNavigation2DSquareSize
-                     - (NAVIGATIONMAP2D_MAX_SIZE / 2) * map->sNavigation2DSquareSize,
-                 path.path[i + 1].x * map->sNavigation2DSquareSize
-                     - (NAVIGATIONMAP2D_MAX_SIZE / 2) * map->sNavigation2DSquareSize,
-                 path.path[i + 1].y * map->sNavigation2DSquareSize
-                     - (NAVIGATIONMAP2D_MAX_SIZE / 2) * map->sNavigation2DSquareSize,
-                 BLUE);
-    }
-    return path;
-}
-
-// void NavigationMap2D_FillMap(NavigationMap2D * map, Entity2D * entityList)
-// {
-//     for(uint8_t y = 0; y < NAVIGATIONMAP2D_MAX_SIZE; y++)
-//     {
-//         for(uint8_t x = 0; x < NAVIGATIONMAP2D_MAX_SIZE; x++)
-//         {
-//             NavigationMap2D_SetPosition(map, x, y, UINT32_MAX);
-//         }
-//     }
-//     Entity2D * current = entityList;
-//     while(current != NULL)
-//     {
-//         uint8_t positionX = (uint8_t)((current->position.x/sNavigation2DSquareSize)+(NAVIGATIONMAP2D_MAX_SIZE/2));
-//         uint8_t positionY = (uint8_t)((current->position.y/sNavigation2DSquareSize)+(NAVIGATIONMAP2D_MAX_SIZE/2));
-//         NavigationMap2D_SetPosition(map, positionX, positionY, current->id);
-//         current = current->next;
-//     }
-// }
-
-void NavigationMap2D_Clear(NavigationMap2D* map)
-{
-    for (uint8_t y = 0; y < NAVIGATIONMAP2D_MAX_SIZE; y++)
-    {
-        for (uint8_t x = 0; x < NAVIGATIONMAP2D_MAX_SIZE; x++)
-        {
-            NavigationMap2D_SetPosition(map, x, y, UINT32_MAX);
-        }
-    }
-}
-
-Vector2 NavigationMap2D_ConvertWorldToMap(NavigationMap2D* map, Vector2 worldPosition)
-{
-    Vector2 mapPosition;
-    mapPosition.x = (int16_t)(worldPosition.x / (map->sNavigation2DSquareSize));
-    mapPosition.y = (int16_t)(worldPosition.y / (map->sNavigation2DSquareSize));
-    mapPosition.x += (NAVIGATIONMAP2D_MAX_SIZE / 2);
-    mapPosition.y += (NAVIGATIONMAP2D_MAX_SIZE / 2);
-    return mapPosition;
-}
-
-Vector2 NavigationMap2D_ConvertMapToWorld(NavigationMap2D* map, Vector2 mapPosition)
-{
-    Vector2 worldPosition;
-    mapPosition.x -= (NAVIGATIONMAP2D_MAX_SIZE / 2);
-    mapPosition.y -= (NAVIGATIONMAP2D_MAX_SIZE / 2);
-    worldPosition.x = (mapPosition.x * (map->sNavigation2DSquareSize));
-    worldPosition.y = (mapPosition.y * (map->sNavigation2DSquareSize));
-    return worldPosition;
-}
-
-
-void NavigationMap2D_Fill(NavigationMap2D* map, Collider2D* collider)
-{
-    Vector2 topLeftIndex, topRightIndex, bottomLeftIndex, bottomRightIndex;
-    Vector2 centerPos;
-    uint8_t entityId = 0;
-    centerPos.x      = collider->position.x;
-    centerPos.y      = collider->position.y;
-    if (collider->parent != NULL)
-    {
-        centerPos.x += collider->parent->position.x;
-        centerPos.y += collider->parent->position.y;
-        entityId = collider->parent->id;
-    }
-    Vector2 current;
-    current.x    = centerPos.x - collider->size.x;
-    current.y    = centerPos.y - collider->size.y;
-    topLeftIndex = NavigationMap2D_ConvertWorldToMap(map, current);
-
-    // those two are useless computation power when colliders are always squares
-    //  current.x = centerPos.x + collider->size.x;
-    //  current.y = centerPos.y - collider->size.y;
-    //  topRightIndex = NavigationMap2D_ConvertWorldToMap(map, current);
-
-    // current.x = centerPos.x - collider->size.x;
-    // current.y = centerPos.y + collider->size.y;
-    // bottomLeftIndex = NavigationMap2D_ConvertWorldToMap(map, current);
-
-    current.x        = centerPos.x + collider->size.x;
-    current.y        = centerPos.y + collider->size.y;
-    bottomRightIndex = NavigationMap2D_ConvertWorldToMap(map, current);
-
-    for (uint32_t y = topLeftIndex.y; y <= bottomRightIndex.y; y++)
-    {
-        for (uint32_t x = topLeftIndex.x; x <= bottomRightIndex.x; x++)
-        {
-            NavigationMap2D_SetPosition(map, x, y, entityId);
-        }
-    }
-
-    // uint8_t positionX = (uint8_t)((current->position.x/sNavigation2DSquareSize)+(NAVIGATIONMAP2D_MAX_SIZE/2));
-    // uint8_t positionY = (uint8_t)((current->position.y/sNavigation2DSquareSize)+(NAVIGATIONMAP2D_MAX_SIZE/2));
-
-    // NavigationMap2D_SetPosition(map, positionX, positionY, current->id);
-}
-
-void NavigationMap2D_Debug(NavigationMap2D* map)
-{
-    for (uint8_t y = 0; y < NAVIGATIONMAP2D_MAX_SIZE; y++)
-    {
-        for (uint8_t x = 0; x < NAVIGATIONMAP2D_MAX_SIZE; x++)
-        {
-            if (NavigationMap2D_GetPosition(map, x, y) == UINT32_MAX)
-            {
-                DrawRectangleLines((x - NAVIGATIONMAP2D_MAX_SIZE / 2) * map->sNavigation2DSquareSize + 2,
-                                   (y - NAVIGATIONMAP2D_MAX_SIZE / 2) * map->sNavigation2DSquareSize + 2,
-                                   map->sNavigation2DSquareSize - 4, map->sNavigation2DSquareSize - 4, GREEN);
-            }
-            else
-            {
-                DrawRectangleLines((x - NAVIGATIONMAP2D_MAX_SIZE / 2) * map->sNavigation2DSquareSize + 2,
-                                   (y - NAVIGATIONMAP2D_MAX_SIZE / 2) * map->sNavigation2DSquareSize + 2,
-                                   map->sNavigation2DSquareSize - 4, map->sNavigation2DSquareSize - 4, RED);
-            }
-        }
-    }
-}
-
 Updatable spriteUpdatable = { Sprite_Update };
 uint32_t  sSpriteCount    = 0;
 uint32_t  sSpriteMaxCount = 0;
@@ -1009,7 +746,7 @@ Sprite*   sSpriteList     = NULL;
 void Sprite_SetPool(Sprite* pool, size_t poolSize)
 {
     sSpriteList     = pool;
-    sSpriteMaxCount = (uint32_t)poolSize;
+    sSpriteMaxCount = poolSize;
     sSpriteCount    = 0;
 }
 
@@ -1026,15 +763,13 @@ void Sprite_Initialize(Sprite* spr)
     spr->parent         = NULL;
     spr->extendedDraw   = false;
     spr->portionRect    = (Rectangle){ 0, 0, 0, 0 };
-    // spr->sourceRect     = (Rectangle){ 0, 0, 0, 0 };
-    // spr->destRect       = (Rectangle){ 0, 0, 0, 0 };
-    // spr->origin         = (Vector2){ 0, 0 };
 }
 
 bool Sprite_Add(Sprite* spr)
 {
     if (sSpriteCount >= sSpriteMaxCount)
     {
+        LOG_ERR("Sprite: Sprite_Add() failed, not enough space");
         return false;
     }
     sSpriteList[sSpriteCount] = *spr;
@@ -1114,20 +849,29 @@ Updatable* Sprite_GetUpdatable()
 }
 
 
-uint32_t    sTextureCount = 0;
-TextureData sTextures[TEXTURE_MAX_COUNT];
+uint32_t     sTextureCount    = 0;
+uint32_t     sTextureMaxCount = 0;
+TextureData* sTextures        = NULL;
+
+void Texture_SetPool(TextureData* pool, size_t poolSize)
+{
+    sTextures        = pool;
+    sTextureMaxCount = poolSize;
+    sTextureCount    = 0;
+}
 
 bool Texture_AddTexture(Texture2D texture, const char* textureName)
 {
-    if (sTextureCount + 1 < TEXTURE_MAX_COUNT)
+    if (sTextureCount > sTextureMaxCount)
     {
-        sTextures[sTextureCount].texture = texture;
-        strcpy(sTextures[sTextureCount].textureName, textureName);
-        sTextureCount++;
-        return true;
+        LOG_ERR("Texture: Texture_AddTexture() failed, not enough space");
+        return false;
+        LOG_ERR("Max AnimatedSprite count reached! Cannot add more AnimatedSprites.");
     }
-    LOG_ERR("Texture: Texture_AddTexture() failed, not enough space");
-    return false;
+    sTextures[sTextureCount].texture = texture;
+    strcpy(sTextures[sTextureCount].textureName, textureName);
+    sTextureCount++;
+    return true;
 }
 
 bool Texture_LoadTexture(const char* fileName)
@@ -1212,8 +956,7 @@ uint8_t Texture_LoadTextureSheetWithInfo(const char* fileName)
         uint32_t textureHeight;
         uint32_t texturePosX;
         uint32_t texturePosY;
-        if (sscanf(line, "%s %d %d %d %d", textureName, &textureWidth, &textureHeight, &texturePosX, &texturePosY)
-            != 5)
+        if (sscanf(line, "%s %d %d %d %d", textureName, &textureWidth, &textureHeight, &texturePosX, &texturePosY) != 5)
         {
             LOG_ERR("Texture: Texture_LoadTextureSheetWithInfo() failed to read line from %s.txt", fileNameWithoutExt);
             fclose(file);
@@ -1348,5 +1091,3 @@ Texture2D* Texture_GetTextureByPosition(uint32_t index)
     }
     return &sTextures[index].texture;
 }
-
-

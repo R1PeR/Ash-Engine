@@ -211,9 +211,9 @@ static void Debug_ShowMisc()
         if (ImGui::TreeNode("Entities"))
         {
             ImGui::Text("Entity count: %d", Entitiy2D_GetCount());
-            Entity2D* current = Entitiy2D_GetEntityList();
             for (uint32_t i = 0; i < Entitiy2D_GetCount(); i++)
             {
+                Entity2D* current = Entitiy2D_GetEntityList() + i;
                 // char buffer[12];
                 sprintf(buffer, "Entity %d", i);
                 if (ImGui::CollapsingHeader(buffer))
@@ -223,7 +223,6 @@ static void Debug_ShowMisc()
                     ImGui::Text("Entity rotation: %f", current->rotation);
                     ImGui::Text("Entity id: %d", current->id);
                 }
-                current = current->next;
             }
             ImGui::TreePop();
         }
@@ -261,9 +260,9 @@ static void Debug_ShowMisc()
         if (ImGui::TreeNode("Colliders"))
         {
             ImGui::Text("Colliders count: %d", Collider2D_GetCount());
-            Collider2D* current = Collider2D_GetCollider2DList();
             for (uint32_t i = 0; i < Collider2D_GetCount(); i++)
             {
+                Collider2D* current = Collider2D_GetCollider2DList() + i;
                 sprintf(buffer, "Colliders %d", i);
                 if (ImGui::CollapsingHeader(buffer))
                 {
@@ -274,7 +273,6 @@ static void Debug_ShowMisc()
                     ImGui::Text("Collider id: %d", current->id);
                     ImGui::Text("Collider current collision count: %d", current->collision.collisionCount);
                 }
-                current = current->next;
             }
             ImGui::TreePop();
         }
@@ -296,9 +294,9 @@ static void Debug_ShowMisc()
         if (ImGui::TreeNode("AnimatedSprites"))
         {
             ImGui::Text("AnimatedSprites count: %d", AnimatedSprite_GetCount());
-            AnimatedSprite* current = AnimatedSprite_GetAnimatedSpriteList();
             for (uint32_t i = 0; i < AnimatedSprite_GetCount(); i++)
             {
+                AnimatedSprite* current = AnimatedSprite_GetAnimatedSpriteArray() + i;
                 sprintf(buffer, "AnimatedSprite %d", i);
                 if (ImGui::CollapsingHeader(buffer))
                 {
@@ -311,7 +309,6 @@ static void Debug_ShowMisc()
                     ImGui::Text("AnimatedSprite currentFrame: %d", current->currentFrame);
                     // ImGui::Image((ImTextureID)&Texture_GetTextures()[i].texture, {128, 128});
                 }
-                current = current->next;
             }
             ImGui::TreePop();
         }

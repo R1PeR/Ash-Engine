@@ -1011,6 +1011,7 @@ void UpdateDragItems()
 void MainMode_OnStart()
 {
     UI_Init(&gameData.cameraEntity);
+    Texture_SetPool(gameData.textures, TEXTURE_MAX_COUNT);
     Texture_LoadTextureSheet("resources/sprites/Anikki_square_8x8.png", 8, 8, 256);
 
     Window_GetCamera()->target = (Vector2){ 0.0f, 0.0f };

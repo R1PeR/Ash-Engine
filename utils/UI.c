@@ -1,12 +1,5 @@
 #include "UI.h"
-
-#include "engine/components/Entity2D.h"
-#include "engine/components/Sprite.h"
-#include "engine/components/Texture.h"
-#include "engine/io/Input.h"
-#include "engine/io/Window.h"
-#include "engine/misc/Logger.h"
-#include "engine/misc/Utils.h"
+#include "ashes/ash_io.h"
 
 #include <stdio.h>
 Entity2D* uiParentEntity = NULL;
@@ -27,6 +20,7 @@ bool UI_CheckBounds(Rectangle bounds)
     }
     return false;
 }
+
 void UI_Init(Entity2D* parentEntity)
 {
     uiParentEntity = parentEntity;

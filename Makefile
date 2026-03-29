@@ -28,6 +28,8 @@ FLAGS        := $(shell scripts/read_list_file.sh "./config/flags.txt")
 # 1. Find all .c and .cpp files recursively in your SOURCE_DIRS [cite: 2]
 RAW_SOURCES := $(shell find $(SOURCE_DIRS) -maxdepth 1 -type f -name "*.c" -or -name "*.cpp")
 
+$(info RAW_SOURCES: $(RAW_SOURCES))
+
 # 2. Read the raw list of directories to exclude 
 RAW_EXCLUDE_DIRS := $(shell scripts/read_list_file.sh "./config/source_exclude.txt")
 

@@ -7,33 +7,24 @@
 #include <stdint.h>
 
 /* Defines */
-#define ANIMATEDSPRITE_MAX_FRAMES  32
-#define ANIMATEDSPRITE_MAX_COUNT   32
-#define ASCIIWINDOW_MAX_TEXURES    256
-#define ASCIIWINDOW_ASCII_START    0
-#define AUDIO_MAX_COUNT            1024
-#define AUDIO_MAX_NAME             32
-#define AUDIOPLAYER_MAX_COUNT      128
-#define AUDIOPLAYER_MAX_NAME       32
-#define COLLIDER2D_MAX_COUNT       16
-#define COLLIDER2D_MAX_COLLISIONS  16
-#define COLLIDER2D_SIMPLE_CHECK    true
-#define NAVIGATIONMAP2D_MAX_SIZE   64
-#define NAVIGATIONMAP2D_MAX_PATH   64
-#define TEXTURE_MAX_COUNT          1024
-#define TEXTURE_MAX_NAME           32
-#define TEXTURE_ALPHA_COLOR        { 0xff, 0xff, 0x00, 0xff }
-#define TEXTURE_INFO_FILE_MAX_NAME 64
-#define TEXTURE_INFO_LINE_MAX      128
+#define ANIMATEDSPRITE_MAX_FRAMES              32
+#define ASCIIWINDOW_MAX_TEXURES                256
+#define ANIMATEDSPRITE_DEFAULT_ANIMATION_SPEED 33
+#define ASCIIWINDOW_ASCII_START                0
+#define AUDIO_MAX_NAME                         32
+#define COLLIDER2D_MAX_COUNT                   16
+#define COLLIDER2D_MAX_COLLISIONS              16
+#define TEXTURE_MAX_NAME                       32
+#define TEXTURE_INFO_FILE_MAX_NAME             64
+#define TEXTURE_INFO_LINE_MAX                  128
 
 /* Structs, Enums, and Unions */
 typedef struct Entity2D
 {
-    Vector2   position;
-    float     scale;
-    float     rotation;
-    uint8_t   id;
-    Entity2D* next;
+    Vector2 position;
+    float   scale;
+    float   rotation;
+    uint8_t id;
 } Entity2D;
 
 typedef struct Sprite
@@ -49,9 +40,6 @@ typedef struct Sprite
 
     bool      extendedDraw;
     Rectangle portionRect;
-    // Rectangle  destRect;
-    // Vector2    origin;
-    // Sprite*    next;
 } Sprite;
 
 typedef struct AnimationData
@@ -62,15 +50,14 @@ typedef struct AnimationData
 
 typedef struct AnimatedSprite
 {
-    Sprite          sprite;
-    AnimationData*  currentAnimation;
-    uint8_t         id;
-    uint16_t        frameTime;
-    bool            isPlaying;
-    bool            repeat;
-    uint8_t         currentFrame;
-    Stopwatch       stopwatch;
-    AnimatedSprite* next;
+    Sprite         sprite;
+    AnimationData* currentAnimation;
+    uint8_t        id;
+    uint16_t       frameTime;
+    bool           isPlaying;
+    bool           repeat;
+    uint8_t        currentFrame;
+    Stopwatch      stopwatch;
 } AnimatedSprite;
 
 typedef struct AsciiWindow
@@ -131,21 +118,7 @@ typedef struct Collider2D
     bool        isTrigger;
     uint8_t     id;
     Collision2D collision;
-    Collider2D* next;
 } Collider2D;
-
-typedef struct NavigationMap2DPath
-{
-    Vector2 path[NAVIGATIONMAP2D_MAX_PATH];
-    uint8_t count;
-} NavigationMap2DPath;
-
-typedef struct NavigationMap2D
-{
-    // can make optimalization here to make 8bit hold 8 squares
-    uint32_t square[NAVIGATIONMAP2D_MAX_SIZE][NAVIGATIONMAP2D_MAX_SIZE];  // 0 - free, other - entity id
-    float    sNavigation2DSquareSize;
-} NavigationMap2D;
 
 typedef struct TextureData
 {
@@ -155,6 +128,7 @@ typedef struct TextureData
 
 /* Function Prototypes */
 
+void AnimatedSprite_SetPool(AnimatedSprite* pool, size_t poolSize);
 void AnimatedSprite_Initialize(AnimatedSprite* animatedSprite);
 bool AnimatedSprite_Add(AnimatedSprite* animatedSprite);
 bool AnimatedSprite_Clear();
@@ -166,7 +140,7 @@ bool AnimatedSprite_SetAnimationDataFromTextureSheet(AnimationData* data, const 
                                                      uint8_t frameCount);
 
 uint32_t        AnimatedSprite_GetCount();
-AnimatedSprite* AnimatedSprite_GetAnimatedSpriteList();
+AnimatedSprite* AnimatedSprite_GetAnimatedSpriteArray();
 Updatable*      AnimatedSprite_GetUpdatable();
 
 void     AsciiWindow_Initalize(AsciiWindow* window, const char* textureName);
@@ -192,6 +166,7 @@ void AsciiSubWindow_DrawBorder(AsciiSubWindow* window, AsciiWindowBorder border)
 void AsciiSubWindow_DrawFill(AsciiSubWindow* window, uint32_t fill);
 void AsciiSubWindow_DrawString(AsciiSubWindow* window, const char* string);
 
+void Audio_SetPool(AudioData* pool, size_t poolSize);
 bool Audio_Init();
 void Audio_Deinit();
 bool Audio_LoadAudio(const char* fileName);
@@ -201,11 +176,13 @@ void Audio_UnloadAudios();
 uint32_t   Audio_GetCount();
 AudioData* Audio_GetAudios();
 
+void    AudioPlayer_SetPool(AudioPlayerData* pool, size_t poolSize);
 int32_t AudioPlayer_PlaySoundByName(const char* audioName);
 int32_t AudioPlayer_PlaySoundById(uint32_t id);
 bool    AudioPlayer_StopSoundById(uint32_t id);
 void    AudioPlayer_StopAll();
 
+void Collider2D_SetPool(Collider2D* pool, size_t poolSize);
 void Collider2D_Initialize(Collider2D* col);
 bool Collider2D_Add(Collider2D* col);
 bool Collider2D_Clear();
@@ -220,23 +197,13 @@ uint32_t    Collider2D_GetCount();
 Collider2D* Collider2D_GetCollider2DList();
 Updatable*  Collider2D_GetUpdatable();
 
+void Entity2D_SetPool(Entity2D* pool, size_t poolSize);
 void Entity2D_Initialize(Entity2D* ent);
 bool Entity2D_Add(Entity2D* ent);
 bool Entity2D_Clear();
 
 uint32_t  Entitiy2D_GetCount();
 Entity2D* Entitiy2D_GetEntityList();
-
-void                NavigationMap2D_Initialize(NavigationMap2D* map, float squareSize);
-uint32_t            NavigationMap2D_GetPosition(NavigationMap2D* map, uint8_t x, uint8_t y);
-void                NavigationMap2D_SetPosition(NavigationMap2D* map, uint8_t x, uint8_t y, uint32_t state);
-void                NavigationMap2D_Clear(NavigationMap2D* map);
-void                NavigationMap2D_Fill(NavigationMap2D* map, Collider2D* entity);
-NavigationMap2DPath NavigationMap2D_CalculatePath(NavigationMap2D* map, uint8_t startX, uint8_t startY, uint8_t stopX,
-                                                  uint8_t stopY);
-void                NavigationMap2D_Debug(NavigationMap2D* map);
-Vector2             NavigationMap2D_ConvertWorldToMap(NavigationMap2D* map, Vector2 worldPosition);
-Vector2             NavigationMap2D_ConvertMapToWorld(NavigationMap2D* map, Vector2 mapPosition);
 
 void Sprite_SetPool(Sprite* pool, size_t poolSize);
 void Sprite_Initialize(Sprite* spr);
@@ -249,6 +216,7 @@ uint32_t   Sprite_GetCount();
 Sprite*    Sprite_GetSpriteList();
 Updatable* Sprite_GetUpdatable();
 
+void    Texture_SetPool(TextureData* pool, size_t poolSize);
 bool    Texture_LoadTexture(const char* fileName);
 uint8_t Texture_LoadTextureSheet(const char* fileName, uint32_t textureWidth, uint32_t textureHeight,
                                  uint32_t texturesCount);

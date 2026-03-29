@@ -11,6 +11,7 @@
 #define CHUNK_MAX_OBJECTS 256
 #define TEXTURE_SCALE     4
 #define TEXTURE_SIZE      8
+#define TEXTURE_MAX_COUNT 1024
 #define SPRITE_MAX_COUNT  256
 #define MAX_OBJECT_COUNT  4096
 #define ENTITY_MAX_ITEMS  8
@@ -123,11 +124,12 @@ struct Chunk
 
 struct GameData
 {
-    Sprite   sprites[SPRITE_MAX_COUNT];
-    Object   objects[MAX_OBJECT_COUNT];
-    uint16_t objectCount;
-    Chunk    chunks[CHUNK_SIZE * CHUNK_SIZE];
-    uint16_t chunkCount;
+    Sprite      sprites[SPRITE_MAX_COUNT];
+    Object      objects[MAX_OBJECT_COUNT];
+    TextureData textures[TEXTURE_MAX_COUNT];
+    uint16_t    objectCount;
+    Chunk       chunks[CHUNK_SIZE * CHUNK_SIZE];
+    uint16_t    chunkCount;
     // uint16_t spriteCount;
     int      currentZPos;
     Entity2D cameraEntity;
