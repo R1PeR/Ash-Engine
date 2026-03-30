@@ -200,20 +200,19 @@ uint16_t AStar_GetPath(const Vector2Int startPos, const Vector2Int targetPos, ui
 
 #define MOUSE_BUTTON_COUNT    5
 #define KEYBOARD_BUTTON_COUNT 128
-Updatable debugUpdatable = { Debug_ShowDebugWindow };
 bool      debugVisible   = false;
 
-static void Debug_ShowMisc()
+static void Debug_ShowMisc(Entity2D* ent, Sprite* spr, Collider2D* col, TextureData* tex, AnimatedSprite* anim, AudioData* aud)
 {
     char buffer[12];
     if (ImGui::CollapsingHeader("Objects"))
     {
         if (ImGui::TreeNode("Entities"))
         {
-            ImGui::Text("Entity count: %d", Entitiy2D_GetCount());
-            for (uint32_t i = 0; i < Entitiy2D_GetCount(); i++)
+            ImGui::Text("Entity count: %d", Utils_ArraySize(ent));
+            for (uint32_t i = 0; i < Utils_ArraySize(ent); i++)
             {
-                Entity2D* current = Entitiy2D_GetEntityList() + i;
+                Entity2D* current = ent + i;
                 // char buffer[12];
                 sprintf(buffer, "Entity %d", i);
                 if (ImGui::CollapsingHeader(buffer))
@@ -228,10 +227,10 @@ static void Debug_ShowMisc()
         }
         if (ImGui::TreeNode("Sprites"))
         {
-            ImGui::Text("Sprites count: %d", Sprite_GetCount());
-            for (uint32_t i = 0; i < Sprite_GetCount(); i++)
+            ImGui::Text("Sprites count: %d", Utils_ArraySize(spr));
+            for (uint32_t i = 0; i < Utils_ArraySize(spr); i++)
             {
-                Sprite* current = Sprite_GetSpriteList() + i;
+                Sprite* current = spr + i;
                 sprintf(buffer, "Sprite %d", i);
                 if (ImGui::CollapsingHeader(buffer))
                 {
@@ -259,10 +258,10 @@ static void Debug_ShowMisc()
         }
         if (ImGui::TreeNode("Colliders"))
         {
-            ImGui::Text("Colliders count: %d", Collider2D_GetCount());
-            for (uint32_t i = 0; i < Collider2D_GetCount(); i++)
+            ImGui::Text("Colliders count: %d", Utils_ArraySize(col));
+            for (uint32_t i = 0; i < Utils_ArraySize(col); i++)
             {
-                Collider2D* current = Collider2D_GetCollider2DList() + i;
+                Collider2D* current = col + i;
                 sprintf(buffer, "Colliders %d", i);
                 if (ImGui::CollapsingHeader(buffer))
                 {
@@ -278,25 +277,24 @@ static void Debug_ShowMisc()
         }
         if (ImGui::TreeNode("Textures"))
         {
-            ImGui::Text("Textures count: %d", Texture_GetCount());
-            for (uint32_t i = 0; i < Texture_GetCount(); i++)
+            ImGui::Text("Textures count: %d", Utils_ArraySize(tex));
+            for (uint32_t i = 0; i < Utils_ArraySize(tex); i++)
             {
                 sprintf(buffer, "Textures %d", i);
                 if (ImGui::CollapsingHeader(buffer))
                 {
-                    ImGui::Text("Texture id: %d", Texture_GetTextures()[i].texture.id);
-                    ImGui::Text("Texture name: %s", Texture_GetTextures()[i].textureName);
-                    ImGui::Image((ImTextureID)Texture_GetTextures()[i].texture.id, { 128, 128 });
+                    ImGui::Text("Texture id: %d", tex[i].texture.id);
+                    ImGui::Image((ImTextureID)tex[i].texture.id, { 128, 128 });
                 }
             }
             ImGui::TreePop();
         }
         if (ImGui::TreeNode("AnimatedSprites"))
         {
-            ImGui::Text("AnimatedSprites count: %d", AnimatedSprite_GetCount());
-            for (uint32_t i = 0; i < AnimatedSprite_GetCount(); i++)
+            ImGui::Text("AnimatedSprites count: %d", Utils_ArraySize(tex));
+            for (uint32_t i = 0; i < Utils_ArraySize(tex); i++)
             {
-                AnimatedSprite* current = AnimatedSprite_GetAnimatedSpriteArray() + i;
+                AnimatedSprite* current = anim + i;
                 sprintf(buffer, "AnimatedSprite %d", i);
                 if (ImGui::CollapsingHeader(buffer))
                 {
@@ -307,21 +305,20 @@ static void Debug_ShowMisc()
                     ImGui::Text("AnimatedSprite isPlaying: %d", current->isPlaying);
                     ImGui::Text("AnimatedSprite repeat: %d", current->repeat);
                     ImGui::Text("AnimatedSprite currentFrame: %d", current->currentFrame);
-                    // ImGui::Image((ImTextureID)&Texture_GetTextures()[i].texture, {128, 128});
+                    // ImGui::Image((ImTextureID)&tex[i].texture, {128, 128});
                 }
             }
             ImGui::TreePop();
         }
         if (ImGui::TreeNode("Audio"))
         {
-            ImGui::Text("Audio count: %d", Audio_GetCount());
-            for (uint32_t i = 0; i < Audio_GetCount(); i++)
+            ImGui::Text("Audio count: %d", Utils_ArraySize(aud));
+            for (uint32_t i = 0; i < Utils_ArraySize(aud); i++)
             {
                 sprintf(buffer, "Audio %d", i);
                 if (ImGui::CollapsingHeader(buffer))
                 {
-                    ImGui::Text("Audio Id: %d", Audio_GetAudios()[i].id);
-                    ImGui::Text("Audio Name: %s", Audio_GetAudios()[i].soundName);
+                    ImGui::Text("Audio Id: %d", i);
                 }
             }
             ImGui::TreePop();
@@ -423,7 +420,7 @@ static void Debug_ShowMisc()
     }
 }
 
-void Debug_ShowDebugWindow()
+void Debug_ShowDebugWindow(Entity2D* ent, Sprite* spr, Collider2D* col, TextureData* tex, AnimatedSprite* anim, AudioData* aud)
 {
     if (Input_IsKeyPressed(INPUT_KEYCODE_F3))
     {
@@ -457,15 +454,10 @@ void Debug_ShowDebugWindow()
 
     ImGui::Spacing();
 
-    Debug_ShowMisc();
+    Debug_ShowMisc(ent, spr, col, tex, anim, aud);
 
     // End of ShowDemoWindow()
     ImGui::End();
-}
-
-Updatable* Debug_GetUpdatable()
-{
-    return &debugUpdatable;
 }
 
 Updatable deltaTimeUpdatable = { DeltaTime_Update };
@@ -488,11 +480,6 @@ void DeltaTime_Update()
 float DeltaTime_GetDeltaTime()
 {
     return deltaTime;
-}
-
-Updatable* DeltaTime_GetUpdatable()
-{
-    return &deltaTimeUpdatable;
 }
 
 void Logger_Init()

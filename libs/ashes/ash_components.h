@@ -14,7 +14,6 @@
 #define AUDIO_MAX_NAME                         32
 #define COLLIDER2D_MAX_COUNT                   16
 #define COLLIDER2D_MAX_COLLISIONS              16
-#define TEXTURE_MAX_NAME                       32
 #define TEXTURE_INFO_FILE_MAX_NAME             64
 #define TEXTURE_INFO_LINE_MAX                  128
 
@@ -90,15 +89,12 @@ typedef struct AsciiWindowBorder
 
 typedef struct AudioData
 {
-    Sound    sound;
-    char     soundName[AUDIO_MAX_NAME];
-    uint32_t id;
+    Sound sound;
 } AudioData;
 
 typedef struct AudioPlayerData
 {
-    Sound    sound;
-    uint32_t id;
+    Sound sound;
 } AudioPlayerData;
 
 typedef struct Collider2D Collider2D;
@@ -122,28 +118,18 @@ typedef struct Collider2D
 
 typedef struct TextureData
 {
-    Texture2D texture;
-    char      textureName[TEXTURE_MAX_NAME];
+    Texture2D    texture;
+    Vector4Float uv;
 } TextureData;
 
 /* Function Prototypes */
 
-void AnimatedSprite_SetPool(AnimatedSprite* pool, size_t poolSize);
 void AnimatedSprite_Initialize(AnimatedSprite* animatedSprite);
-bool AnimatedSprite_Add(AnimatedSprite* animatedSprite);
-bool AnimatedSprite_Clear();
 void AnimatedSprite_Play(AnimatedSprite* animatedSprite, AnimationData* animation, bool repeat);
 void AnimatedSprite_Stop(AnimatedSprite* animatedSprite);
-void AnimatedSprite_Update();
+void AnimatedSprite_Update(AnimatedSprite* animatedSprite);
 
-bool AnimatedSprite_SetAnimationDataFromTextureSheet(AnimationData* data, const char* textureName, uint8_t startFrame,
-                                                     uint8_t frameCount);
-
-uint32_t        AnimatedSprite_GetCount();
-AnimatedSprite* AnimatedSprite_GetAnimatedSpriteArray();
-Updatable*      AnimatedSprite_GetUpdatable();
-
-void     AsciiWindow_Initalize(AsciiWindow* window, const char* textureName);
+void     AsciiWindow_Initalize(AsciiWindow* window, Texture2D* texture);
 void     AsciiWindow_SetCharacter(AsciiWindow* window, uint32_t x, uint32_t y, char c);
 char     AsciiWindow_GetCharacter(AsciiWindow* window, uint32_t x, uint32_t y);
 void     AsciiWindow_SetCell(AsciiWindow* window, uint32_t x, uint32_t y, uint32_t c);
@@ -166,69 +152,29 @@ void AsciiSubWindow_DrawBorder(AsciiSubWindow* window, AsciiWindowBorder border)
 void AsciiSubWindow_DrawFill(AsciiSubWindow* window, uint32_t fill);
 void AsciiSubWindow_DrawString(AsciiSubWindow* window, const char* string);
 
-void Audio_SetPool(AudioData* pool, size_t poolSize);
-bool Audio_Init();
-void Audio_Deinit();
-bool Audio_LoadAudio(const char* fileName);
-bool Audio_UnloadAudioByName(const char* audioName);
-void Audio_UnloadAudios();
+bool      Audio_Init();
+void      Audio_Deinit();
+AudioData Audio_LoadAudio(const char* fileName);
+void      Audio_UnloadAudio(AudioData* audio);
+void      Audio_Play(AudioData* audio);
+void      Audio_Stop(AudioData* audio);
 
-uint32_t   Audio_GetCount();
-AudioData* Audio_GetAudios();
 
-void    AudioPlayer_SetPool(AudioPlayerData* pool, size_t poolSize);
-int32_t AudioPlayer_PlaySoundByName(const char* audioName);
-int32_t AudioPlayer_PlaySoundById(uint32_t id);
-bool    AudioPlayer_StopSoundById(uint32_t id);
-void    AudioPlayer_StopAll();
-
-void Collider2D_SetPool(Collider2D* pool, size_t poolSize);
 void Collider2D_Initialize(Collider2D* col);
-bool Collider2D_Add(Collider2D* col);
-bool Collider2D_Clear();
-void Collider2D_Update();
 void Collider2D_DrawDebug(Collider2D* col);
 bool Collider2D_Check(Collider2D* a, Collider2D* b);
 bool Collider2D_CheckCollider(Collider2D* a, Collider2D* b);
 bool Collider2D_CheckPoint(Collider2D* a, Vector2 b);
 bool Collider2D_CheckRect(Collider2D* a, Rectangle b);
 
-uint32_t    Collider2D_GetCount();
-Collider2D* Collider2D_GetCollider2DList();
-Updatable*  Collider2D_GetUpdatable();
-
-void Entity2D_SetPool(Entity2D* pool, size_t poolSize);
 void Entity2D_Initialize(Entity2D* ent);
-bool Entity2D_Add(Entity2D* ent);
-bool Entity2D_Clear();
 
-uint32_t  Entitiy2D_GetCount();
-Entity2D* Entitiy2D_GetEntityList();
-
-void Sprite_SetPool(Sprite* pool, size_t poolSize);
 void Sprite_Initialize(Sprite* spr);
-bool Sprite_Add(Sprite* spr);
-bool Sprite_Clear();
-void Sprite_Update();
+void Sprite_Update(Sprite* spr);
 void Sprite_Draw(Sprite* spr);
 
-uint32_t   Sprite_GetCount();
-Sprite*    Sprite_GetSpriteList();
-Updatable* Sprite_GetUpdatable();
-
-void    Texture_SetPool(TextureData* pool, size_t poolSize);
-bool    Texture_LoadTexture(const char* fileName);
-uint8_t Texture_LoadTextureSheet(const char* fileName, uint32_t textureWidth, uint32_t textureHeight,
-                                 uint32_t texturesCount);
-uint8_t Texture_LoadTextureSheetWithInfo(const char* fileName);
-
-bool Texture_UnloadTextureByName(const char* textureName);
-bool Texture_UnloadTextureById(uint32_t textureId);
-void Texture_UnloadTextures();
-
-uint32_t     Texture_GetCount();
-TextureData* Texture_GetTextures();
-Texture2D*   Texture_GetTextureByName(const char* textureName);
-Texture2D*   Texture_GetTextureById(uint32_t textureId);
+TextureData Texture_LoadTexture(const char* fileName);
+bool        Texture_CreateTextureAtlas(TextureData texture, uint32_t columns, uint32_t rows, TextureData* output);
+void        Texture_UnloadTexture(TextureData* texture);
 
 #endif  // ASH_COMPONENTS_H

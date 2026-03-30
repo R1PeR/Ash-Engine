@@ -43,7 +43,8 @@
 #    endif
 #endif
 
-#define CLOCKS_PER_MS CLOCKS_PER_SEC / 1000
+#define CLOCKS_PER_MS        CLOCKS_PER_SEC / 1000
+#define Utils_ArraySize(arr) (sizeof(arr) / sizeof(arr[0]))
 
 /* Structs, Enums, and Unions */
 typedef struct Vector2Int
@@ -117,6 +118,13 @@ typedef struct Vector2Float
     float x;
     float y;
 } Vector2Float;
+typedef struct Vector4Float
+{
+    float x;
+    float y;
+    float w;
+    float h;
+} Vector4Float;
 typedef struct Stopwatch
 {
     uint32_t startTime;
@@ -150,12 +158,10 @@ uint16_t AStar_GetPath(const Vector2Int startPos, const Vector2Int targetPos, ui
                        Vector2Int* outPathBuffer, size_t outPathBufferSize, size_t& outPathLength,
                        HeuristicFuncPtr hFunc);
 
-void       Debug_ShowDebugWindow();
-Updatable* Debug_GetUpdatable();
+void Debug_ShowDebugWindow();
 
-void       DeltaTime_Update();
-float      DeltaTime_GetDeltaTime();
-Updatable* DeltaTime_GetUpdatable();
+void  DeltaTime_Update();
+float DeltaTime_GetDeltaTime();
 
 void Logger_Init();
 void Logger_Deinit();
@@ -172,8 +178,6 @@ float    Stopwatch_GetPercentRemainingTime(Stopwatch* stopwatch);
 bool Stopwatch_IsRunning(Stopwatch* stopwatch);
 bool Stopwatch_IsElapsed(Stopwatch* stopwatch);
 bool Stopwatch_IsZero(Stopwatch* stopwatch);
-
-typedef void (*GetPositionScoreFunc)(Vector2Int8);
 
 uint32_t Utils_AbsInt32(int32_t value);
 uint16_t Utils_AbsInt16(int16_t value);

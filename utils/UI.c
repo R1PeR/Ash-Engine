@@ -50,7 +50,7 @@ bool UI_TextureButton(Button* button)
     {
         buttonSprite.currentTexture = button->offTexture;
     }
-    Sprite_Add(&buttonSprite);
+    //Sprite_Add(&buttonSprite);
 
     return UI_CheckBounds(button->bounds);
 }
@@ -79,7 +79,7 @@ bool UI_TextButton(TextButton* textButton, const char* fontName)
     {
         buttonSprite.currentTexture = textButton->offTexture;
     }
-    Sprite_Add(&buttonSprite);
+    //Sprite_Add(&buttonSprite);
 
     UI_Text(&textButton->text, fontName);
 
@@ -88,31 +88,31 @@ bool UI_TextButton(TextButton* textButton, const char* fontName)
 
 bool UI_Text(Text* uiText, const char* fontName)
 {
-    uiText->bounds.x *= uiParentEntity->scale;
-    uiText->bounds.y *= uiParentEntity->scale;
-    uiText->bounds.width *= uiParentEntity->scale;
-    uiText->bounds.height *= uiParentEntity->scale;
-
-    uiText->bounds.x += uiParentEntity->position.x;
-    uiText->bounds.y += uiParentEntity->position.y;
-
-    for (size_t i = 0; i < uiText->bufferSize; i++)
-    {
-        Sprite textSprite;
-        Sprite_Initialize(&textSprite);
-        char c = uiText->buffer[i];
-        char textureName[32];
-        sprintf(textureName, "%s_%d", fontName, c);
-        Texture2D* charTexture    = Texture_GetTextureByName(textureName);
-        textSprite.currentTexture = charTexture;
-        textSprite.scale          = uiText->scale;
-        textSprite.position.x     = uiText->position.x + (charTexture->width * uiText->scale * i);
-        textSprite.position.y     = uiText->position.y;
-        textSprite.parent         = uiParentEntity;
-        Sprite_Add(&textSprite);
-    }
-
-    return UI_CheckBounds(uiText->bounds);
+    // uiText->bounds.x *= uiParentEntity->scale;
+    // uiText->bounds.y *= uiParentEntity->scale;
+    // uiText->bounds.width *= uiParentEntity->scale;
+    // uiText->bounds.height *= uiParentEntity->scale;
+    //
+    // uiText->bounds.x += uiParentEntity->position.x;
+    // uiText->bounds.y += uiParentEntity->position.y;
+    //
+    // for (size_t i = 0; i < uiText->bufferSize; i++)
+    // {
+    //     Sprite textSprite;
+    //     Sprite_Initialize(&textSprite);
+    //     char c = uiText->buffer[i];
+    //     char textureName[32];
+    //     sprintf(textureName, "%s_%d", fontName, c);
+    //     Texture2D* charTexture    = Texture_GetTextureByName(textureName);
+    //     textSprite.currentTexture = charTexture;
+    //     textSprite.scale          = uiText->scale;
+    //     textSprite.position.x     = uiText->position.x + (charTexture->width * uiText->scale * i);
+    //     textSprite.position.y     = uiText->position.y;
+    //     textSprite.parent         = uiParentEntity;
+    //     //Sprite_Add(&textSprite);
+    // }
+    //
+    // return UI_CheckBounds(uiText->bounds);
 }
 
 bool UI_SliderFloat(SliderFloat* slider)
@@ -134,7 +134,7 @@ bool UI_SliderFloat(SliderFloat* slider)
         backgroundSprite.position.x     = slider->position.x;
         backgroundSprite.position.y     = slider->position.y;
         backgroundSprite.parent         = uiParentEntity;
-        Sprite_Add(&backgroundSprite);
+        //Sprite_Add(&backgroundSprite);
     }
 
     Sprite sliderSprite;
@@ -147,7 +147,7 @@ bool UI_SliderFloat(SliderFloat* slider)
                               - (slider->sliderTexture->width * 0.5f * slider->scale);
     sliderSprite.position.y = slider->position.y;
     sliderSprite.parent     = uiParentEntity;
-    Sprite_Add(&sliderSprite);
+    //Sprite_Add(&sliderSprite);
 
     return UI_CheckBounds(slider->bounds);
 }
@@ -171,7 +171,7 @@ bool UI_SliderInt(SliderInt* slider)
         backgroundSprite.position.x     = slider->position.x;
         backgroundSprite.position.y     = slider->position.y;
         backgroundSprite.parent         = uiParentEntity;
-        Sprite_Add(&backgroundSprite);
+        //Sprite_Add(&backgroundSprite);
     }
 
     Sprite sliderSprite;
@@ -185,7 +185,7 @@ bool UI_SliderInt(SliderInt* slider)
         - (slider->sliderTexture->width * 0.5f * slider->scale);
     sliderSprite.position.y = slider->position.y;
     sliderSprite.parent     = uiParentEntity;
-    Sprite_Add(&sliderSprite);
+    //Sprite_Add(&sliderSprite);
 
     return UI_CheckBounds(slider->bounds);
 }
@@ -210,7 +210,7 @@ bool UI_ProgressBar(ProgressBar* progressBar)
         backgroundSprite.position.x     = progressBar->position.x;
         backgroundSprite.position.y     = progressBar->position.y;
         backgroundSprite.parent         = uiParentEntity;
-        Sprite_Add(&backgroundSprite);
+        //Sprite_Add(&backgroundSprite);
     }
 
     Sprite sliderSprite;
@@ -228,7 +228,7 @@ bool UI_ProgressBar(ProgressBar* progressBar)
                                      * progressBar->progressTexture->width;
     sliderSprite.portionRect.height = progressBar->progressTexture->height;
 
-    Sprite_Add(&sliderSprite);
+    //Sprite_Add(&sliderSprite);
 
     return UI_CheckBounds(progressBar->bounds);
 }
@@ -257,7 +257,7 @@ bool UI_Checkbox(Checkbox* checkbox)
     {
         checkboxSprite.currentTexture = checkbox->offTexture;
     }
-    Sprite_Add(&checkboxSprite);
+    //Sprite_Add(&checkboxSprite);
 
     return UI_CheckBounds(checkbox->bounds);
 }
@@ -281,7 +281,7 @@ bool UI_ItemSlot(ItemSlot* itemSlot)
         backgroundSprite.position.x     = itemSlot->position.x;
         backgroundSprite.position.y     = itemSlot->position.y;
         backgroundSprite.parent         = uiParentEntity;
-        Sprite_Add(&backgroundSprite);
+        //Sprite_Add(&backgroundSprite);
     }
 
     Sprite itemSprite;
@@ -291,7 +291,7 @@ bool UI_ItemSlot(ItemSlot* itemSlot)
     itemSprite.currentTexture = itemSlot->itemTexture;
     itemSprite.scale          = itemSlot->scale;
     itemSprite.parent         = uiParentEntity;
-    Sprite_Add(&itemSprite);
+    //Sprite_Add(&itemSprite);
 
     return UI_CheckBounds(itemSlot->bounds);
 }

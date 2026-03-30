@@ -14,12 +14,6 @@ int main()
     Logger_Init();
     Audio_Init();
 
-    Context_AddUpdatable(Debug_GetUpdatable());
-    Context_AddUpdatable(Sprite_GetUpdatable());
-    Context_AddUpdatable(Collider2D_GetUpdatable());
-    Context_AddUpdatable(DeltaTime_GetUpdatable());
-    Context_AddUpdatable(AnimatedSprite_GetUpdatable());
-
     Context_SetMode(&mainMode);
 
     Logger_Deinit();
