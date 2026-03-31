@@ -1,12 +1,8 @@
 #ifndef ASH_MISC_H
 #define ASH_MISC_H
-#include "ash_context.h"
 
 #include <raylib.h>
 #include <stdint.h>
-
-/* Defines */
-#define ASH_MISC_H
 
 #define LOG_LEVEL_DEBUG   4
 #define LOG_LEVEL_INFO    3
@@ -45,6 +41,8 @@
 
 #define CLOCKS_PER_MS        CLOCKS_PER_SEC / 1000
 #define Utils_ArraySize(arr) (sizeof(arr) / sizeof(arr[0]))
+#define Utils_AddToArray(arr, value, currentSize, maxSize) \
+    (((currentSize) < (maxSize)) ? ((arr)[(currentSize)++] = (value), true) : false)
 
 /* Structs, Enums, and Unions */
 typedef struct Vector2Int
@@ -125,6 +123,13 @@ typedef struct Vector4Float
     float w;
     float h;
 } Vector4Float;
+typedef struct Vector4UInt32
+{
+    uint32_t x;
+    uint32_t y;
+    uint32_t w;
+    uint32_t h;
+} Vector4UInt32;
 typedef struct Stopwatch
 {
     uint32_t startTime;
@@ -158,7 +163,9 @@ uint16_t AStar_GetPath(const Vector2Int startPos, const Vector2Int targetPos, ui
                        Vector2Int* outPathBuffer, size_t outPathBufferSize, size_t& outPathLength,
                        HeuristicFuncPtr hFunc);
 
-void Debug_ShowDebugWindow();
+// void Debug_ShowDebugWindow(Entity2D* ent, uint32_t entSize, Sprite* spr, uint32_t sprSize, Collider2D* col,
+//                            uint32_t colSize, TextureData* tex, uint32_t texSize, AnimatedSprite* anim,
+//                            uint32_t animSize, AudioData* aud, uint32_t audSize);
 
 void  DeltaTime_Update();
 float DeltaTime_GetDeltaTime();

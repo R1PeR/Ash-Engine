@@ -1,9 +1,7 @@
 #ifndef ASH_COMPONENTS_H
 #define ASH_COMPONENTS_H
 
-/* Includes */
 #include "ash_misc.h"
-
 #include <stdint.h>
 
 /* Defines */
@@ -26,16 +24,17 @@ typedef struct Entity2D
     uint8_t id;
 } Entity2D;
 
+typedef struct TextureData TextureData;
 typedef struct Sprite
 {
-    Entity2D*  parent;
-    Vector2    position;
-    float      scale;
-    float      rotation;
-    Texture2D* currentTexture;
-    uint8_t    zOrder;
-    bool       isVisible;
-    Color      tint;
+    Entity2D*    parent;
+    Vector2      position;
+    float        scale;
+    float        rotation;
+    TextureData* currentTexture;
+    uint8_t      zOrder;
+    bool         isVisible;
+    Color        tint;
 
     bool      extendedDraw;
     Rectangle portionRect;
@@ -43,8 +42,8 @@ typedef struct Sprite
 
 typedef struct AnimationData
 {
-    Texture2D* animationFrames[ANIMATEDSPRITE_MAX_FRAMES];
-    uint8_t    animationFrameCount;
+    TextureData* animationFrames[ANIMATEDSPRITE_MAX_FRAMES];
+    uint8_t      animationFrameCount;
 } AnimationData;
 
 typedef struct AnimatedSprite
@@ -64,7 +63,7 @@ typedef struct AsciiWindow
     Entity2D entity;
     uint8_t* windowBuffer;
     Sprite*  spriteBuffer;
-    Texture* textureBuffer[ASCIIWINDOW_MAX_TEXURES];
+    TextureData* textureBuffer[ASCIIWINDOW_MAX_TEXURES];
     Vector2  position;
     uint32_t width;
     uint32_t height;
@@ -120,6 +119,7 @@ typedef struct TextureData
 {
     Texture2D    texture;
     Vector4Float uv;
+    Vector2Int16 size;
 } TextureData;
 
 /* Function Prototypes */

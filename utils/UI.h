@@ -8,8 +8,8 @@
 struct Button
 {
     Vector2Float position;
-    Texture2D*   onTexture;
-    Texture2D*   offTexture;
+    TextureData* onTexture;
+    TextureData* offTexture;
     Rectangle    bounds;
     float        scale;
     bool         isPressed;
@@ -27,8 +27,8 @@ struct Text
 struct TextButton
 {
     Vector2Float position;
-    Texture2D*   onTexture;
-    Texture2D*   offTexture;
+    TextureData* onTexture;
+    TextureData* offTexture;
     Rectangle    bounds;
     float        scale;
     bool         isPressed;
@@ -38,8 +38,8 @@ struct TextButton
 struct SliderFloat
 {
     Vector2Float position;
-    Texture2D*   backgroundSprite;
-    Texture2D*   sliderTexture;
+    TextureData* backgroundSprite;
+    TextureData* sliderTexture;
     Rectangle    bounds;
     float        scale;
     float        minValue;
@@ -51,8 +51,8 @@ struct SliderFloat
 struct SliderInt
 {
     Vector2Float position;
-    Texture2D*   backgroundTexture;
-    Texture2D*   sliderTexture;
+    TextureData* backgroundTexture;
+    TextureData* sliderTexture;
     Rectangle    bounds;
     float        scale;
     int32_t      minValue;
@@ -64,8 +64,8 @@ struct SliderInt
 struct ProgressBar
 {
     Vector2Float position;
-    Texture2D*   backgroundTexture;
-    Texture2D*   progressTexture;
+    TextureData* backgroundTexture;
+    TextureData* progressTexture;
     Rectangle    bounds;
     float        scale;
     float        minValue;
@@ -76,8 +76,8 @@ struct ProgressBar
 struct Checkbox
 {
     Vector2Float position;
-    Texture2D*   onTexture;
-    Texture2D*   offTexture;
+    TextureData* onTexture;
+    TextureData* offTexture;
     Rectangle    bounds;
     float        scale;
     bool         isChecked;
@@ -86,16 +86,16 @@ struct Checkbox
 struct ItemSlot
 {
     Vector2Float position;
-    Texture2D*   backgroundTexture;
-    Texture2D*   itemTexture;
+    TextureData* backgroundTexture;
+    TextureData* itemTexture;
     Rectangle    bounds;
     float        scale;
 };
 
 void UI_Init(Entity2D* parentEntity);
 bool UI_TextureButton(Button* uiButton);
-bool UI_TextButton(TextButton* uiTextButton);
-bool UI_Text(Text* uiText, const char* fontName);
+bool UI_TextButton(TextButton* uiTextButton, TextureData* fontAtlas);
+bool UI_Text(Text* uiText, TextureData* fontAtlas);
 bool UI_SliderFloat(SliderFloat* uiSlider);
 bool UI_SliderInt(SliderInt* uiSlider);
 bool UI_ProgressBar(ProgressBar* uiProgressBar);

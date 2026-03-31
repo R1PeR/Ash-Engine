@@ -1,8 +1,13 @@
 #include "UI.h"
+
+#include "ashes/ash_components.h"
 #include "ashes/ash_io.h"
 
 #include <stdio.h>
-Entity2D* uiParentEntity = NULL;
+Entity2D* uiParentEntity       = NULL;
+Sprite*   uiSpriteArray        = NULL;
+size_t    uiSpriteArraySize    = 0;
+size_t    uiSpriteArrayMaxSize = 0;
 
 bool UI_CheckBounds(Rectangle bounds)
 {
@@ -21,9 +26,12 @@ bool UI_CheckBounds(Rectangle bounds)
     return false;
 }
 
-void UI_Init(Entity2D* parentEntity)
+void UI_Init(Entity2D* parentEntity, Sprite* spriteArray, size_t spriteArraySize)
 {
-    uiParentEntity = parentEntity;
+    uiParentEntity       = parentEntity;
+    uiSpriteArray        = spriteArray;
+    uiSpriteArraySize    = 0;
+    uiSpriteArrayMaxSize = spriteArraySize;
 }
 
 bool UI_TextureButton(Button* button)
@@ -50,12 +58,15 @@ bool UI_TextureButton(Button* button)
     {
         buttonSprite.currentTexture = button->offTexture;
     }
-    //Sprite_Add(&buttonSprite);
+    if (!Utils_AddToArray(uiSpriteArray, buttonSprite, uiSpriteArraySize, uiSpriteArrayMaxSize))
+    {
+        LOG_ERR("UI sprite array is full! Cannot add more UI elements.");
+    }
 
     return UI_CheckBounds(button->bounds);
 }
 
-bool UI_TextButton(TextButton* textButton, const char* fontName)
+bool UI_TextButton(TextButton* textButton, TextureData* fontAtlas)
 {
     textButton->bounds.x *= uiParentEntity->scale;
     textButton->bounds.y *= uiParentEntity->scale;
@@ -79,40 +90,43 @@ bool UI_TextButton(TextButton* textButton, const char* fontName)
     {
         buttonSprite.currentTexture = textButton->offTexture;
     }
-    //Sprite_Add(&buttonSprite);
+    if (!Utils_AddToArray(uiSpriteArray, buttonSprite, uiSpriteArraySize, uiSpriteArrayMaxSize))
+    {
+        LOG_ERR("UI sprite array is full! Cannot add more UI elements.");
+    }
 
-    UI_Text(&textButton->text, fontName);
+    UI_Text(&textButton->text, fontAtlas);
 
     return UI_CheckBounds(textButton->bounds);
 }
 
-bool UI_Text(Text* uiText, const char* fontName)
+bool UI_Text(Text* uiText, TextureData* fontAtlas)
 {
-    // uiText->bounds.x *= uiParentEntity->scale;
-    // uiText->bounds.y *= uiParentEntity->scale;
-    // uiText->bounds.width *= uiParentEntity->scale;
-    // uiText->bounds.height *= uiParentEntity->scale;
-    //
-    // uiText->bounds.x += uiParentEntity->position.x;
-    // uiText->bounds.y += uiParentEntity->position.y;
-    //
-    // for (size_t i = 0; i < uiText->bufferSize; i++)
-    // {
-    //     Sprite textSprite;
-    //     Sprite_Initialize(&textSprite);
-    //     char c = uiText->buffer[i];
-    //     char textureName[32];
-    //     sprintf(textureName, "%s_%d", fontName, c);
-    //     Texture2D* charTexture    = Texture_GetTextureByName(textureName);
-    //     textSprite.currentTexture = charTexture;
-    //     textSprite.scale          = uiText->scale;
-    //     textSprite.position.x     = uiText->position.x + (charTexture->width * uiText->scale * i);
-    //     textSprite.position.y     = uiText->position.y;
-    //     textSprite.parent         = uiParentEntity;
-    //     //Sprite_Add(&textSprite);
-    // }
-    //
-    // return UI_CheckBounds(uiText->bounds);
+    uiText->bounds.x *= uiParentEntity->scale;
+    uiText->bounds.y *= uiParentEntity->scale;
+    uiText->bounds.width *= uiParentEntity->scale;
+    uiText->bounds.height *= uiParentEntity->scale;
+
+    uiText->bounds.x += uiParentEntity->position.x;
+    uiText->bounds.y += uiParentEntity->position.y;
+
+    for (size_t i = 0; i < uiText->bufferSize; i++)
+    {
+        Sprite textSprite;
+        Sprite_Initialize(&textSprite);
+        char c = uiText->buffer[i];
+        char textureName[32];
+        // sprintf(textureName, "%s_%d", fontName, c);
+        TextureData* charTexture  = &fontAtlas[c - 32];
+        textSprite.currentTexture = charTexture;
+        textSprite.scale          = uiText->scale;
+        textSprite.position.x     = uiText->position.x + (charTexture->size.x * uiText->scale * i);
+        textSprite.position.y     = uiText->position.y;
+        textSprite.parent         = uiParentEntity;
+        // Sprite_Add(&textSprite);
+    }
+
+    return UI_CheckBounds(uiText->bounds);
 }
 
 bool UI_SliderFloat(SliderFloat* slider)
@@ -134,7 +148,10 @@ bool UI_SliderFloat(SliderFloat* slider)
         backgroundSprite.position.x     = slider->position.x;
         backgroundSprite.position.y     = slider->position.y;
         backgroundSprite.parent         = uiParentEntity;
-        //Sprite_Add(&backgroundSprite);
+        if (!Utils_AddToArray(uiSpriteArray, backgroundSprite, uiSpriteArraySize, uiSpriteArrayMaxSize))
+        {
+            LOG_ERR("UI sprite array is full! Cannot add more UI elements.");
+        }
     }
 
     Sprite sliderSprite;
@@ -143,11 +160,14 @@ bool UI_SliderFloat(SliderFloat* slider)
     sliderSprite.scale          = slider->scale;
     sliderSprite.position.x     = slider->position.x
                               + ((slider->currentValue - slider->minValue) / (slider->maxValue - slider->minValue))
-                                    * slider->backgroundSprite->width
-                              - (slider->sliderTexture->width * 0.5f * slider->scale);
+                                    * slider->backgroundSprite->size.x
+                              - (slider->sliderTexture->size.x * 0.5f * slider->scale);
     sliderSprite.position.y = slider->position.y;
     sliderSprite.parent     = uiParentEntity;
-    //Sprite_Add(&sliderSprite);
+    if (!Utils_AddToArray(uiSpriteArray, sliderSprite, uiSpriteArraySize, uiSpriteArrayMaxSize))
+    {
+        LOG_ERR("UI sprite array is full! Cannot add more UI elements.");
+    }
 
     return UI_CheckBounds(slider->bounds);
 }
@@ -171,7 +191,10 @@ bool UI_SliderInt(SliderInt* slider)
         backgroundSprite.position.x     = slider->position.x;
         backgroundSprite.position.y     = slider->position.y;
         backgroundSprite.parent         = uiParentEntity;
-        //Sprite_Add(&backgroundSprite);
+        if (!Utils_AddToArray(uiSpriteArray, backgroundSprite, uiSpriteArraySize, uiSpriteArrayMaxSize))
+        {
+            LOG_ERR("UI sprite array is full! Cannot add more UI elements.");
+        }
     }
 
     Sprite sliderSprite;
@@ -181,11 +204,14 @@ bool UI_SliderInt(SliderInt* slider)
     sliderSprite.position.x =
         slider->position.x
         + ((float)(slider->currentValue - slider->minValue) / (float)(slider->maxValue - slider->minValue))
-              * slider->backgroundTexture->width
-        - (slider->sliderTexture->width * 0.5f * slider->scale);
+              * slider->backgroundTexture->size.x
+        - (slider->sliderTexture->size.x * 0.5f * slider->scale);
     sliderSprite.position.y = slider->position.y;
     sliderSprite.parent     = uiParentEntity;
-    //Sprite_Add(&sliderSprite);
+    if (!Utils_AddToArray(uiSpriteArray, sliderSprite, uiSpriteArraySize, uiSpriteArrayMaxSize))
+    {
+        LOG_ERR("UI sprite array is full! Cannot add more UI elements.");
+    }
 
     return UI_CheckBounds(slider->bounds);
 }
@@ -210,7 +236,10 @@ bool UI_ProgressBar(ProgressBar* progressBar)
         backgroundSprite.position.x     = progressBar->position.x;
         backgroundSprite.position.y     = progressBar->position.y;
         backgroundSprite.parent         = uiParentEntity;
-        //Sprite_Add(&backgroundSprite);
+        if (!Utils_AddToArray(uiSpriteArray, backgroundSprite, uiSpriteArraySize, uiSpriteArrayMaxSize))
+        {
+            LOG_ERR("UI sprite array is full! Cannot add more UI elements.");
+        }
     }
 
     Sprite sliderSprite;
@@ -225,10 +254,13 @@ bool UI_ProgressBar(ProgressBar* progressBar)
     sliderSprite.portionRect.y     = 0;
     sliderSprite.portionRect.width = (progressBar->currentValue - progressBar->minValue)
                                      / (progressBar->maxValue - progressBar->minValue)
-                                     * progressBar->progressTexture->width;
-    sliderSprite.portionRect.height = progressBar->progressTexture->height;
+                                     * progressBar->progressTexture->size.x;
+    sliderSprite.portionRect.height = progressBar->progressTexture->size.y;
 
-    //Sprite_Add(&sliderSprite);
+    if (!Utils_AddToArray(uiSpriteArray, sliderSprite, uiSpriteArraySize, uiSpriteArrayMaxSize))
+    {
+        LOG_ERR("UI sprite array is full! Cannot add more UI elements.");
+    }
 
     return UI_CheckBounds(progressBar->bounds);
 }
@@ -257,7 +289,10 @@ bool UI_Checkbox(Checkbox* checkbox)
     {
         checkboxSprite.currentTexture = checkbox->offTexture;
     }
-    //Sprite_Add(&checkboxSprite);
+    if (!Utils_AddToArray(uiSpriteArray, checkboxSprite, uiSpriteArraySize, uiSpriteArrayMaxSize))
+    {
+        LOG_ERR("UI sprite array is full! Cannot add more UI elements.");
+    }
 
     return UI_CheckBounds(checkbox->bounds);
 }
@@ -281,7 +316,10 @@ bool UI_ItemSlot(ItemSlot* itemSlot)
         backgroundSprite.position.x     = itemSlot->position.x;
         backgroundSprite.position.y     = itemSlot->position.y;
         backgroundSprite.parent         = uiParentEntity;
-        //Sprite_Add(&backgroundSprite);
+        if (!Utils_AddToArray(uiSpriteArray, backgroundSprite, uiSpriteArraySize, uiSpriteArrayMaxSize))
+        {
+            LOG_ERR("UI sprite array is full! Cannot add more UI elements.");
+        }
     }
 
     Sprite itemSprite;
@@ -291,7 +329,10 @@ bool UI_ItemSlot(ItemSlot* itemSlot)
     itemSprite.currentTexture = itemSlot->itemTexture;
     itemSprite.scale          = itemSlot->scale;
     itemSprite.parent         = uiParentEntity;
-    //Sprite_Add(&itemSprite);
+    if (!Utils_AddToArray(uiSpriteArray, itemSprite, uiSpriteArraySize, uiSpriteArrayMaxSize))
+    {
+        LOG_ERR("UI sprite array is full! Cannot add more UI elements.");
+    }
 
     return UI_CheckBounds(itemSlot->bounds);
 }

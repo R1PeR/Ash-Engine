@@ -57,16 +57,16 @@ void AsciiWindow_Initalize(AsciiWindow* window, Texture2D texture)
     {
         Sprite_Initialize(&window->spriteBuffer[i]);
     }
-    window->spriteHeight = window->textureBuffer[0]->height;
-    window->spriteWidth  = window->textureBuffer[0]->width;
+    window->spriteHeight = window->textureBuffer[0]->size.y;
+    window->spriteWidth  = window->textureBuffer[0]->size.x;
     for (uint32_t i = 0; i < window->height; i++)
     {
         for (uint32_t j = 0; j < window->width; j++)
         {
-            window->spriteBuffer[i * window->width + j].position.x = window->textureBuffer[0]->width
+            window->spriteBuffer[i * window->width + j].position.x = window->textureBuffer[0]->size.x
                                                                      * window->spriteBuffer[i * window->width + j].scale
                                                                      * window->entity.scale * j;
-            window->spriteBuffer[i * window->width + j].position.y = window->textureBuffer[0]->height
+            window->spriteBuffer[i * window->width + j].position.y = window->textureBuffer[0]->size.y
                                                                      * window->spriteBuffer[i * window->width + j].scale
                                                                      * window->entity.scale * i;
             window->spriteBuffer[i * window->width + j].currentTexture = window->textureBuffer[0];
@@ -394,7 +394,7 @@ void Sprite_Draw(Sprite* spr)
     rotation += spr->rotation;
     if (spr->extendedDraw == false)
     {
-        DrawTextureEx(*spr->currentTexture, position, rotation, scale, spr->tint);
+        // DrawTextureEx(*spr->currentTexture, position, rotation, scale, spr->tint);
     }
     else
     {
@@ -403,7 +403,7 @@ void Sprite_Draw(Sprite* spr)
         destRect.y      = position.y;
         destRect.width  = spr->portionRect.width * scale;
         destRect.height = spr->portionRect.height * scale;
-        DrawTexturePro(*spr->currentTexture, spr->portionRect, destRect, { 0, 0 }, rotation, spr->tint);
+        // DrawTexturePro(*spr->currentTexture, spr->portionRect, destRect, { 0, 0 }, rotation, spr->tint);
     }
 }
 
@@ -417,6 +417,7 @@ TextureData Texture_LoadTexture(const char* fileName)
     TextureData textureData;
     textureData.texture = texture;
     textureData.uv      = { 0.0f, 0.0f, 1.0f, 1.0f };
+    textureData.size    = { (int16_t)texture.width, (int16_t)texture.height };
     return textureData;
 }
 
@@ -437,11 +438,14 @@ bool Texture_CreateTextureAtlas(TextureData texture, uint32_t columns, uint32_t 
             portionRect.width  = (float)texture.texture.width / (float)columns;
             portionRect.height = (float)texture.texture.height / (float)rows;
             TextureData textureData;
-            textureData.texture     = texture.texture;
-            textureData.uv.x        = portionRect.x / texture.texture.width;
-            textureData.uv.y        = portionRect.y / texture.texture.height;
-            textureData.uv.w        = portionRect.width / texture.texture.width;
-            textureData.uv.h        = portionRect.height / texture.texture.height;
+            textureData.texture = texture.texture;
+            textureData.uv.x    = portionRect.x / texture.texture.width;
+            textureData.uv.y    = portionRect.y / texture.texture.height;
+            textureData.uv.w    = portionRect.width / texture.texture.width;
+            textureData.uv.h    = portionRect.height / texture.texture.height;
+            textureData.size.x  = portionRect.width;
+            textureData.size.y  = portionRect.height;
+
             output[j * columns + i] = textureData;
         }
     }
