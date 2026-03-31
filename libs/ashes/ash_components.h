@@ -2,6 +2,7 @@
 #define ASH_COMPONENTS_H
 
 #include "ash_misc.h"
+
 #include <stdint.h>
 
 /* Defines */
@@ -35,7 +36,7 @@ typedef struct Sprite
     uint8_t      zOrder;
     bool         isVisible;
     Color        tint;
-    Rectangle portionRect;
+    Rectangle    portionRect;
 } Sprite;
 
 typedef struct AnimationData
@@ -58,15 +59,15 @@ typedef struct AnimatedSprite
 
 typedef struct AsciiWindow
 {
-    Entity2D entity;
-    uint8_t* windowBuffer;
-    Sprite*  spriteBuffer;
+    Entity2D     entity;
+    uint8_t*     windowBuffer;
+    Sprite*      spriteBuffer;
     TextureData* textureBuffer[ASCIIWINDOW_MAX_TEXURES];
-    Vector2  position;
-    uint32_t width;
-    uint32_t height;
-    uint32_t spriteWidth;
-    uint32_t spriteHeight;
+    Vector2      position;
+    uint32_t     width;
+    uint32_t     height;
+    uint32_t     spriteWidth;
+    uint32_t     spriteHeight;
 } AsciiWindow;
 
 typedef struct AsciiSubWindow

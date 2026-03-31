@@ -4,11 +4,6 @@
 #include <raylib.h>
 #include <stdint.h>
 
-#define LOG_LEVEL_DEBUG   4
-#define LOG_LEVEL_INFO    3
-#define LOG_LEVEL_WARNING 2
-#define LOG_LEVEL_ERROR   1
-
 #define CLOCKS_PER_MS        CLOCKS_PER_SEC / 1000
 #define Utils_ArraySize(arr) (sizeof(arr) / sizeof(arr[0]))
 #define Utils_AddToArray(arr, value, currentSize, maxSize) \
