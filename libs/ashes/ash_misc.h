@@ -9,36 +9,6 @@
 #define LOG_LEVEL_WARNING 2
 #define LOG_LEVEL_ERROR   1
 
-#ifdef DEBUG
-#    ifdef LOG_LEVEL
-#        if (LOG_LEVEL >= LOG_LEVEL_DEBUG)
-#            define LOG_DBG(...) TraceLog(LOG_INFO, __VA_ARGS__)
-#        else
-#            define LOG_DBG(...) (void)0
-#        endif
-
-#        if (LOG_LEVEL >= LOG_LEVEL_INFO)
-#            define LOG_INF(...) TraceLog(LOG_INFO, __VA_ARGS__)
-#        else
-#            define LOG_INF(...) (void)0
-#        endif
-
-#        if (LOG_LEVEL >= LOG_LEVEL_WARNING)
-#            define LOG_WRN(...) TraceLog(LOG_WARNING, __VA_ARGS__)
-#        else
-#            define LOG_WRN(...) (void)0
-#        endif
-
-#        if (LOG_LEVEL >= LOG_LEVEL_ERROR)
-#            define LOG_ERR(...) TraceLog(LOG_ERROR, __VA_ARGS__)
-#        else
-#            define LOG_ERR(...) (void)0
-#        endif
-#    else
-#        define LOG_LEVEL 0
-#    endif
-#endif
-
 #define CLOCKS_PER_MS        CLOCKS_PER_SEC / 1000
 #define Utils_ArraySize(arr) (sizeof(arr) / sizeof(arr[0]))
 #define Utils_AddToArray(arr, value, currentSize, maxSize) \
@@ -163,15 +133,8 @@ uint16_t AStar_GetPath(const Vector2Int startPos, const Vector2Int targetPos, ui
                        Vector2Int* outPathBuffer, size_t outPathBufferSize, size_t& outPathLength,
                        HeuristicFuncPtr hFunc);
 
-// void Debug_ShowDebugWindow(Entity2D* ent, uint32_t entSize, Sprite* spr, uint32_t sprSize, Collider2D* col,
-//                            uint32_t colSize, TextureData* tex, uint32_t texSize, AnimatedSprite* anim,
-//                            uint32_t animSize, AudioData* aud, uint32_t audSize);
-
 void  DeltaTime_Update();
 float DeltaTime_GetDeltaTime();
-
-void Logger_Init();
-void Logger_Deinit();
 
 void Stopwatch_Start(Stopwatch* stopwatch, uint32_t milis);
 void Stopwatch_Stop(Stopwatch* stopwatch);
