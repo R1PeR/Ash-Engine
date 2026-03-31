@@ -1,5 +1,6 @@
 #include "ash_components.h"
 
+#include "ash_debug.h"
 #include "ash_misc.h"
 #include "raylib.h"
 
@@ -368,7 +369,6 @@ void Sprite_Initialize(Sprite* spr)
     spr->zOrder         = 0;
     spr->tint           = WHITE;
     spr->parent         = NULL;
-    spr->extendedDraw   = false;
     spr->portionRect    = (Rectangle){ 0, 0, 0, 0 };
 }
 
@@ -392,19 +392,28 @@ void Sprite_Draw(Sprite* spr)
     position.y += spr->position.y * scale;
     scale *= spr->scale;
     rotation += spr->rotation;
-    if (spr->extendedDraw == false)
-    {
-        // DrawTextureEx(*spr->currentTexture, position, rotation, scale, spr->tint);
-    }
-    else
-    {
-        Rectangle destRect;
-        destRect.x      = position.x;
-        destRect.y      = position.y;
-        destRect.width  = spr->portionRect.width * scale;
-        destRect.height = spr->portionRect.height * scale;
-        // DrawTexturePro(*spr->currentTexture, spr->portionRect, destRect, { 0, 0 }, rotation, spr->tint);
-    }
+
+    Rectangle sourceRect;
+    Rectangle destRect;
+
+    sourceRect.x      = spr->currentTexture->uv.x;
+    sourceRect.y      = spr->currentTexture->uv.y;
+    sourceRect.width  = spr->currentTexture->uv.w;
+    sourceRect.height = spr->currentTexture->uv.h;
+
+    destRect.x      = position.x;
+    destRect.y      = position.y;
+    destRect.width  = 1.0;
+    destRect.height = 1.0;
+
+    DrawTexturePro(spr->currentTexture->texture, sourceRect, destRect, { 0, 0 }, rotation, spr->tint);
+    // TODO: Bring back portion drawing
+    //      Rectangle destRect;
+    //      destRect.x      = position.x;
+    //      destRect.y      = position.y;
+    //      destRect.width  = spr->portionRect.width * scale;
+    //      destRect.height = spr->portionRect.height * scale;
+    //      // DrawTexturePro(*spr->currentTexture, spr->portionRect, destRect, { 0, 0 }, rotation, spr->tint);
 }
 
 TextureData Texture_LoadTexture(const char* fileName)

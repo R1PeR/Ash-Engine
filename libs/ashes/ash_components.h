@@ -35,8 +35,6 @@ typedef struct Sprite
     uint8_t      zOrder;
     bool         isVisible;
     Color        tint;
-
-    bool      extendedDraw;
     Rectangle portionRect;
 } Sprite;
 
