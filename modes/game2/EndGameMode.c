@@ -9,9 +9,9 @@
 #include <stdio.h>
 #include <string.h>
 
-Mode     endGameMode = MODE_FROM_CLASSNAME(EndGameMode);
-Entity2D cameraEntity;
-Sprite   sprites[32];
+// Mode     endGameMode = MODE_FROM_CLASSNAME(EndGameMode);
+// Entity2D cameraEntity;
+// Sprite   sprites[32];
 
 void EndGameMode_OnStart()
 {

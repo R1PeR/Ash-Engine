@@ -160,9 +160,11 @@ bool        Utils_IsInGridRadius(Vector2Int originalPos, Vector2Int currentPos, 
 float       Utils_Vector2Distance(Vector2 a, Vector2 b);
 uint16_t    Utils_Vector2DistanceInt(Vector2Int a, Vector2Int b);
 uint16_t    Utils_ManhattanDistance(Vector2Int a, Vector2Int b);
-int16_t     Utils_GetRandomInRange(int16_t min, int16_t max);
 
 bool Utils_PointInRectangle(Vector2 point, Rectangle rect);
 bool Utils_RectangleOverlap(Rectangle point, Rectangle rect);
+
+int32_t Utils_GetRandomInRangeInteger(int32_t min, int32_t max);
+float   Utils_GetRandomInRangeFloat(float min, float max);
 
 #endif  // ASH_MISC_H

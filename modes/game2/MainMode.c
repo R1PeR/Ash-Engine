@@ -32,6 +32,7 @@ struct GameData
 
 TextureData textures[512];
 TextureData texture;
+Sprite      sprites[100000];
 
 bool IsPlayerOnGround()
 {
@@ -60,6 +61,13 @@ void MainMode_OnStart()
     {
         LOG_ERR("Failed to create texture atlas");
     }
+    for (uint32_t i = 0; i < 100000; i++)
+    {
+        Sprite_Initialize(&sprites[i]);
+        sprites[i].currentTexture = &textures[Utils_GetRandomInRangeInteger(0, 64)];
+        sprites[i].scale          = 1.0f;
+        sprites[i].position       = { Utils_GetRandomInRangeFloat(-500, 500), Utils_GetRandomInRangeFloat(-300, 300) };
+    }
 }
 
 void MainMode_OnPause()
@@ -68,13 +76,13 @@ void MainMode_OnPause()
 
 void MainMode_Update()
 {
-    DeltaTime_Update();
-    gameData.dt = DeltaTime_GetDeltaTime();
-
-    int  direction = { -Input_IsKeyDown(KEY_A) + Input_IsKeyDown(KEY_D) };
-    bool isJumping = Input_IsKeyDown(KEY_SPACE);
-
-    gameData.playerPos.x += direction * gameData.dt * 50.0f;
+    // DeltaTime_Update();
+    // gameData.dt = DeltaTime_GetDeltaTime();
+    //
+    // int  direction = { -Input_IsKeyDown(KEY_A) + Input_IsKeyDown(KEY_D) };
+    // bool isJumping = Input_IsKeyDown(KEY_SPACE);
+    //
+    // gameData.playerPos.x += direction * gameData.dt * 50.0f;
 
     // if (IsPlayerOnGround())
     // {
@@ -103,21 +111,11 @@ void MainMode_Update()
     //     gameData.playerVel.x += direction * gameData.dt * DIRECTION_SPEED_AIR;
     // }
     // Draw part
-    Sprite sprite;
-    Sprite_Initialize(&sprite);
-    sprite.position       = gameData.playerPos;
-    sprite.currentTexture = &textures[0];
-    sprite.scale          = 4.0f;
-    Sprite_Draw(&sprite);
-
-    Sprite_Initialize(&sprite);
-    sprite.position = gameData.playerPos;
-    sprite.position.y += 100.0f;  // Offset to draw the second sprite below the first one
-    sprite.currentTexture = &textures[0];
-    sprite.scale          = 4.0f;
-    sprite.drawPortion    = true;
-    sprite.portionRect    = { 0, 0, 1, 1 };
-    Sprite_Draw(&sprite);
+    for (uint32_t i = 0; i < 100000; i++)
+    {
+        sprites[i].position = { Utils_GetRandomInRangeFloat(-500, 500), Utils_GetRandomInRangeFloat(-300, 300) };
+        Sprite_Draw(&sprites[i]);
+    }
 }
 
 void MainMode_OnStop()

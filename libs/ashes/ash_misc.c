@@ -414,11 +414,6 @@ uint16_t Utils_ManhattanDistance(Vector2Int a, Vector2Int b)
     return Utils_AbsInt16(a.x - b.x) + Utils_AbsInt16(a.y - b.y);
 }
 
-int16_t Utils_GetRandomInRange(int16_t min, int16_t max)
-{
-    return (rand() % (max - min + 1)) + min;
-}
-
 bool Utils_PointInRectangle(Vector2 point, Rectangle rect)
 {
     return (point.x >= rect.x && point.x <= rect.x + rect.width && point.y >= rect.y
@@ -428,4 +423,14 @@ bool Utils_PointInRectangle(Vector2 point, Rectangle rect)
 bool Utils_RectangleOverlap(Rectangle a, Rectangle b)
 {
     return (a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y);
+}
+
+int32_t Utils_GetRandomInRangeInteger(int32_t min, int32_t max)
+{
+    return (rand() % (max - min + 1)) + min;
+}
+float   Utils_GetRandomInRangeFloat(float min, float max)
+{
+    float scale = rand() / (float)RAND_MAX;
+    return min + scale * (max - min);
 }

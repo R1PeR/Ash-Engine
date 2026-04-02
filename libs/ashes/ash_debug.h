@@ -36,6 +36,11 @@
 #    else
 #        define LOG_LEVEL 0
 #    endif
+#else
+#    define LOG_DBG(...) (void)0
+#    define LOG_INF(...) (void)0
+#    define LOG_WRN(...) (void)0
+#    define LOG_ERR(...) (void)0
 #endif
 
 void Logger_Init();

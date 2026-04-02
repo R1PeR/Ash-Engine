@@ -420,7 +420,6 @@ void Sprite_Draw(Sprite* spr)
         destRect.width -= (1.0 - spr->portionRect.width) * spr->currentTexture->size.x * scale;
         destRect.height -= (1.0 - spr->portionRect.height) * spr->currentTexture->size.y * scale;
     }
-
     DrawTexturePro(spr->currentTexture->texture, sourceRect, destRect, { 0, 0 }, rotation, spr->tint);
 }
 
