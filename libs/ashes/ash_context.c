@@ -1,10 +1,11 @@
 #include "ash_context.h"
-#include "ash_io.h"
-#include "ash_misc.h"
-#include <stdint.h>
 
+#include "ash_debug.h"
+#include "ash_io.h"
 #include "raylib.h"
 #include "rlImGui.h"
+
+#include <stdint.h>
 
 Mode*      screen[MAX_MODES];
 Updatable* updatables[MAX_UPDATABLES];
@@ -47,7 +48,7 @@ void Context_SetMode(Mode* mode)
             }
             screen[screenCount - 1]->Update();
             EndMode2D();
-            // DrawFPS(10, 10);
+            DrawFPS(10, 10);
             rlImGuiEnd();
             EndDrawing();
         }
@@ -89,5 +90,3 @@ void Context_FinishMode()
 {
     currentFinished = true;
 }
-
-

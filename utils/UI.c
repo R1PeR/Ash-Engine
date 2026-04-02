@@ -1,6 +1,7 @@
 #include "UI.h"
 
 #include "ashes/ash_components.h"
+#include "ashes/ash_debug.h"
 #include "ashes/ash_io.h"
 
 #include <stdio.h>
@@ -114,16 +115,17 @@ bool UI_Text(Text* uiText, TextureData* fontAtlas)
     {
         Sprite textSprite;
         Sprite_Initialize(&textSprite);
-        char c = uiText->buffer[i];
-        char textureName[32];
-        // sprintf(textureName, "%s_%d", fontName, c);
+        char         c            = uiText->buffer[i];
         TextureData* charTexture  = &fontAtlas[c - 32];
         textSprite.currentTexture = charTexture;
         textSprite.scale          = uiText->scale;
         textSprite.position.x     = uiText->position.x + (charTexture->size.x * uiText->scale * i);
         textSprite.position.y     = uiText->position.y;
         textSprite.parent         = uiParentEntity;
-        // Sprite_Add(&textSprite);
+        if (!Utils_AddToArray(uiSpriteArray, textSprite, uiSpriteArraySize, uiSpriteArrayMaxSize))
+        {
+            LOG_ERR("UI sprite array is full! Cannot add more UI elements.");
+        }
     }
 
     return UI_CheckBounds(uiText->bounds);
@@ -249,7 +251,7 @@ bool UI_ProgressBar(ProgressBar* progressBar)
     sliderSprite.position.x        = progressBar->position.x;
     sliderSprite.position.y        = progressBar->position.y;
     sliderSprite.parent            = uiParentEntity;
-    sliderSprite.extendedDraw      = true;
+    sliderSprite.drawPortion       = true;
     sliderSprite.portionRect.x     = 0;
     sliderSprite.portionRect.y     = 0;
     sliderSprite.portionRect.width = (progressBar->currentValue - progressBar->minValue)

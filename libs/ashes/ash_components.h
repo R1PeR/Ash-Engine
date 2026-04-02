@@ -19,23 +19,24 @@
 /* Structs, Enums, and Unions */
 typedef struct Entity2D
 {
-    Vector2 position;
-    float   scale;
-    float   rotation;
-    uint8_t id;
+    Vector2Float position;
+    float        scale;
+    float        rotation;
+    uint8_t      id;
 } Entity2D;
 
 typedef struct TextureData TextureData;
 typedef struct Sprite
 {
     Entity2D*    parent;
-    Vector2      position;
+    Vector2Float position;
     float        scale;
     float        rotation;
     TextureData* currentTexture;
     uint8_t      zOrder;
     bool         isVisible;
     Color        tint;
+    bool         drawPortion;
     Rectangle    portionRect;
 } Sprite;
 
@@ -63,7 +64,7 @@ typedef struct AsciiWindow
     uint8_t*     windowBuffer;
     Sprite*      spriteBuffer;
     TextureData* textureBuffer[ASCIIWINDOW_MAX_TEXURES];
-    Vector2      position;
+    Vector2Float position;
     uint32_t     width;
     uint32_t     height;
     uint32_t     spriteWidth;
@@ -73,7 +74,7 @@ typedef struct AsciiWindow
 typedef struct AsciiSubWindow
 {
     AsciiWindow* parent;
-    Vector2      position;
+    Vector2Float position;
     uint32_t     width;
     uint32_t     height;
 } AsciiSubWindow;
@@ -105,20 +106,20 @@ typedef struct Collision2D
 
 typedef struct Collider2D
 {
-    Entity2D*   parent;
-    Vector2     position;
-    Vector2     size;
-    bool        isEnabled;
-    bool        isTrigger;
-    uint8_t     id;
-    Collision2D collision;
+    Entity2D*    parent;
+    Vector2Float position;
+    Vector2Float size;
+    bool         isEnabled;
+    bool         isTrigger;
+    uint8_t      id;
+    Collision2D  collision;
 } Collider2D;
 
 typedef struct TextureData
 {
     Texture2D    texture;
     Vector4Float uv;
-    Vector2Int16 size;
+    Vector2UInt  size;
 } TextureData;
 
 /* Function Prototypes */

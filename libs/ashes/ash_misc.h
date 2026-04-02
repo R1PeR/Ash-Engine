@@ -45,20 +45,20 @@ typedef struct Vector3Int8
 } Vector3Int8;
 typedef struct Vector2UInt
 {
-    int32_t x;
-    int32_t y;
+    uint32_t x;
+    uint32_t y;
 } Vector2UInt;
 typedef struct Vector3UInt
 {
     uint32_t x;
     uint32_t y;
     uint32_t z;
-} Vector3Uuint;
+} Vector3UInt;
 typedef struct Vector2UInt16
 {
     uint16_t x;
     uint16_t y;
-} Vector2Uuint16;
+} Vector2UInt16;
 typedef struct Vector3UInt16
 {
     uint16_t x;
@@ -69,13 +69,13 @@ typedef struct Vector2UInt8
 {
     uint8_t x;
     uint8_t y;
-} Vector2Uuint8;
+} Vector2UInt8;
 typedef struct Vector3UInt8
 {
     uint8_t x;
     uint8_t y;
     uint8_t z;
-} Vector3Uuint8;
+} Vector3UInt8;
 typedef struct Vector2Float
 {
     float x;
@@ -88,13 +88,13 @@ typedef struct Vector4Float
     float w;
     float h;
 } Vector4Float;
-typedef struct Vector4UInt32
+typedef struct Vector4UInt
 {
     uint32_t x;
     uint32_t y;
     uint32_t w;
     uint32_t h;
-} Vector4UInt32;
+} Vector4UInt;
 typedef struct Stopwatch
 {
     uint32_t startTime;

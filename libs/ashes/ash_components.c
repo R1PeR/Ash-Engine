@@ -282,10 +282,10 @@ bool Collider2D_Check(Collider2D* a, Collider2D* b)
 
 bool Collider2D_CheckCollider(Collider2D* a, Collider2D* b)
 {
-    Vector2 aPos  = { 0, 0 };
-    Vector2 bPos  = { 0, 0 };
-    Vector2 aSize = a->size;
-    Vector2 bSize = b->size;
+    Vector2Float aPos  = { 0, 0 };
+    Vector2Float bPos  = { 0, 0 };
+    Vector2Float aSize = a->size;
+    Vector2Float bSize = b->size;
     if (a->parent)
     {
         aPos = { a->parent->position.x + (a->position.x * a->parent->scale),
@@ -314,8 +314,8 @@ bool Collider2D_CheckCollider(Collider2D* a, Collider2D* b)
 
 bool Collider2D_CheckPoint(Collider2D* a, Vector2 b)
 {
-    Vector2 aPos  = { 0, 0 };
-    Vector2 aSize = a->size;
+    Vector2Float aPos  = { 0, 0 };
+    Vector2Float aSize = a->size;
     if (a->parent)
     {
         aPos = a->parent->position;
@@ -331,10 +331,10 @@ bool Collider2D_CheckPoint(Collider2D* a, Vector2 b)
 
 bool Collider2D_CheckRect(Collider2D* a, Rectangle b)
 {
-    Vector2 aPos  = { 0, 0 };
-    Vector2 bPos  = { b.x, b.y };
-    Vector2 aSize = a->size;
-    Vector2 bSize = { b.width, b.height };
+    Vector2Float aPos  = { 0, 0 };
+    Vector2Float bPos  = { b.x, b.y };
+    Vector2Float aSize = a->size;
+    Vector2Float bSize = { b.width, b.height };
     if (a->parent)
     {
         aPos = a->parent->position;
@@ -369,6 +369,7 @@ void Sprite_Initialize(Sprite* spr)
     spr->zOrder         = 0;
     spr->tint           = WHITE;
     spr->parent         = NULL;
+    spr->drawPortion    = false;
     spr->portionRect    = (Rectangle){ 0, 0, 0, 0 };
 }
 
@@ -394,39 +395,47 @@ void Sprite_Draw(Sprite* spr)
     rotation += spr->rotation;
 
     Rectangle sourceRect;
-    Rectangle destRect;
 
     sourceRect.x      = spr->currentTexture->uv.x;
     sourceRect.y      = spr->currentTexture->uv.y;
     sourceRect.width  = spr->currentTexture->uv.w;
     sourceRect.height = spr->currentTexture->uv.h;
 
+    Rectangle destRect;
+
     destRect.x      = position.x;
     destRect.y      = position.y;
-    destRect.width  = 1.0;
-    destRect.height = 1.0;
+    destRect.width  = spr->currentTexture->size.x * scale;
+    destRect.height = spr->currentTexture->size.y * scale;
+
+    if (spr->drawPortion)
+    {
+        sourceRect.x += spr->portionRect.x * spr->currentTexture->size.x;
+        sourceRect.y += spr->portionRect.y * spr->currentTexture->size.y;
+        sourceRect.width -= (1.0 - spr->portionRect.width) * spr->currentTexture->size.x;
+        sourceRect.height -= (1.0 - spr->portionRect.height) * spr->currentTexture->size.y;
+
+        destRect.x += spr->portionRect.x * spr->currentTexture->size.x * scale;
+        destRect.y += spr->portionRect.y * spr->currentTexture->size.y * scale;
+        destRect.width -= (1.0 - spr->portionRect.width) * spr->currentTexture->size.x * scale;
+        destRect.height -= (1.0 - spr->portionRect.height) * spr->currentTexture->size.y * scale;
+    }
 
     DrawTexturePro(spr->currentTexture->texture, sourceRect, destRect, { 0, 0 }, rotation, spr->tint);
-    // TODO: Bring back portion drawing
-    //      Rectangle destRect;
-    //      destRect.x      = position.x;
-    //      destRect.y      = position.y;
-    //      destRect.width  = spr->portionRect.width * scale;
-    //      destRect.height = spr->portionRect.height * scale;
-    //      // DrawTexturePro(*spr->currentTexture, spr->portionRect, destRect, { 0, 0 }, rotation, spr->tint);
 }
 
 TextureData Texture_LoadTexture(const char* fileName)
 {
     if (fileName == NULL)
     {
+        LOG_ERR("Texture: LoadTexture() failed, fileName is nullptr");
         return (TextureData){ 0 };
     }
     Texture2D   texture = LoadTexture(fileName);
     TextureData textureData;
     textureData.texture = texture;
-    textureData.uv      = { 0.0f, 0.0f, 1.0f, 1.0f };
-    textureData.size    = { (int16_t)texture.width, (int16_t)texture.height };
+    textureData.uv      = { 0.0f, 0.0f, (float)textureData.texture.width, (float)textureData.texture.height };
+    textureData.size    = { (uint32_t)texture.width, (uint32_t)texture.height };
     return textureData;
 }
 
@@ -437,9 +446,9 @@ bool Texture_CreateTextureAtlas(TextureData texture, uint32_t columns, uint32_t 
         LOG_ERR("Texture: Texture_LoadTextureAtlas() failed, output is nullptr");
         return false;
     }
-    for (int i = 0; i < columns; i++)
+    for (uint32_t i = 0; i < columns; i++)
     {
-        for (int j = 0; j < rows; j++)
+        for (uint32_t j = 0; j < rows; j++)
         {
             Rectangle portionRect;
             portionRect.x      = ((float)texture.texture.width / (float)columns) * i;
@@ -448,12 +457,13 @@ bool Texture_CreateTextureAtlas(TextureData texture, uint32_t columns, uint32_t 
             portionRect.height = (float)texture.texture.height / (float)rows;
             TextureData textureData;
             textureData.texture = texture.texture;
-            textureData.uv.x    = portionRect.x / texture.texture.width;
-            textureData.uv.y    = portionRect.y / texture.texture.height;
-            textureData.uv.w    = portionRect.width / texture.texture.width;
-            textureData.uv.h    = portionRect.height / texture.texture.height;
-            textureData.size.x  = portionRect.width;
-            textureData.size.y  = portionRect.height;
+            textureData.uv.x    = portionRect.x;
+            textureData.uv.y    = portionRect.y;
+            textureData.uv.w    = portionRect.width;
+            textureData.uv.h    = portionRect.height;
+
+            textureData.size.x = portionRect.width;
+            textureData.size.y = portionRect.height;
 
             output[j * columns + i] = textureData;
         }

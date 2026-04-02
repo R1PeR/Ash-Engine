@@ -2,6 +2,7 @@
 
 #include "ashes/ash_components.h"
 #include "ashes/ash_context.h"
+#include "ashes/ash_debug.h"
 #include "ashes/ash_io.h"
 #include "ashes/ash_misc.h"
 
@@ -30,10 +31,11 @@ struct GameData
 } gameData;
 
 TextureData textures[512];
+TextureData texture;
 
 bool IsPlayerOnGround()
 {
-    return gameData.playerPos.y >= 0.0f;
+    return gameData.playerPos.y <= 0.0f;
 }
 
 bool IsPlayerOnWall()
@@ -51,7 +53,9 @@ void MainMode_OnStart()
     gameData.playerVel   = (Vector2Float){ 0.0f, 0.0f };
     gameData.playerState = PlayerState_Idle;
 
-    TextureData texture = Texture_LoadTexture("texturepack.png");
+    texture = Texture_LoadTexture("resources/sprites/font.png");
+    LOG_INF("Loaded texture: %s, width: %d, height: %d", "resources/sprites/player.png", texture.size.x,
+            texture.size.y);
     if (!Texture_CreateTextureAtlas(texture, 16, 16, textures))
     {
         LOG_ERR("Failed to create texture atlas");
@@ -67,38 +71,53 @@ void MainMode_Update()
     DeltaTime_Update();
     gameData.dt = DeltaTime_GetDeltaTime();
 
-    int  direction = { -Input_IsKeyPressed(KEY_A) + Input_IsKeyPressed(KEY_D) };
-    bool isJumping = Input_IsKeyPressed(KEY_SPACE);
+    int  direction = { -Input_IsKeyDown(KEY_A) + Input_IsKeyDown(KEY_D) };
+    bool isJumping = Input_IsKeyDown(KEY_SPACE);
 
-    if (IsPlayerOnGround())
-    {
-        gameData.playerVel.y = 0.0f;
-        gameData.playerVel.x += direction * gameData.dt * DIRECTION_SPEED_GROUND;
-        if (isJumping)
-        {
-            gameData.playerVel.y = 5.0f;  // Jump impulse
-        }
-        else
-        {
-            // Apply friction
-            if (gameData.playerVel.x > 0.0f)
-            {
-                gameData.playerVel.x -= FRICTION_GROUND * gameData.dt;
-            }
-            else if (gameData.playerVel.x < 0.0f)
-            {
-                gameData.playerVel.x += FRICTION_GROUND * gameData.dt;
-            }
-        }
-    }
-    else
-    {
-        gameData.playerVel.y -= 9.8f * gameData.dt;
-        gameData.playerVel.x += direction * gameData.dt * DIRECTION_SPEED_AIR;
-    }
+    gameData.playerPos.x += direction * gameData.dt * 50.0f;
+
+    // if (IsPlayerOnGround())
+    // {
+    //     gameData.playerVel.y = 0.0f;
+    //     gameData.playerVel.x += direction * gameData.dt * DIRECTION_SPEED_GROUND;
+    //     if (isJumping)
+    //     {
+    //         gameData.playerVel.y = 5.0f;  // Jump impulse
+    //     }
+    //     else
+    //     {
+    //         // Apply friction
+    //         if (gameData.playerVel.x > 0.0f)
+    //         {
+    //             gameData.playerVel.x -= FRICTION_GROUND * gameData.dt;
+    //         }
+    //         else if (gameData.playerVel.x < 0.0f)
+    //         {
+    //             gameData.playerVel.x += FRICTION_GROUND * gameData.dt;
+    //         }
+    //     }
+    // }
+    // else
+    // {
+    //     gameData.playerVel.y -= 9.8f * gameData.dt;
+    //     gameData.playerVel.x += direction * gameData.dt * DIRECTION_SPEED_AIR;
+    // }
     // Draw part
     Sprite sprite;
     Sprite_Initialize(&sprite);
+    sprite.position       = gameData.playerPos;
+    sprite.currentTexture = &textures[0];
+    sprite.scale          = 4.0f;
+    Sprite_Draw(&sprite);
+
+    Sprite_Initialize(&sprite);
+    sprite.position = gameData.playerPos;
+    sprite.position.y += 100.0f;  // Offset to draw the second sprite below the first one
+    sprite.currentTexture = &textures[0];
+    sprite.scale          = 4.0f;
+    sprite.drawPortion    = true;
+    sprite.portionRect    = { 0, 0, 1, 1 };
+    Sprite_Draw(&sprite);
 }
 
 void MainMode_OnStop()
