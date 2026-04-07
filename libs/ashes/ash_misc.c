@@ -429,8 +429,31 @@ int32_t Utils_GetRandomInRangeInteger(int32_t min, int32_t max)
 {
     return (rand() % (max - min + 1)) + min;
 }
-float   Utils_GetRandomInRangeFloat(float min, float max)
+float Utils_GetRandomInRangeFloat(float min, float max)
 {
     float scale = rand() / (float)RAND_MAX;
     return min + scale * (max - min);
+}
+
+float Utils_MinFloat(float a, float b)
+{
+    return (a < b) ? a : b;
+}
+
+float Utils_MaxFloat(float a, float b)
+{
+    return (a > b) ? a : b;
+}
+
+float Utils_ClampFloat(float a, float min, float max)
+{
+    if (a < min)
+    {
+        return min;
+    }
+    else if (a > max)
+    {
+        return max;
+    }
+    return a;
 }

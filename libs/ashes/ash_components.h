@@ -6,7 +6,7 @@
 #include <stdint.h>
 
 /* Defines */
-#define ANIMATEDSPRITE_MAX_FRAMES              32
+// #define ANIMATEDSPRITE_MAX_FRAMES              32
 #define ASCIIWINDOW_MAX_TEXURES                256
 #define ANIMATEDSPRITE_DEFAULT_ANIMATION_SPEED 33
 #define ASCIIWINDOW_ASCII_START                0
@@ -42,7 +42,7 @@ typedef struct Sprite
 
 typedef struct AnimationData
 {
-    TextureData* animationFrames[ANIMATEDSPRITE_MAX_FRAMES];
+    TextureData* animationFrames;
     uint8_t      animationFrameCount;
 } AnimationData;
 
@@ -96,13 +96,14 @@ typedef struct AudioPlayerData
     Sound sound;
 } AudioPlayerData;
 
-typedef struct Collider2D Collider2D;
-
-typedef struct Collision2D
+enum Collision2D_Collision
 {
-    Collider2D* collision[COLLIDER2D_MAX_COUNT];
-    uint8_t     collisionCount;
-} Collision2D;
+    Collision_None,
+    Collision_Top    = 1,
+    Collision_Bottom = 2,
+    Collision_Left   = 4,
+    Collision_Right  = 8
+};
 
 typedef struct Collider2D
 {
@@ -112,7 +113,6 @@ typedef struct Collider2D
     bool         isEnabled;
     bool         isTrigger;
     uint8_t      id;
-    Collision2D  collision;
 } Collider2D;
 
 typedef struct TextureData
@@ -159,13 +159,12 @@ void      Audio_UnloadAudio(AudioData* audio);
 void      Audio_Play(AudioData* audio);
 void      Audio_Stop(AudioData* audio);
 
-
-void Collider2D_Initialize(Collider2D* col);
-void Collider2D_DrawDebug(Collider2D* col);
-bool Collider2D_Check(Collider2D* a, Collider2D* b);
-bool Collider2D_CheckCollider(Collider2D* a, Collider2D* b);
-bool Collider2D_CheckPoint(Collider2D* a, Vector2 b);
-bool Collider2D_CheckRect(Collider2D* a, Rectangle b);
+void                  Collider2D_Initialize(Collider2D* col);
+void                  Collider2D_DrawDebug(Collider2D* col);
+bool                  Collider2D_CheckCollider(Collider2D* a, Collider2D* b);
+bool                  Collider2D_CheckPoint(Collider2D* a, Vector2 b);
+bool                  Collider2D_CheckRect(Collider2D* a, Rectangle b);
+Collision2D_Collision Collider2D_CheckCollisionSide(Collider2D* a, Collider2D* b);
 
 void Entity2D_Initialize(Entity2D* ent);
 

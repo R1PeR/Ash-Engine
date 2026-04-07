@@ -35,7 +35,7 @@ void AnimatedSprite_Update(AnimatedSprite* animatedSprite)
     if (animatedSprite->isPlaying && animatedSprite->currentAnimation && Stopwatch_IsZero(&animatedSprite->stopwatch))
     {
         animatedSprite->sprite.currentTexture =
-            animatedSprite->currentAnimation->animationFrames[animatedSprite->currentFrame++];
+            &animatedSprite->currentAnimation->animationFrames[animatedSprite->currentFrame++];
         if (animatedSprite->currentFrame >= animatedSprite->currentAnimation->animationFrameCount)
         {
             if (animatedSprite->repeat)
@@ -44,7 +44,8 @@ void AnimatedSprite_Update(AnimatedSprite* animatedSprite)
             }
             else
             {
-                animatedSprite->isPlaying = false;
+                animatedSprite->isPlaying             = false;
+                animatedSprite->sprite.currentTexture = &animatedSprite->currentAnimation->animationFrames[0];
             }
         }
         Stopwatch_Start(&animatedSprite->stopwatch, animatedSprite->frameTime);
@@ -229,14 +230,13 @@ void AudioPlayer_Start(AudioData* audio)
 
 void Collider2D_Initialize(Collider2D* col)
 {
-    col->parent                   = 0;
-    col->position.x               = 0;
-    col->position.y               = 0;
-    col->size.x                   = 0;
-    col->size.y                   = 0;
-    col->isEnabled                = true;
-    col->id                       = 0;
-    col->collision.collisionCount = 0;
+    col->parent     = NULL;
+    col->position.x = 0;
+    col->position.y = 0;
+    col->size.x     = 0;
+    col->size.y     = 0;
+    col->isEnabled  = true;
+    col->id         = 0;
 }
 
 void Collider2D_DrawDebug(Collider2D* col)
@@ -248,8 +248,7 @@ void Collider2D_DrawDebug(Collider2D* col)
     }
     if (col->parent == NULL)
     {
-        DrawRectangleLines(col->parent->position.x + col->position.x, col->parent->position.y + col->position.y,
-                           col->size.x * col->parent->scale, col->size.y, YELLOW);
+        DrawRectangleLines(col->position.x, col->position.y, col->size.x, col->size.y, YELLOW);
     }
     else
     {
@@ -257,27 +256,6 @@ void Collider2D_DrawDebug(Collider2D* col)
                            col->parent->position.y + (col->position.y * col->parent->scale),
                            col->size.x * col->parent->scale, col->size.y * col->parent->scale, YELLOW);
     }
-}
-
-bool Collider2D_Check(Collider2D* a, Collider2D* b)
-{
-    if (a == NULL || b == NULL)
-    {
-        LOG_ERR("Collider2D: CheckCollision(), collider A or B is nullptr");
-        return false;
-    }
-    if (a->collision.collisionCount > 0)
-    {
-        for (uint32_t i = 0; i < a->collision.collisionCount; i++)
-        {
-            if (a->collision.collision[i] == b)
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-    return false;
 }
 
 bool Collider2D_CheckCollider(Collider2D* a, Collider2D* b)
@@ -347,6 +325,56 @@ bool Collider2D_CheckRect(Collider2D* a, Rectangle b)
         return true;
     }
     return false;
+}
+
+Collision2D_Collision Collider2D_CheckCollisionSide(Collider2D* a, Collider2D* b)
+{
+    // calculate on which side the colliders are colliding with each other
+    Vector2Float aPos = { 0, 0 };
+    Vector2Float bPos = { 0, 0 };
+    if (a->parent)
+    {
+        aPos = { a->parent->position.x + (a->position.x * a->parent->scale),
+                 a->parent->position.y + (a->position.y * a->parent->scale) };
+    }
+    else
+    {
+        aPos = a->position;
+    }
+    if (b->parent)
+    {
+        bPos = { b->parent->position.x + (b->position.x * b->parent->scale),
+                 b->parent->position.y + (b->position.y * b->parent->scale) };
+    }
+    else
+    {
+        bPos = b->position;
+    }
+    float aLeft   = aPos.x;
+    float aRight  = aPos.x + a->size.x;
+    float aTop    = aPos.y;
+    float aBottom = aPos.y + a->size.y;
+    float bLeft   = bPos.x;
+    float bRight  = bPos.x + b->size.x;
+    float bTop    = bPos.y;
+    float bBottom = bPos.y + b->size.y;
+    if (aBottom > bTop && aTop < bTop && aRight > bLeft && aLeft < bRight)
+    {
+        return Collision_Top;
+    }
+    else if (aTop < bBottom && aBottom > bBottom && aRight > bLeft && aLeft < bRight)
+    {
+        return Collision_Bottom;
+    }
+    else if (aRight > bLeft && aLeft < bLeft && aBottom > bTop && aTop < bBottom)
+    {
+        return Collision_Left;
+    }
+    else if (aLeft < bRight && aRight > bRight && aBottom > bTop && aTop < bBottom)
+    {
+        return Collision_Right;
+    }
+    return Collision_None;
 }
 
 void Entity2D_Initialize(Entity2D* ent)

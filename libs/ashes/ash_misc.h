@@ -167,4 +167,9 @@ bool Utils_RectangleOverlap(Rectangle point, Rectangle rect);
 int32_t Utils_GetRandomInRangeInteger(int32_t min, int32_t max);
 float   Utils_GetRandomInRangeFloat(float min, float max);
 
+float   Utils_MinFloat(float a, float b);
+float   Utils_MaxFloat(float a, float b);
+
+float   Utils_ClampFloat(float a, float min, float max);
+
 #endif  // ASH_MISC_H
