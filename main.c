@@ -3,6 +3,7 @@
 #include "ashes/ash_io.h"
 #include "ashes/ash_debug.h"
 #include "modes/game2/MainMode.h"
+#include "modes/game2/MapEditorMode.h"
 
 #include <cstdint>
 
@@ -14,7 +15,8 @@ int main()
     Logger_Init();
     Audio_Init();
 
-    Context_SetMode(&mainMode);
+    // Context_SetMode(&mainMode);
+    Context_SetMode(&mapEditorMode);
 
     Logger_Deinit();
     Audio_Deinit();

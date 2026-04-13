@@ -92,7 +92,7 @@ struct ItemSlot
     float        scale;
 };
 
-void UI_Init(Entity2D* parentEntity);
+void UI_Initialize(Entity2D* parentEntity, Sprite* spriteArray, size_t* spriteArraySize, size_t spriteArrayMaxSize);
 bool UI_TextureButton(Button* uiButton);
 bool UI_TextButton(TextButton* uiTextButton, TextureData* fontAtlas);
 bool UI_Text(Text* uiText, TextureData* fontAtlas);
@@ -101,5 +101,6 @@ bool UI_SliderInt(SliderInt* uiSlider);
 bool UI_ProgressBar(ProgressBar* uiProgressBar);
 bool UI_Checkbox(Checkbox* uiCheckbox);
 bool UI_ItemSlot(ItemSlot* uiItemSlot);
+void UI_Clear();
 
 #endif  // LIBS_UTILS_UI_H

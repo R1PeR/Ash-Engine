@@ -49,7 +49,7 @@ AStar_Node* AStar_CalucalatePath(AStar_Node* nodeArray, size_t nodeArraySize, co
             //             for (uint16_t i = 0; i < nodeListCount; i++)
             //             {
             //                 Vector3Int pos3D    = { nodeArray[i].position.x, nodeArray[i].position.y, 0 };
-            //                 Vector2    worldPos = Utils_GridToWorld(pos3D, TEXTURE_SIZE * TEXTURE_SCALE);
+            //                 Vector2Float    worldPos = Utils_GridToWorld(pos3D, TEXTURE_SIZE * TEXTURE_SCALE);
             //                 DrawRectangleLines(int(worldPos.x), int(worldPos.y), int(TEXTURE_SIZE * TEXTURE_SCALE),
             //                                    int(TEXTURE_SIZE * TEXTURE_SCALE), BLUE);
             //             }
@@ -135,7 +135,7 @@ Vector2Int8 AStar_GetMoveDirection(const Vector2Int startPos, const Vector2Int t
     {
         // #if 1
         //         Vector3Int pos3D    = { lastNode->position.x, lastNode->position.y, 0 };
-        //         Vector2    worldPos = Utils_GridToWorld(pos3D, TEXTURE_SIZE * TEXTURE_SCALE);
+        //         Vector2Float    worldPos = Utils_GridToWorld(pos3D, TEXTURE_SIZE * TEXTURE_SCALE);
         //         DrawRectangleLines(int(worldPos.x), int(worldPos.y), int(TEXTURE_SIZE * TEXTURE_SCALE),
         //                            int(TEXTURE_SIZE * TEXTURE_SCALE), GREEN);
         // #endif
@@ -299,30 +299,33 @@ float Utils_AbsFloat(float value)
     return (value < 0) ? -value : value;
 }
 
-Vector2 Utils_WorldToScreen2D(Vector2 position, Camera2D camera)
+Vector2Float Utils_WorldToScreen2D(Vector2Float position, Camera2D camera)
 {
-    float   zoom = camera.zoom;
-    Vector2 screenPosition;
+    float        zoom = camera.zoom;
+    Vector2Float screenPosition;
     screenPosition.x = (position.x - camera.target.x) * zoom + GetScreenWidth() / 2.0f;
     screenPosition.y = (position.y - camera.target.y) * zoom + GetScreenHeight() / 2.0f;
     return screenPosition;
 }
 
-Vector2 Utils_ScreenToWorld2D(Vector2 position, Camera2D camera)
+Vector2Float Utils_ScreenToWorld2D(Vector2Float position, Camera2D camera)
 {
-    Vector2 worldPosition = GetScreenToWorld2D(position, camera);
-    return worldPosition;
+    Vector2      worldPosition = GetScreenToWorld2D({position.x, position.y}, camera);
+    Vector2Float worldPositionFloat;
+    worldPositionFloat.x = worldPosition.x;
+    worldPositionFloat.y = worldPosition.y;
+    return worldPositionFloat;
 }
 
-Vector2 Utils_ScaleWithCamera(Vector2 value, Camera2D camera)
+Vector2Float Utils_ScaleWithCamera(Vector2Float value, Camera2D camera)
 {
-    Vector2 scaledValue;
+    Vector2Float scaledValue;
     scaledValue.x = value.x * (1.0f / camera.zoom);
     scaledValue.y = value.y * (1.0f / camera.zoom);
     return scaledValue;
 }
 
-Vector3Int Utils_WorldToGrid(Vector2 pos, uint8_t gridSize)
+Vector3Int Utils_WorldToGrid(Vector2Float pos, uint8_t gridSize)
 {
     Vector3Int position;
     position.x = (int)(pos.x / gridSize);
@@ -339,7 +342,7 @@ Vector3Int Utils_WorldToGrid(Vector2 pos, uint8_t gridSize)
     return position;
 }
 
-Vector3Int8 Utils_WorldToChunk(Vector2 pos, uint8_t gridSize, uint8_t chunkSize)
+Vector3Int8 Utils_WorldToChunk(Vector2Float pos, uint8_t gridSize, uint8_t chunkSize)
 {
     Vector3Int8 position;
     position.x = (pos.x / gridSize) / chunkSize;
@@ -356,17 +359,17 @@ Vector3Int8 Utils_WorldToChunk(Vector2 pos, uint8_t gridSize, uint8_t chunkSize)
     return position;
 }
 
-Vector2 Utils_GridToWorld(Vector3Int pos, uint8_t gridSize)
+Vector2Float Utils_GridToWorld(Vector3Int pos, uint8_t gridSize)
 {
-    Vector2 position;
+    Vector2Float position;
     position.x = pos.x * gridSize;
     position.y = pos.y * gridSize;
     return position;
 }
 
-Vector2 Utils_GridCenterToWorld(Vector3Int pos, uint8_t gridSize)
+Vector2Float Utils_GridCenterToWorld(Vector3Int pos, uint8_t gridSize)
 {
-    Vector2 position;
+    Vector2Float position;
     position.x = pos.x * gridSize + (gridSize / 2.0);
     position.y = pos.y * gridSize + (gridSize / 2.0);
     return position;
@@ -396,7 +399,7 @@ bool Utils_IsInGridRadius(Vector2Int center, Vector2Int point, uint16_t radius)
     return (dx * dx + dy * dy) <= (radius * radius);
 }
 
-float Utils_Vector2Distance(Vector2 a, Vector2 b)
+float Utils_Vector2Distance(Vector2Float a, Vector2Float b)
 {
     float dx = a.x - b.x;
     float dy = a.y - b.y;
@@ -414,7 +417,7 @@ uint16_t Utils_ManhattanDistance(Vector2Int a, Vector2Int b)
     return Utils_AbsInt16(a.x - b.x) + Utils_AbsInt16(a.y - b.y);
 }
 
-bool Utils_PointInRectangle(Vector2 point, Rectangle rect)
+bool Utils_PointInRectangle(Vector2Float point, Rectangle rect)
 {
     return (point.x >= rect.x && point.x <= rect.x + rect.width && point.y >= rect.y
             && point.y <= rect.y + rect.height);

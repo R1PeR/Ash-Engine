@@ -148,28 +148,28 @@ uint32_t Utils_AbsInt32(int32_t value);
 uint16_t Utils_AbsInt16(int16_t value);
 float    Utils_AbsFloat(float value);
 
-Vector2     Utils_WorldToScreen2D(Vector2 position, Camera2D camera);
-Vector2     Utils_ScreenToWorld2D(Vector2 position, Camera2D camera);
-Vector2     Utils_ScaleWithCamera(Vector2 value, Camera2D camera);
-Vector3Int  Utils_WorldToGrid(Vector2 pos, uint8_t gridSize);
-Vector3Int8 Utils_WorldToChunk(Vector2 pos, uint8_t gridSize, uint8_t chunkSize);
-Vector2     Utils_GridToWorld(Vector3Int pos, uint8_t gridSize);
-Vector2     Utils_GridCenterToWorld(Vector3Int pos, uint8_t gridSize);
-Vector3Int8 Utils_GridToChunk(Vector3Int pos, uint8_t chunkSize);
-bool        Utils_IsInGridRadius(Vector2Int originalPos, Vector2Int currentPos, uint16_t radius);
-float       Utils_Vector2Distance(Vector2 a, Vector2 b);
-uint16_t    Utils_Vector2DistanceInt(Vector2Int a, Vector2Int b);
-uint16_t    Utils_ManhattanDistance(Vector2Int a, Vector2Int b);
+Vector2Float Utils_WorldToScreen2D(Vector2Float position, Camera2D camera);
+Vector2Float Utils_ScreenToWorld2D(Vector2Float position, Camera2D camera);
+Vector2Float Utils_ScaleWithCamera(Vector2Float value, Camera2D camera);
+Vector3Int   Utils_WorldToGrid(Vector2Float pos, uint8_t gridSize);
+Vector3Int8  Utils_WorldToChunk(Vector2Float pos, uint8_t gridSize, uint8_t chunkSize);
+Vector2Float Utils_GridToWorld(Vector3Int pos, uint8_t gridSize);
+Vector2Float Utils_GridCenterToWorld(Vector3Int pos, uint8_t gridSize);
+Vector3Int8  Utils_GridToChunk(Vector3Int pos, uint8_t chunkSize);
+bool         Utils_IsInGridRadius(Vector2Int originalPos, Vector2Int currentPos, uint16_t radius);
+float        Utils_Vector2Distance(Vector2Float a, Vector2Float b);
+uint16_t     Utils_Vector2DistanceInt(Vector2Int a, Vector2Int b);
+uint16_t     Utils_ManhattanDistance(Vector2Int a, Vector2Int b);
 
-bool Utils_PointInRectangle(Vector2 point, Rectangle rect);
+bool Utils_PointInRectangle(Vector2Float point, Rectangle rect);
 bool Utils_RectangleOverlap(Rectangle point, Rectangle rect);
 
 int32_t Utils_GetRandomInRangeInteger(int32_t min, int32_t max);
 float   Utils_GetRandomInRangeFloat(float min, float max);
 
-float   Utils_MinFloat(float a, float b);
-float   Utils_MaxFloat(float a, float b);
+float Utils_MinFloat(float a, float b);
+float Utils_MaxFloat(float a, float b);
 
-float   Utils_ClampFloat(float a, float min, float max);
+float Utils_ClampFloat(float a, float min, float max);
 
 #endif  // ASH_MISC_H

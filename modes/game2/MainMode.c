@@ -52,10 +52,10 @@ struct GameData
 
 } gameData;
 
-TextureData textures[512];
-TextureData texture;
-Sprite      sprites[128];
-uint8_t     spriteCount = 0;
+static TextureData textures[512];
+static TextureData texture;
+static Sprite      sprites[128];
+static uint8_t     spriteCount = 0;
 
 void DrawDebug()
 {
