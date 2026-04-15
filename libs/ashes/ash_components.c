@@ -473,15 +473,17 @@ bool Texture_CreateTextureAtlas(TextureData texture, uint32_t columns, uint32_t 
         LOG_ERR("Texture: Texture_LoadTextureAtlas() failed, output is nullptr");
         return false;
     }
-    for (uint32_t i = 0; i < columns; i++)
+    float cellWidth  = (float)texture.texture.width / (float)columns;
+    float cellHeight = (float)texture.texture.height / (float)rows;
+    for (uint32_t j = 0; j < rows; j++)
     {
-        for (uint32_t j = 0; j < rows; j++)
+        for (uint32_t i = 0; i < columns; i++)
         {
             Rectangle portionRect;
-            portionRect.x      = ((float)texture.texture.width / (float)columns) * i;
-            portionRect.y      = ((float)texture.texture.height / (float)rows) * j;
-            portionRect.width  = (float)texture.texture.width / (float)columns;
-            portionRect.height = (float)texture.texture.height / (float)rows;
+            portionRect.x      = cellWidth * i;
+            portionRect.y      = cellHeight * j;
+            portionRect.width  = cellWidth;
+            portionRect.height = cellHeight;
             TextureData textureData;
             textureData.texture = texture.texture;
             textureData.uv.x    = portionRect.x;
@@ -492,7 +494,7 @@ bool Texture_CreateTextureAtlas(TextureData texture, uint32_t columns, uint32_t 
             textureData.size.x = portionRect.width;
             textureData.size.y = portionRect.height;
 
-            output[j * columns + i] = textureData;
+            output[columns * j + i] = textureData;
         }
     }
     return true;

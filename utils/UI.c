@@ -117,7 +117,7 @@ bool UI_Text(Text* uiText, TextureData* fontAtlas)
         Sprite textSprite;
         Sprite_Initialize(&textSprite);
         char         c            = uiText->buffer[i];
-        TextureData* charTexture  = &fontAtlas[c - 32];
+        TextureData* charTexture  = fontAtlas + c;
         textSprite.currentTexture = charTexture;
         textSprite.scale          = uiText->scale;
         textSprite.position.x     = uiText->position.x + (charTexture->size.x * uiText->scale * i);
@@ -338,9 +338,4 @@ bool UI_ItemSlot(ItemSlot* itemSlot)
     }
 
     return UI_CheckBounds(itemSlot->bounds);
-}
-
-void UI_Clear()
-{
-    *uiSpriteArraySize = 0;
 }

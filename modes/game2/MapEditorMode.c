@@ -6,6 +6,8 @@
 #include "ashes/ash_io.h"
 #include "ashes/ash_misc.h"
 #include "utils/UI.h"
+#include <stdio.h>
+#include <string.h>
 
 Mode mapEditorMode = MODE_FROM_CLASSNAME(MapEditorMode);
 
@@ -13,6 +15,8 @@ static Sprite      sprites[2048];
 static uint16_t    spriteCount = 0;
 static TextureData textures[512];
 static TextureData texture;
+static TextureData fontTextures[512];
+static TextureData fontTexture;
 
 static Entity2D cameraEntity;
 
@@ -40,10 +44,11 @@ struct MapData
 
 struct EditorData
 {
-    int32_t  selectedTile = -1;
     bool     overMap      = false;
+    int32_t  selectedTile = -1;
     TileType tileType     = TILE_TYPE_EMPTY;
     MapData  mapData;
+    bool     showTypes = false;
 } data;
 
 void MapEditorMode_OnStart()
@@ -55,6 +60,13 @@ void MapEditorMode_OnStart()
     {
         LOG_ERR("Failed to create texture atlas");
     }
+
+    fontTexture = Texture_LoadTexture("resources/sprites/Anikki_square_8x8.png");
+    if (!Texture_CreateTextureAtlas(fontTexture, 16, 16, fontTextures))
+    {
+        LOG_ERR("Failed to create texture atlas");
+    }
+
     for (uint32_t i = 0; i < 128; i++)
     {
         Sprite_Initialize(&sprites[i]);
@@ -76,7 +88,6 @@ void MapEditorMode_Update()
     cameraEntity.position.y = Window_GetCamera()->target.y;
     cameraEntity.scale      = Window_GetCamera()->zoom;
 
-
     data.overMap       = true;
     Vector2Float uiPos = Utils_ScreenToWorld2D({ 0.0f, 0.0f }, *Window_GetCamera());
 
@@ -84,7 +95,7 @@ void MapEditorMode_Update()
     {
         uint16_t posX = i % 16;
         uint16_t posY = i / 16;
-        Button   button;
+Button   button;
         button.scale = 1.85f;
         button.position =
             (Vector2Float){ uiPos.x + posX * 16.0f * button.scale, uiPos.y + posY * 16.0f * button.scale };
@@ -114,6 +125,37 @@ void MapEditorMode_Update()
         }
     }
 
+    Vector2Float textPos = Utils_ScreenToWorld2D({900.0f , 0.0f }, *Window_GetCamera());
+
+    char typeText[64];
+    switch (data.tileType)
+    {
+        case TILE_TYPE_EMPTY:
+            sprintf(typeText, "Type: Empty");
+            break;
+        case TILE_TYPE_SOLID:
+            sprintf(typeText, "Type: Solid");
+            break;
+        case TILE_TYPE_JUMP_PLATFORM:
+            sprintf(typeText, "Type: Jump Platform");
+            break;
+        case TILE_TYPE_PLAYER_SPAWN:
+            sprintf(typeText, "Type: Player Spawn");
+            break;
+        case TILE_TYPE_ENEMY_SPAWN:
+            sprintf(typeText, "Type: Enemy Spawn");
+            break;
+        default:
+            sprintf(typeText, "Type: Unknown");
+            break;
+    }
+    Text text;
+    text.position = textPos;
+    text.buffer = typeText;
+    text.scale = 2.0f;
+    text.bufferSize = strlen(typeText);
+
+    UI_Text(&text, fontTextures);
 
     if (data.overMap)
     {
@@ -150,6 +192,52 @@ void MapEditorMode_Update()
         sprite->position.x     = tile->position.x * 32.0f;
         sprite->position.y     = tile->position.y * 32.0f;
         sprite->currentTexture = &textures[tile->textureId];
+        if (data.showTypes)
+        {
+            switch (tile->type)
+            {
+                case TILE_TYPE_SOLID:
+                    sprite->tint = (Color){ 255, 0, 0, 255 };
+                    break;
+                case TILE_TYPE_JUMP_PLATFORM:
+                    sprite->tint = (Color){ 0, 255, 0, 255 };
+                    break;
+                case TILE_TYPE_PLAYER_SPAWN:
+                    sprite->tint = (Color){ 0, 0, 255, 255 };
+                    break;
+                case TILE_TYPE_ENEMY_SPAWN:
+                    sprite->tint = (Color){ 255, 255, 0, 255 };
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    if(Input_IsKeyPressed(KEY_T))
+    {
+        data.showTypes = !data.showTypes;
+    }
+
+    if(Input_IsKeyPressed(KEY_ONE))
+    {
+        data.tileType = TILE_TYPE_EMPTY;
+    }
+    else if(Input_IsKeyPressed(KEY_TWO))
+    {
+        data.tileType = TILE_TYPE_SOLID;
+    }
+    else if(Input_IsKeyPressed(KEY_THREE))
+    {
+        data.tileType = TILE_TYPE_JUMP_PLATFORM;
+    }
+    else if(Input_IsKeyPressed(KEY_FOUR))
+    {
+        data.tileType = TILE_TYPE_PLAYER_SPAWN;
+    }
+    else if(Input_IsKeyPressed(KEY_FIVE))
+    {
+        data.tileType = TILE_TYPE_ENEMY_SPAWN;
     }
 
     for (uint16_t i = 0; i < spriteCount; i++)
