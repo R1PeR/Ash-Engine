@@ -17,6 +17,46 @@
 #define TEXTURE_INFO_LINE_MAX                  128
 
 /* Structs, Enums, and Unions */
+
+typedef enum Shape2DType
+{
+    SHAPE2D_RECTANGLE,        /* filled rectangle          */
+    SHAPE2D_RECTANGLE_LINES,  /* outline rectangle         */
+    SHAPE2D_LINE,             /* line segment with thickness */
+    SHAPE2D_CIRCLE,           /* filled circle             */
+    SHAPE2D_CIRCLE_LINES,     /* outline circle (ring)     */
+} Shape2DType;
+
+typedef struct Entity2D Entity2D;
+
+typedef struct Shape2D
+{
+    Entity2D*    parent;
+    Vector2Float position;  /* local-space: top-left for rects, center for circles, start for lines */
+    float        scale;     /* multiplied with parent scale for all sizes */
+    Color        color;
+    Shape2DType  type;
+    union
+    {
+        struct
+        {
+            float width;
+            float height;
+            float outlineThickness;  /* RECTANGLE_LINES only */
+        } rectangle;
+        struct
+        {
+            Vector2Float endPosition;  /* local-space end point */
+            float        thickness;
+        } line;
+        struct
+        {
+            float radius;
+            float outlineThickness;  /* CIRCLE_LINES: ring width */
+        } circle;
+    };
+} Shape2D;
+
 typedef struct Entity2D
 {
     Vector2Float position;
@@ -39,6 +79,22 @@ typedef struct Sprite
     bool         drawPortion;
     Rectangle    portionRect;
 } Sprite;
+
+typedef enum DrawableType
+{
+    DRAWABLE_SPRITE,
+    DRAWABLE_SHAPE,
+} DrawableType;
+
+typedef struct Drawable
+{
+    DrawableType type;
+    union
+    {
+        Sprite  sprite;
+        Shape2D shape;
+    };
+} Drawable;
 
 typedef struct AnimationData
 {
@@ -168,9 +224,14 @@ Collision2D_Collision Collider2D_CheckCollisionSide(Collider2D* a, Collider2D* b
 
 void Entity2D_Initialize(Entity2D* ent);
 
+void Shape2D_Initialize(Shape2D* shape);
+void Shape2D_Draw(Shape2D* shape);
+
 void Sprite_Initialize(Sprite* spr);
 void Sprite_Update(Sprite* spr);
 void Sprite_Draw(Sprite* spr);
+
+void Drawable_Draw(Drawable* drawable);
 
 TextureData Texture_LoadTexture(const char* fileName);
 bool        Texture_CreateTextureAtlas(TextureData texture, uint32_t columns, uint32_t rows, TextureData* output);

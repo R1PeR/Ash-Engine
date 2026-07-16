@@ -79,7 +79,6 @@ static void Debug_ShowMisc(Entity2D* ent, uint32_t entSize, Sprite* spr, uint32_
                     ImGui::Text("Collider size: {%f, %f }", current->size.x, current->size.y);
                     ImGui::Text("Collider is enabled: %d", current->isEnabled);
                     ImGui::Text("Collider id: %d", current->id);
-                    ImGui::Text("Collider current collision count: %d", current->collision.collisionCount);
                 }
             }
             ImGui::TreePop();

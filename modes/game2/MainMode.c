@@ -1,4 +1,5 @@
 #include "MainMode.h"
+#include "MapEditorMode.h"
 
 #include "ashes/ash_components.h"
 #include "ashes/ash_context.h"
@@ -52,10 +53,14 @@ struct GameData
 
 } gameData;
 
-static TextureData textures[512];
-static TextureData texture;
-static Sprite      sprites[128];
-static uint8_t     spriteCount = 0;
+TextureData textures[512];
+TextureData texture;
+Sprite      sprites[2048];
+uint16_t    spriteCount = 0;
+
+static TextureData editorTileTextures[MAP_TILESET_COUNT];
+static TextureData editorTileAtlasBase;
+static bool        editorTilesLoaded = false;
 
 void DrawDebug()
 {
@@ -74,6 +79,28 @@ void DrawDebug()
              originPoint.y + 120, 20, WHITE);
     DrawText(TextFormat("Player wallCoyoteTime: %s", Stopwatch_IsRunning(&gameData.player.wallCoyoteTime) ? "true" : "false"), originPoint.x,
              originPoint.y + 150, 20, WHITE);
+}
+
+static void DrawEditorTiles()
+{
+    if (!g_editorTestMapData.isValid || !editorTilesLoaded)
+        return;
+    for (int l = 0; l < MAP_MAX_LAYERS; l++)
+    {
+        TileLayer* layer = &g_editorTestMapData.mapData.layers[l];
+        for (int i = 0; i < (int)layer->tileCount && spriteCount < 2047; i++)
+        {
+            Tile* tile = &layer->tiles[i];
+            if (tile->textureId >= MAP_TILESET_COUNT)
+                continue;
+            Sprite_Initialize(&sprites[spriteCount]);
+            sprites[spriteCount].currentTexture = &editorTileTextures[tile->textureId];
+            sprites[spriteCount].position.x     = (float)(tile->position.x * TILE_SIZE);
+            sprites[spriteCount].position.y     = (float)(tile->position.y * TILE_SIZE);
+            sprites[spriteCount].scale          = 2.0f;
+            spriteCount++;
+        }
+    }
 }
 
 void UpdateGame()
@@ -289,6 +316,7 @@ void UpdateGame()
 
 void MainMode_OnStart()
 {
+    editorTilesLoaded          = false;
     gameData.map.platformCount = 0;
     Entity2D_Initialize(&gameData.player.entity);
     Collider2D_Initialize(&gameData.player.collider);
@@ -297,29 +325,65 @@ void MainMode_OnStart()
     gameData.player.collider.parent = &gameData.player.entity;
     gameData.player.collider.size   = (Vector2Float){ 16.0f, 16.0f };
 
-    Entity2D_Initialize(&gameData.map.platforms[0].entity);
-    Collider2D_Initialize(&gameData.map.platforms[0].collider);
-    Sprite_Initialize(&gameData.map.platforms[0].sprite);
-    gameData.map.platforms[0].entity.position = (Vector2Float){ -100.0f, 100.0f };
-    gameData.map.platforms[0].collider.parent = &gameData.map.platforms[0].entity;
-    gameData.map.platforms[0].collider.size   = (Vector2Float){ 200.0f, 20.0f };
-    gameData.map.platformCount++;
+    if (g_editorTestMapData.isValid)
+    {
+        /* Build platforms from editor SOLID / JUMP_PLATFORM tiles */
+        for (int l = 0; l < MAP_MAX_LAYERS; l++)
+        {
+            TileLayer* layer = &g_editorTestMapData.mapData.layers[l];
+            for (int i = 0; i < (int)layer->tileCount; i++)
+            {
+                Tile* tile = &layer->tiles[i];
+                if ((tile->type == TILE_TYPE_SOLID || tile->type == TILE_TYPE_JUMP_PLATFORM)
+                    && gameData.map.platformCount < 128)
+                {
+                    Platform* p = &gameData.map.platforms[gameData.map.platformCount++];
+                    Entity2D_Initialize(&p->entity);
+                    Collider2D_Initialize(&p->collider);
+                    Sprite_Initialize(&p->sprite);
+                    p->entity.position.x = (float)(tile->position.x * TILE_SIZE);
+                    p->entity.position.y = (float)(tile->position.y * TILE_SIZE);
+                    p->collider.parent   = &p->entity;
+                    p->collider.size     = (Vector2Float){ (float)TILE_SIZE, (float)TILE_SIZE };
+                }
+                if (tile->type == TILE_TYPE_PLAYER_SPAWN)
+                {
+                    gameData.player.entity.position.x = (float)(tile->position.x * TILE_SIZE);
+                    gameData.player.entity.position.y = (float)(tile->position.y * TILE_SIZE);
+                }
+            }
+        }
+        /* Load tileset for visual rendering */
+        editorTileAtlasBase = Texture_LoadTexture("resources/sprites/tileset.png");
+        if (Texture_CreateTextureAtlas(editorTileAtlasBase, MAP_TILESET_COLS, MAP_TILESET_ROWS, editorTileTextures))
+            editorTilesLoaded = true;
+    }
+    else
+    {
+        Entity2D_Initialize(&gameData.map.platforms[0].entity);
+        Collider2D_Initialize(&gameData.map.platforms[0].collider);
+        Sprite_Initialize(&gameData.map.platforms[0].sprite);
+        gameData.map.platforms[0].entity.position = (Vector2Float){ -100.0f, 100.0f };
+        gameData.map.platforms[0].collider.parent = &gameData.map.platforms[0].entity;
+        gameData.map.platforms[0].collider.size   = (Vector2Float){ 200.0f, 20.0f };
+        gameData.map.platformCount++;
 
-    Entity2D_Initialize(&gameData.map.platforms[1].entity);
-    Collider2D_Initialize(&gameData.map.platforms[1].collider);
-    Sprite_Initialize(&gameData.map.platforms[1].sprite);
-    gameData.map.platforms[1].entity.position = (Vector2Float){ 50.0f, -400.0f };
-    gameData.map.platforms[1].collider.parent = &gameData.map.platforms[1].entity;
-    gameData.map.platforms[1].collider.size   = (Vector2Float){ 20.0f, 500.0f };
-    gameData.map.platformCount++;
+        Entity2D_Initialize(&gameData.map.platforms[1].entity);
+        Collider2D_Initialize(&gameData.map.platforms[1].collider);
+        Sprite_Initialize(&gameData.map.platforms[1].sprite);
+        gameData.map.platforms[1].entity.position = (Vector2Float){ 50.0f, -400.0f };
+        gameData.map.platforms[1].collider.parent = &gameData.map.platforms[1].entity;
+        gameData.map.platforms[1].collider.size   = (Vector2Float){ 20.0f, 500.0f };
+        gameData.map.platformCount++;
 
-    Entity2D_Initialize(&gameData.map.platforms[2].entity);
-    Collider2D_Initialize(&gameData.map.platforms[2].collider);
-    Sprite_Initialize(&gameData.map.platforms[2].sprite);
-    gameData.map.platforms[2].entity.position = (Vector2Float){ -50.0f, -100.0f };
-    gameData.map.platforms[2].collider.parent = &gameData.map.platforms[2].entity;
-    gameData.map.platforms[2].collider.size   = (Vector2Float){ 20.0f, 200.0f };
-    gameData.map.platformCount++;
+        Entity2D_Initialize(&gameData.map.platforms[2].entity);
+        Collider2D_Initialize(&gameData.map.platforms[2].collider);
+        Sprite_Initialize(&gameData.map.platforms[2].sprite);
+        gameData.map.platforms[2].entity.position = (Vector2Float){ -50.0f, -100.0f };
+        gameData.map.platforms[2].collider.parent = &gameData.map.platforms[2].entity;
+        gameData.map.platforms[2].collider.size   = (Vector2Float){ 20.0f, 200.0f };
+        gameData.map.platformCount++;
+    }
 
     texture = Texture_LoadTexture("resources/sprites/font.png");
     LOG_INF("Loaded texture: %s, width: %d, height: %d", "resources/sprites/player.png", texture.size.x,
@@ -328,7 +392,7 @@ void MainMode_OnStart()
     {
         LOG_ERR("Failed to create texture atlas");
     }
-    for (uint32_t i = 0; i < 128; i++)
+    for (uint32_t i = 0; i < 2048; i++)
     {
         Sprite_Initialize(&sprites[i]);
     }
@@ -344,19 +408,28 @@ void MainMode_Update()
     DeltaTime_Update();
     gameData.dt = DeltaTime_GetDeltaTime();
 
+    if (Input_IsKeyPressed(KEY_ESCAPE))
+        Context_FinishMode();
+
+    DrawEditorTiles();
     UpdateGame();
 
-    // Draw part
-    // for (uint32_t i = 0; i < spriteCount; i++)
-    // {
-    //     Sprite_Draw(&sprites[i]);
-    // }
+    /* Camera follows player */
+    Camera2D* camera    = Window_GetCamera();
+    camera->target.x    = gameData.player.entity.position.x;
+    camera->target.y    = gameData.player.entity.position.y;
+
+    for (uint16_t i = 0; i < spriteCount; i++)
+        Sprite_Draw(&sprites[i]);
+
     DrawDebug();
 }
 
 void MainMode_OnStop()
 {
-    Texture_UnloadTexture(&textures[0]);
+    if (editorTilesLoaded)
+        Texture_UnloadTexture(&editorTileAtlasBase);
+    g_editorTestMapData.isValid = false;
 }
 
 void MainMode_OnResume()

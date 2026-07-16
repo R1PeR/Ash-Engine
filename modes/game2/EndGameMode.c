@@ -4,7 +4,7 @@
 #include "ashes/ash_io.h"
 #include "ashes/ash_misc.h"
 #include "raylib.h"
-#include "utils/UI.h"
+#include "utils/UI_old.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -15,7 +15,7 @@
 
 void EndGameMode_OnStart()
 {
-    // UI_Init(&cameraEntity);
+    // UI_old_Init(&cameraEntity);
 }
 
 void EndGameMode_OnPause()
@@ -37,7 +37,7 @@ void EndGameMode_Update()
     // text.scale      = 2.0f;
     // text.bounds =
     //     (Rectangle){ text.position.x, text.position.y, text.scale * 8.0f * text.bufferSize, text.scale * 8.0f };
-    // if (UI_Text(&text, "Anikki_square_8x8"))
+    // if (UI_old_Text(&text, "Anikki_square_8x8"))
     // {
     //     LOG_INF("Text clicked!");
     // }
@@ -49,7 +49,7 @@ void EndGameMode_Update()
     // text.position   = (Vector2Float){ -(text.scale * 8.0f * text.bufferSize / 2.0f), -(text.scale * 8.0f / 2.0f) };
     // text.bounds =
     //     (Rectangle){ text.position.x, text.position.y, text.scale * 8.0f * text.bufferSize, text.scale * 8.0f };
-    // if (UI_Text(&text, "Anikki_square_8x8"))
+    // if (UI_old_Text(&text, "Anikki_square_8x8"))
     // {
     //     LOG_INF("Text clicked!");
     // }

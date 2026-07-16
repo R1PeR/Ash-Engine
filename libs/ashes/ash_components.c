@@ -386,6 +386,82 @@ void Entity2D_Initialize(Entity2D* ent)
     ent->scale      = 1.0f;
 }
 
+void Shape2D_Initialize(Shape2D* shape)
+{
+    shape->parent              = NULL;
+    shape->position            = { 0.0f, 0.0f };
+    shape->scale               = 1.0f;
+    shape->color               = WHITE;
+    shape->type                = SHAPE2D_RECTANGLE;
+    shape->rectangle.width     = 0.0f;
+    shape->rectangle.height    = 0.0f;
+    shape->rectangle.outlineThickness = 1.0f;
+}
+
+void Shape2D_Draw(Shape2D* shape)
+{
+    Vector2 worldPosition = { shape->position.x, shape->position.y };
+    float   worldScale    = shape->scale;
+
+    if (shape->parent != NULL)
+    {
+        worldPosition.x = shape->parent->position.x + shape->position.x * shape->parent->scale;
+        worldPosition.y = shape->parent->position.y + shape->position.y * shape->parent->scale;
+        worldScale *= shape->parent->scale;
+    }
+
+    switch (shape->type)
+    {
+        case SHAPE2D_RECTANGLE:
+            DrawRectangleRec(
+                (Rectangle){ worldPosition.x, worldPosition.y,
+                             shape->rectangle.width  * worldScale,
+                             shape->rectangle.height * worldScale },
+                shape->color);
+            break;
+
+        case SHAPE2D_RECTANGLE_LINES:
+            DrawRectangleLinesEx(
+                (Rectangle){ worldPosition.x, worldPosition.y,
+                             shape->rectangle.width  * worldScale,
+                             shape->rectangle.height * worldScale },
+                shape->rectangle.outlineThickness * worldScale,
+                shape->color);
+            break;
+
+        case SHAPE2D_LINE:
+        {
+            Vector2 worldEnd;
+            if (shape->parent != NULL)
+            {
+                worldEnd.x = shape->parent->position.x + shape->line.endPosition.x * shape->parent->scale;
+                worldEnd.y = shape->parent->position.y + shape->line.endPosition.y * shape->parent->scale;
+            }
+            else
+            {
+                worldEnd.x = shape->line.endPosition.x;
+                worldEnd.y = shape->line.endPosition.y;
+            }
+            DrawLineEx(worldPosition, worldEnd, shape->line.thickness * worldScale, shape->color);
+            break;
+        }
+
+        case SHAPE2D_CIRCLE:
+            DrawCircleV(worldPosition, shape->circle.radius * worldScale, shape->color);
+            break;
+
+        case SHAPE2D_CIRCLE_LINES:
+        {
+            float outerRadius = shape->circle.radius * worldScale;
+            float innerRadius = outerRadius - shape->circle.outlineThickness * worldScale;
+            if (innerRadius < 0.0f)
+                innerRadius = 0.0f;
+            DrawRing(worldPosition, innerRadius, outerRadius, 0.0f, 360.0f, 36, shape->color);
+            break;
+        }
+    }
+}
+
 void Sprite_Initialize(Sprite* spr)
 {
     spr->currentTexture = NULL;
@@ -503,4 +579,12 @@ bool Texture_CreateTextureAtlas(TextureData texture, uint32_t columns, uint32_t 
 void Texture_UnloadTexture(TextureData* textureData)
 {
     UnloadTexture(textureData->texture);
+}
+
+void Drawable_Draw(Drawable* drawable)
+{
+    if (drawable->type == DRAWABLE_SPRITE)
+        Sprite_Draw(&drawable->sprite);
+    else
+        Shape2D_Draw(&drawable->shape);
 }

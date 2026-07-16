@@ -7,12 +7,21 @@
             "label": "Make",
             "type": "shell",
             "command": "make",
-            "isShellCommand": true,
-            "showOutput": "always",
             "group": {
                 "kind": "build",
                 "isDefault": true
-            }
+            },
+            "presentation": {
+                "reveal": "always", // Replaces showOutput
+                "panel": "shared"
+            },
+            "options": {
+                "env": {
+                    "PATH": "C:\\msys64\\mingw64\\bin;C:\\msys64\\usr\\bin;${env:PATH}",
+                    "MSYSTEM": "MINGW64"
+                }
+            },
+            "problemMatcher": []
         }
     ]
 }

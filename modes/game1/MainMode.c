@@ -10,7 +10,7 @@
 #include "utils/Prefabs.h"
 #include "utils/Stats.h"
 #include "utils/Structs.h"
-#include "utils/UI.h"
+#include "utils/UI_old.h"
 #include <stdio.h>
 
 Mode mainMode = MODE_FROM_CLASSNAME(MainMode);
@@ -875,7 +875,7 @@ void UpdateUI()
     text.scale      = 2.0f;
     text.bounds =
         (Rectangle){ text.position.x, text.position.y, text.scale * 8.0f * text.bufferSize, text.scale * 8.0f };
-    if (UI_Text(&text, "Anikki_square_8x8"))
+    if (UI_old_Text(&text, "Anikki_square_8x8"))
     {
         // LOG_INF("Text clicked!");
     }
@@ -891,7 +891,7 @@ void UpdateUI()
     text.scale      = 1.0f;
     text.bounds =
         (Rectangle){ text.position.x, text.position.y, text.scale * 8.0f * text.bufferSize, text.scale * 8.0f };
-    if (UI_Text(&text, "Anikki_square_8x8"))
+    if (UI_old_Text(&text, "Anikki_square_8x8"))
     {
         LOG_INF("Text clicked!");
     }
@@ -906,7 +906,7 @@ void UpdateUI()
     progressbar.minValue     = 0.0f;
     progressbar.maxValue     = 100.0f;
     progressbar.currentValue = (float)gameData.playerObject->entity.entityHealth;
-    UI_ProgressBar(&progressbar);
+    UI_old_ProgressBar(&progressbar);
 
     ItemSlot itemSlot;
     for (uint8_t i = 0; i < ENTITY_MAX_ITEMS; i++)
@@ -924,7 +924,7 @@ void UpdateUI()
         {
             itemSlot.itemTexture = Texture_GetTextureById(gameData.playerObject->entity.entityItems[i]->textureId);
         }
-        if (UI_ItemSlot(&itemSlot))
+        if (UI_old_ItemSlot(&itemSlot))
         {
             if (Input_IsMouseButtonPressed(INPUT_MOUSE_BUTTON_LEFT))
             {
@@ -1010,7 +1010,7 @@ void UpdateDragItems()
 
 void MainMode_OnStart()
 {
-    UI_Init(&gameData.cameraEntity);
+    UI_old_Init(&gameData.cameraEntity);
     Texture_SetPool(gameData.textures, TEXTURE_MAX_COUNT);
     Texture_LoadTextureSheet("resources/sprites/Anikki_square_8x8.png", 8, 8, 256);
 

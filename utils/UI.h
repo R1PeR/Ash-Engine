@@ -4,102 +4,157 @@
 #include "ashes/ash_misc.h"
 
 #include <cstdint>
+#define UI_MAX_STACK_DEPTH 32
+#define UI_MAX_WIDGETS   64
 
-struct Button
+enum UI_LayoutType
 {
-    Vector2Float position;
-    TextureData* onTexture;
-    TextureData* offTexture;
-    Rectangle    bounds;
-    float        scale;
-    bool         isPressed;
+    LayoutHorizontal,
+    LayoutVertical
 };
 
-struct Text
+enum UI_CenterType
 {
-    Vector2Float position;
-    Rectangle    bounds;
-    float        scale;
-    char*        buffer;
-    size_t       bufferSize;
+    CenterNone,
+    CenterHorizontal,
+    CenterVertical,
+    CenterBoth
 };
 
-struct TextButton
+struct UITextData
 {
-    Vector2Float position;
-    TextureData* onTexture;
-    TextureData* offTexture;
-    Rectangle    bounds;
+    char*        text;
+    size_t       textSize;
     float        scale;
-    bool         isPressed;
-    Text         text;
+    TextureData* font;
 };
 
-struct SliderFloat
+struct UI_Sprite
 {
-    Vector2Float position;
-    TextureData* backgroundSprite;
-    TextureData* sliderTexture;
-    Rectangle    bounds;
-    float        scale;
-    float        minValue;
-    float        maxValue;
-    float        currentValue;
-    bool         isDragging;
+    Sprite* sprite;
 };
 
-struct SliderInt
+struct UI_Frame
 {
-    Vector2Float position;
-    TextureData* backgroundTexture;
-    TextureData* sliderTexture;
-    Rectangle    bounds;
-    float        scale;
-    int32_t      minValue;
-    int32_t      maxValue;
-    int32_t      currentValue;
-    bool         isDragging;
+    bool     scrollable;
+    float    contentHeight;
+    uint16_t widgetId;
+    float    size;
 };
 
-struct ProgressBar
+struct UI_TileGridData
 {
-    Vector2Float position;
-    TextureData* backgroundTexture;
-    TextureData* progressTexture;
-    Rectangle    bounds;
-    float        scale;
-    float        minValue;
-    float        maxValue;
-    float        currentValue;
+    TextureData* textures;
+    int          textureCount;
+    int          cols;
+    int          selectedTile;
+    uint16_t     widgetId;
 };
 
-struct Checkbox
+struct UI_ButtonData
 {
-    Vector2Float position;
-    TextureData* onTexture;
-    TextureData* offTexture;
-    Rectangle    bounds;
+    const char*  text;
     float        scale;
-    bool         isChecked;
+    TextureData* font;
+    uint16_t     widgetId;
 };
 
-struct ItemSlot
+struct UI_SliderData
 {
-    Vector2Float position;
-    TextureData* backgroundTexture;
-    TextureData* itemTexture;
-    Rectangle    bounds;
-    float        scale;
+    float    value;
+    float    min;
+    float    max;
+    uint16_t widgetId;
 };
 
-void UI_Initialize(Entity2D* parentEntity, Sprite* spriteArray, size_t* spriteArraySize, size_t spriteArrayMaxSize);
-bool UI_TextureButton(Button* uiButton);
-bool UI_TextButton(TextButton* uiTextButton, TextureData* fontAtlas);
-bool UI_Text(Text* uiText, TextureData* fontAtlas);
-bool UI_SliderFloat(SliderFloat* uiSlider);
-bool UI_SliderInt(SliderInt* uiSlider);
-bool UI_ProgressBar(ProgressBar* uiProgressBar);
-bool UI_Checkbox(Checkbox* uiCheckbox);
-bool UI_ItemSlot(ItemSlot* uiItemSlot);
+struct UI_ListData
+{
+    const char** items;
+    int          itemCount;
+    float        textScale;
+    float        itemHeight;
+    TextureData* font;
+    uint16_t     widgetId;
+    bool         showScroll;
+};
 
-#endif  // LIBS_UTILS_UI_H
+enum UI_StackType
+{
+    StackType_Layout,
+    StackType_Centering,
+    StackType_Frame,
+    StackType_Text,
+    StackType_Sprite,
+    StackType_Button,
+    StackType_Slider,
+    StackType_List,
+    StackType_Toggle,
+    StackType_Separator,
+    StackType_TileGrid
+};
+
+struct UI_Stack
+{
+    UI_StackType type;
+    union
+    {
+        UI_LayoutType   layout;
+        UI_CenterType   centeringMode;
+        UI_Frame        frame;
+        UITextData      text;
+        UI_Sprite       sprite;
+        UI_ButtonData   button;
+        UI_SliderData   slider;
+        UI_ListData     list;
+        UI_TileGridData tileGrid;
+    };
+};
+
+struct UI_State
+{
+    UI_Stack item[UI_MAX_STACK_DEPTH];
+    uint16_t itemCount;
+
+    uint16_t widgetIdCounter;
+
+    bool   buttonClicked[UI_MAX_WIDGETS];
+    bool   toggleState[UI_MAX_WIDGETS];
+    float  sliderValue[UI_MAX_WIDGETS];
+    bool   sliderDragging[UI_MAX_WIDGETS];
+    int    listSelected[UI_MAX_WIDGETS];
+    int    tileGridSelected[UI_MAX_WIDGETS];
+    float  scrollOffset[UI_MAX_WIDGETS];
+
+    Drawable* drawableArray;
+    size_t*   drawableArraySize;
+    size_t    drawableArrayMaxSize;
+
+    Vector4Float bounds;
+};
+
+void UI_Initialize(Drawable* drawableArray, size_t* drawableArraySize, size_t drawableArrayMaxSize);
+void UI_SetParentEntity(Entity2D entity);
+
+void UI_Begin(Vector4Float bounds);
+
+void UI_Layout(UI_LayoutType layout);
+void UI_Center(UI_CenterType mode);
+
+void UI_Frame();
+void UI_ScrollFrame(float contentHeight);
+void UI_Text(const char* text, float scale, TextureData* font);
+void UI_Sprite(Sprite* sprite);
+
+bool  UI_Button(const char* text, float scale, TextureData* font);
+float UI_Slider(float value, float min, float max);
+int   UI_List(const char** items, int itemCount, float textScale, float itemHeight, TextureData* font, bool showScroll);
+
+void UI_FrameSize(float sizeRatio);
+bool UI_Toggle(const char* text, bool active, float scale, TextureData* font);
+void UI_Separator();
+int  UI_TileGrid(TextureData* textures, int textureCount, int cols, int selectedTile);
+bool UI_IsMouseOverBounds(Vector4Float bounds);
+
+void UI_End();
+
+#endif
