@@ -5,7 +5,7 @@
 
 #include <cstdint>
 #define UI_MAX_STACK_DEPTH 32
-#define UI_MAX_WIDGETS   64
+#define UI_MAX_WIDGETS     64
 
 enum UI_LayoutType
 {
@@ -21,7 +21,9 @@ enum UI_CenterType
     CenterBoth
 };
 
-struct UITextData
+typedef Vector4Float UI_PaddingData;
+
+struct UI_TextData
 {
     char*        text;
     size_t       textSize;
@@ -29,12 +31,12 @@ struct UITextData
     TextureData* font;
 };
 
-struct UI_Sprite
+struct UI_SpriteData
 {
     Sprite* sprite;
 };
 
-struct UI_Frame
+struct UI_FrameData
 {
     bool     scrollable;
     float    contentHeight;
@@ -82,6 +84,7 @@ enum UI_StackType
 {
     StackType_Layout,
     StackType_Centering,
+    StackType_Padding,
     StackType_Frame,
     StackType_Text,
     StackType_Sprite,
@@ -100,9 +103,10 @@ struct UI_Stack
     {
         UI_LayoutType   layout;
         UI_CenterType   centeringMode;
-        UI_Frame        frame;
-        UITextData      text;
-        UI_Sprite       sprite;
+        UI_PaddingData  padding;
+        UI_FrameData    frame;
+        UI_TextData     text;
+        UI_SpriteData   sprite;
         UI_ButtonData   button;
         UI_SliderData   slider;
         UI_ListData     list;
@@ -117,13 +121,13 @@ struct UI_State
 
     uint16_t widgetIdCounter;
 
-    bool   buttonClicked[UI_MAX_WIDGETS];
-    bool   toggleState[UI_MAX_WIDGETS];
-    float  sliderValue[UI_MAX_WIDGETS];
-    bool   sliderDragging[UI_MAX_WIDGETS];
-    int    listSelected[UI_MAX_WIDGETS];
-    int    tileGridSelected[UI_MAX_WIDGETS];
-    float  scrollOffset[UI_MAX_WIDGETS];
+    bool  buttonClicked[UI_MAX_WIDGETS];
+    bool  toggleState[UI_MAX_WIDGETS];
+    float sliderValue[UI_MAX_WIDGETS];
+    bool  sliderDragging[UI_MAX_WIDGETS];
+    int   listSelected[UI_MAX_WIDGETS];
+    int   tileGridSelected[UI_MAX_WIDGETS];
+    float scrollOffset[UI_MAX_WIDGETS];
 
     Drawable* drawableArray;
     size_t*   drawableArraySize;
@@ -133,12 +137,13 @@ struct UI_State
 };
 
 void UI_Initialize(Drawable* drawableArray, size_t* drawableArraySize, size_t drawableArrayMaxSize);
-void UI_SetParentEntity(Entity2D entity);
+void UI_SetParentEntity(Entity2D* entity);
 
 void UI_Begin(Vector4Float bounds);
 
 void UI_Layout(UI_LayoutType layout);
 void UI_Center(UI_CenterType mode);
+void UI_Padding(Vector4Float padding);
 
 void UI_Frame();
 void UI_ScrollFrame(float contentHeight);

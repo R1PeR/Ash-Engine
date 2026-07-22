@@ -35,7 +35,7 @@ Mode              mapEditorMode       = MODE_FROM_CLASSNAME(MapEditorMode);
 EditorTestMapData g_editorTestMapData = {};
 
 static Drawable drawables[DRAWABLE_MAX];
-static size_t  drawableCount = 0;
+static size_t   drawableCount = 0;
 
 static TextureData tileTextures[TILESET_COUNT];
 static TextureData tileAtlasBase;
@@ -48,12 +48,12 @@ static Entity2D cameraEntity;
 struct EditorData
 {
     MapData  mapData;
-    uint8_t  activeLayer      = 0;
-    int32_t  selectedTile     = -1;
-    TileType tileType         = TILE_TYPE_SOLID;
-    bool     showTypes        = false;
-    bool     showGrid         = true;
-    bool     isErasing        = false;
+    uint8_t  activeLayer  = 0;
+    int32_t  selectedTile = -1;
+    TileType tileType     = TILE_TYPE_SOLID;
+    bool     showTypes    = false;
+    bool     showGrid     = true;
+    bool     isErasing    = false;
 } data;
 
 static Vector4Float g_texturePaneBounds = { 0, 0, 0, 0 };
@@ -114,7 +114,6 @@ void PlaceTileAt(Vector3Int gridPos)
 }
 
 
-
 void HandleCameraInput()
 {
     float wheel = GetMouseWheelMove();
@@ -124,9 +123,9 @@ void HandleCameraInput()
         bool mouseOverUI = UI_IsMouseOverBounds(g_texturePaneBounds) || UI_IsMouseOverBounds(g_infoPaneBounds);
         if (!mouseOverUI)
         {
-            Vector2Float mw = Utils_ScreenToWorld2D((Vector2Float){ (float)Input_GetMouseX(), (float)Input_GetMouseY() },
-                                                    *Window_GetCamera());
-            float        oldZoom = Window_GetCamera()->zoom;
+            Vector2Float mw = Utils_ScreenToWorld2D(
+                (Vector2Float){ (float)Input_GetMouseX(), (float)Input_GetMouseY() }, *Window_GetCamera());
+            float oldZoom = Window_GetCamera()->zoom;
             Window_GetCamera()->zoom += wheel * ZOOM_STEP;
             if (Window_GetCamera()->zoom < ZOOM_MIN)
                 Window_GetCamera()->zoom = ZOOM_MIN;
@@ -151,15 +150,15 @@ void DrawGrid()
 {
     if (!data.showGrid)
         return;
-    Camera2D*  cam     = Window_GetCamera();
+    Camera2D*    cam      = Window_GetCamera();
     Vector2Float startPos = Utils_ScreenToWorld2D((Vector2Float){ 0.0f, 0.0f }, *cam);
-    Vector2Float endPos   = Utils_ScreenToWorld2D((Vector2Float){ (float)Window_GetWidth(), (float)Window_GetHeight() },
-                                                  *cam);
-    int          startX   = ((int)(startPos.x / TILE_SIZE) - 1) * TILE_SIZE;
-    int          endX     = ((int)(endPos.x / TILE_SIZE) + 1) * TILE_SIZE;
-    int          startY   = ((int)(startPos.y / TILE_SIZE) - 1) * TILE_SIZE;
-    int          endY     = ((int)(endPos.y / TILE_SIZE) + 1) * TILE_SIZE;
-    float        thickness = 1.0f / cam->zoom;
+    Vector2Float endPos =
+        Utils_ScreenToWorld2D((Vector2Float){ (float)Window_GetWidth(), (float)Window_GetHeight() }, *cam);
+    int   startX    = ((int)(startPos.x / TILE_SIZE) - 1) * TILE_SIZE;
+    int   endX      = ((int)(endPos.x / TILE_SIZE) + 1) * TILE_SIZE;
+    int   startY    = ((int)(startPos.y / TILE_SIZE) - 1) * TILE_SIZE;
+    int   endY      = ((int)(endPos.y / TILE_SIZE) + 1) * TILE_SIZE;
+    float thickness = 1.0f / cam->zoom;
     for (int x = startX; x <= endX; x += TILE_SIZE)
         DrawLineEx((Vector2){ (float)x, (float)startY }, (Vector2){ (float)x, (float)endY }, thickness, GRID_COLOR);
     for (int y = startY; y <= endY; y += TILE_SIZE)
@@ -175,8 +174,8 @@ void DrawWorldTiles()
         TileLayer* layer = &data.mapData.layers[l];
         for (uint16_t i = 0; i < layer->tileCount; i++)
         {
-            Tile*   tile   = &layer->tiles[i];
-            Sprite* sprite = &drawables[drawableCount].sprite;
+            Tile*   tile                  = &layer->tiles[i];
+            Sprite* sprite                = &drawables[drawableCount].sprite;
             drawables[drawableCount].type = DRAWABLE_SPRITE;
             drawableCount++;
             Sprite_Initialize(sprite);
@@ -226,7 +225,7 @@ void HandleTilePlacement()
     /* Ghost preview */
     if (data.selectedTile >= 0 && !data.isErasing)
     {
-        Sprite* ghost = &drawables[drawableCount].sprite;
+        Sprite* ghost                 = &drawables[drawableCount].sprite;
         drawables[drawableCount].type = DRAWABLE_SPRITE;
         drawableCount++;
         Sprite_Initialize(ghost);
@@ -248,14 +247,14 @@ void HandleTilePlacement()
 
 void DrawTexturePane()
 {
-    Camera2D* cam    = Window_GetCamera();
-    float     sw     = (float)Window_GetWidth();
-    float     sh     = (float)Window_GetHeight();
-    float     hw     = sw * 0.5f;
-    float     hh     = sh * 0.5f;
-    float     s      = 1.0f / cam->zoom;
-    float     tx     = cam->target.x;
-    float     ty     = cam->target.y;
+    Camera2D* cam = Window_GetCamera();
+    float     sw  = (float)Window_GetWidth();
+    float     sh  = (float)Window_GetHeight();
+    float     hw  = sw * 0.5f;
+    float     hh  = sh * 0.5f;
+    float     s   = 1.0f / cam->zoom;
+    float     tx  = cam->target.x;
+    float     ty  = cam->target.y;
 
     float px = tx + (hw - TEX_PANE_W) * s;
     float py = ty - hh * s;
@@ -298,7 +297,7 @@ void DrawTexturePane()
 void DrawInfoPane()
 {
     Camera2D* cam = Window_GetCamera();
-    float     hw  = (float)Window_GetWidth()  * 0.5f;
+    float     hw  = (float)Window_GetWidth() * 0.5f;
     float     hh  = (float)Window_GetHeight() * 0.5f;
     float     s   = 1.0f / cam->zoom;
     float     tx  = cam->target.x;
@@ -485,10 +484,44 @@ void MapEditorMode_OnStart()
     cameraEntity.scale      = 1.0f / camera->zoom;
 
     UI_Initialize(drawables, (size_t*)&drawableCount, DRAWABLE_MAX);
+    UI_SetParentEntity(&cameraEntity);
 }
 
 void MapEditorMode_OnPause()
 {
+}
+
+void DrawTest()
+{
+    Vector4Float bounds = { -200, -200, 400, 200 };
+    UI_Begin(bounds);
+    {
+        UI_Frame();
+        UI_Layout(LayoutVertical);
+        UI_Center(CenterVertical);
+        UI_Padding({ 20, 20, 20, 20 });
+        UI_Text("Hello, World!", 1.0f, fontTextures);
+        UI_Padding({ 10, 10, 10, 10 });
+        UI_Text("This is a test.", 1.0f, fontTextures);
+        UI_Padding({ 5, 5, 5, 5 });
+        UI_Text("This is a test.", 1.0f, fontTextures);
+    }
+    UI_End();
+
+    bounds = { -200, 100, 400, 200 };
+    UI_Begin(bounds);
+    {
+        UI_Frame();
+        UI_Layout(LayoutVertical);
+        UI_Center(CenterVertical);
+        UI_Padding({ 0, 0, 0, 0 });
+        UI_Text("Hello, World!", 1.0f, fontTextures);
+        UI_Padding({ 0, 0, 0, 0 });
+        UI_Text("This is a test.", 1.0f, fontTextures);
+        UI_Padding({ 0, 0, 0, 0 });
+        UI_Text("This is a test.", 1.0f, fontTextures);
+    }
+    UI_End();
 }
 
 void MapEditorMode_Update()
@@ -508,10 +541,12 @@ void MapEditorMode_Update()
     HandleTilePlacement();
     HandleKeyboardShortcuts();
 
+
     DrawGrid();
-    DrawWorldTiles();
-    DrawTexturePane();
-    DrawInfoPane();
+    DrawTest();
+    // DrawWorldTiles();
+    // DrawTexturePane();
+    // DrawInfoPane();
 
 
     for (size_t i = 0; i < drawableCount; i++)
@@ -527,5 +562,3 @@ void MapEditorMode_OnStop()
 void MapEditorMode_OnResume()
 {
 }
-
-

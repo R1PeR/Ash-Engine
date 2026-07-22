@@ -1,3 +1,4 @@
+### GAME 1
 - [ ] Implement ability to select target by mouse click and attack
 - [ ] Implement saving and loading game state
 - [ ] Add sound effects for attacks and item pickups
@@ -5,7 +6,7 @@
 - [ ] Implement leveling system for player with experience points
 - [ ] Add more items with different effects (healing, buffs, etc.)
 
-- [\] Implement ability to pick up items and use them
+- [ ] Implement ability to pick up items and use them
 - [x] Implement basic ui to show health and inventory
 - [x] Implement health system for player and enemies
 - [x] Implement basic enemy AI to chase and attack player
@@ -18,3 +19,8 @@
 - [x] Implement A* pathfinding algorithm for enemy movement
 - [x] Move A* algorithm to separate module
 - [x] Implement simple attack for enemies
+
+### GAME 2
+
+- [x] Fix problem with ui outline changing thickness
+- [ ] Implement padding for all displayable ui elements
