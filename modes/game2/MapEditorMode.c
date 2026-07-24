@@ -248,89 +248,64 @@ void HandleTilePlacement()
 void DrawTexturePane()
 {
     Camera2D* cam = Window_GetCamera();
-    float     sw  = (float)Window_GetWidth();
-    float     sh  = (float)Window_GetHeight();
-    float     hw  = sw * 0.5f;
-    float     hh  = sh * 0.5f;
-    float     s   = 1.0f / cam->zoom;
-    float     tx  = cam->target.x;
-    float     ty  = cam->target.y;
-
-    float px = tx + (hw - TEX_PANE_W) * s;
-    float py = ty - hh * s;
-    float pw = TEX_PANE_W * s;
-    float ph = sh * s;
-
-    g_texturePaneBounds = (Vector4Float){ px, py, pw, ph };
 
     static const char* typeLabels[] = { "EMPT", "SOLI", "JUMP", "PLYR", "ENMY" };
 
     UI_Begin(g_texturePaneBounds);
+    UI_FrameSize(0.08f);
+    UI_Layout(LayoutHorizontal);
+    for (int l = 0; l < MAP_MAX_LAYERS; l++)
     {
-        UI_FrameSize(0.08f);
-        UI_Layout(LayoutHorizontal);
-        for (int l = 0; l < MAP_MAX_LAYERS; l++)
-        {
-            char label[8];
-            snprintf(label, sizeof(label), "L%d", l);
-            if (UI_Toggle(label, l == data.activeLayer, s, fontTextures))
-                data.activeLayer = (uint8_t)l;
-        }
-
-        UI_FrameSize(0.08f);
-        UI_Layout(LayoutHorizontal);
-        for (int t = 0; t < 5; t++)
-        {
-            if (UI_Toggle(typeLabels[t], data.tileType == (TileType)t, s, fontTextures))
-                data.tileType = (TileType)t;
-        }
-
-        UI_FrameSize(0.02f);
-        UI_Separator();
-
-        UI_Frame();
-        data.selectedTile = UI_TileGrid(tileTextures, TILESET_COUNT, PANE_TILE_COLS, data.selectedTile);
+        char label[8];
+        snprintf(label, sizeof(label), "L%d", l);
+        if (UI_Toggle(label, l == data.activeLayer, 1.0, fontTextures))
+            data.activeLayer = (uint8_t)l;
     }
+
+    UI_FrameSize(0.08f);
+    UI_Layout(LayoutHorizontal);
+    for (int t = 0; t < 5; t++)
+    {
+        if (UI_Toggle(typeLabels[t], data.tileType == (TileType)t, 1.0, fontTextures))
+            data.tileType = (TileType)t;
+    }
+
+    UI_FrameSize(0.02f);
+    UI_Separator();
+
+    UI_Frame();
+    data.selectedTile = UI_TileGrid(tileTextures, TILESET_COUNT, PANE_TILE_COLS, data.selectedTile);
     UI_End();
 }
 
 void DrawInfoPane()
 {
-    Camera2D* cam = Window_GetCamera();
-    float     hw  = (float)Window_GetWidth() * 0.5f;
-    float     hh  = (float)Window_GetHeight() * 0.5f;
-    float     s   = 1.0f / cam->zoom;
-    float     tx  = cam->target.x;
-    float     ty  = cam->target.y;
-
-    float px = tx - hw * s;
-    float py = ty - hh * s;
-    float pw = INFO_PANE_W * s;
-    float ph = INFO_PANE_H * s;
-
-    g_infoPaneBounds = (Vector4Float){ px, py, pw, ph };
-
+    Camera2D*          camera      = Window_GetCamera();
     static const char* typeNames[] = { "EMPTY", "SOLID", "JUMP", "PSPAWN", "ESPAWN" };
 
-    char buf[64];
-    UI_Begin(g_infoPaneBounds);
+    char layer[32];
+    snprintf(layer, sizeof(layer), "LAYER: %d  (PGUP/PGDN)", data.activeLayer);
+    char type[32];
+    snprintf(type, sizeof(type), "TYPE:  %-6s  (1-5)", typeNames[data.tileType]);
+    char tile[32];
+    snprintf(tile, sizeof(tile), "TILE:  %-1d", data.selectedTile);
+    char zoom[32];
+    snprintf(zoom, sizeof(zoom), "ZOOM:  %2.2fx  (WHEEL)", camera->zoom);
+
+    UI_Begin(UI_GetBounds(AnchorTopLeft, { 0.0, 0.0, 0.3, 0.3 }));
     UI_Frame();
     UI_Layout(LayoutVertical);
-    {
-        snprintf(buf, sizeof(buf), "LAYER: %d  (PGUP/PGDN)", data.activeLayer);
-        UI_Text(buf, s, fontTextures);
-        snprintf(buf, sizeof(buf), "TYPE:  %s  (1-5)", typeNames[data.tileType]);
-        UI_Text(buf, s, fontTextures);
-        snprintf(buf, sizeof(buf), "TILE:  %d", data.selectedTile);
-        UI_Text(buf, s, fontTextures);
-        snprintf(buf, sizeof(buf), "ZOOM:  %.2fx  (WHEEL)", cam->zoom);
-        UI_Text(buf, s, fontTextures);
-        UI_Text(data.isErasing ? "MODE:  ERASE  (E)" : "MODE:  DRAW   (E)", s, fontTextures);
-        UI_Text(data.showTypes ? "TYPES: ON  (T)" : "TYPES: OFF (T)", s, fontTextures);
-        UI_Text(data.showGrid ? "GRID:  ON  (G)" : "GRID:  OFF (G)", s, fontTextures);
-        UI_Text("F2:SAVE  F3:LOAD  F9:CLR", s, fontTextures);
-        UI_Text("F5:TEST  (PAN:RMB)", s, fontTextures);
-    }
+    UI_Center(CenterVertical);
+    UI_Padding({ 5, 5, 5, 5 });
+    UI_Text(layer, 1.0, fontTextures);
+    UI_Text(type, 1.0, fontTextures);
+    UI_Text(tile, 1.0, fontTextures);
+    UI_Text(zoom, 1.0, fontTextures);
+    UI_Text(data.isErasing ? "MODE:  ERASE  (E)" : "MODE:  DRAW   (E)", 1.0, fontTextures);
+    UI_Text(data.showTypes ? "TYPES: ON  (T)" : "TYPES: OFF (T)", 1.0, fontTextures);
+    UI_Text(data.showGrid ? "GRID:  ON  (G)" : "GRID:  OFF (G)", 1.0, fontTextures);
+    UI_Text("F2:SAVE  F3:LOAD  F9:CLR", 1.0, fontTextures);
+    UI_Text("F5:TEST  (PAN:RMB)", 1.0, fontTextures);
     UI_End();
 }
 
@@ -493,33 +468,93 @@ void MapEditorMode_OnPause()
 
 void DrawTest()
 {
-    Vector4Float bounds = { -200, -200, 400, 200 };
+    Vector4Float bounds = UI_GetBounds(AnchorTopLeft, { 0.1f, 0.1f, 0.1f, 0.1f });
     UI_Begin(bounds);
     {
         UI_Frame();
         UI_Layout(LayoutVertical);
-        UI_Center(CenterVertical);
-        UI_Padding({ 20, 20, 20, 20 });
-        UI_Text("Hello, World!", 1.0f, fontTextures);
-        UI_Padding({ 10, 10, 10, 10 });
-        UI_Text("This is a test.", 1.0f, fontTextures);
-        UI_Padding({ 5, 5, 5, 5 });
-        UI_Text("This is a test.", 1.0f, fontTextures);
+        UI_Center(CenterBoth);
+        UI_Text("TopLeft", 1.0f, fontTextures);
     }
     UI_End();
 
-    bounds = { -200, 100, 400, 200 };
+    bounds = UI_GetBounds(AnchorTopCenter, { 0.05f, 0.1f, 0.1f, 0.1f });
     UI_Begin(bounds);
     {
         UI_Frame();
         UI_Layout(LayoutVertical);
-        UI_Center(CenterVertical);
-        UI_Padding({ 0, 0, 0, 0 });
-        UI_Text("Hello, World!", 1.0f, fontTextures);
-        UI_Padding({ 0, 0, 0, 0 });
-        UI_Text("This is a test.", 1.0f, fontTextures);
-        UI_Padding({ 0, 0, 0, 0 });
-        UI_Text("This is a test.", 1.0f, fontTextures);
+        UI_Center(CenterBoth);
+        UI_Text("TopCenter", 1.0f, fontTextures);
+    }
+    UI_End();
+
+    bounds = UI_GetBounds(AnchorTopRight, { 0.1f, 0.1f, 0.1f, 0.1f });
+    UI_Begin(bounds);
+    {
+        UI_Frame();
+        UI_Layout(LayoutVertical);
+        UI_Center(CenterBoth);
+        UI_Text("TopRight", 1.0f, fontTextures);
+    }
+    UI_End();
+
+    bounds = UI_GetBounds(AnchorMiddleLeft, { 0.1f, 0.05f, 0.1f, 0.1f });
+    UI_Begin(bounds);
+    {
+        UI_Frame();
+        UI_Layout(LayoutVertical);
+        UI_Center(CenterBoth);
+        UI_Text("MiddleLeft", 1.0f, fontTextures);
+    }
+    UI_End();
+
+    bounds = UI_GetBounds(AnchorMiddleCenter, { 0.05f, 0.05f, 0.1f, 0.1f });
+    UI_Begin(bounds);
+    {
+        UI_Frame();
+        UI_Layout(LayoutVertical);
+        UI_Center(CenterBoth);
+        UI_Text("MiddleCenter", 1.0f, fontTextures);
+    }
+    UI_End();
+
+    bounds = UI_GetBounds(AnchorMiddleRight, { 0.1f, 0.05f, 0.1f, 0.1f });
+    UI_Begin(bounds);
+    {
+        UI_Frame();
+        UI_Layout(LayoutVertical);
+        UI_Center(CenterBoth);
+        UI_Text("MiddleRight", 1.0f, fontTextures);
+    }
+    UI_End();
+
+    bounds = UI_GetBounds(AnchorBottomLeft, { 0.1f, 0.1f, 0.1f, 0.1f });
+    UI_Begin(bounds);
+    {
+        UI_Frame();
+        UI_Layout(LayoutVertical);
+        UI_Center(CenterBoth);
+        UI_Text("BottomLeft", 1.0f, fontTextures);
+    }
+    UI_End();
+
+    bounds = UI_GetBounds(AnchorBottomCenter, { 0.05f, 0.1f, 0.1f, 0.1f });
+    UI_Begin(bounds);
+    {
+        UI_Frame();
+        UI_Layout(LayoutVertical);
+        UI_Center(CenterBoth);
+        UI_Text("BottomCenter", 1.0f, fontTextures);
+    }
+    UI_End();
+
+    bounds = UI_GetBounds(AnchorBottomRight, { 0.1f, 0.1f, 0.1f, 0.1f });
+    UI_Begin(bounds);
+    {
+        UI_Frame();
+        UI_Layout(LayoutVertical);
+        UI_Center(CenterBoth);
+        UI_Text("BottomRight", 1.0f, fontTextures);
     }
     UI_End();
 }
@@ -543,10 +578,10 @@ void MapEditorMode_Update()
 
 
     DrawGrid();
-    DrawTest();
-    // DrawWorldTiles();
-    // DrawTexturePane();
-    // DrawInfoPane();
+    // DrawTest();
+    DrawWorldTiles();
+    DrawTexturePane();
+    DrawInfoPane();
 
 
     for (size_t i = 0; i < drawableCount; i++)

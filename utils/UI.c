@@ -253,21 +253,6 @@ static bool PointInRect(Vector2Float point, Rectangle rectangle)
            && point.y <= rectangle.y + rectangle.height;
 }
 
-static void GetSlotPosition(Vector4Float frameBounds, UI_LayoutType layout, float slotW, float slotH, int ci,
-                            float scrollY, float* slotX, float* slotY)
-{
-    if (layout == LayoutVertical)
-    {
-        *slotX = frameBounds.x;
-        *slotY = frameBounds.y + slotH * ci - scrollY;
-    }
-    else
-    {
-        *slotX = frameBounds.x + slotW * ci;
-        *slotY = frameBounds.y - scrollY;
-    }
-}
-
 static void DrawFrameShape(Vector4Float rectangle, Color background)
 {
     Shape2D s;
@@ -297,29 +282,25 @@ static void DrawFrameOutline(Vector4Float rectangle, Color color)
     PushShape(s);
 }
 
-static void DrawTextItem(int idx, Vector4Float frameBounds, UI_LayoutType layout, UI_CenterType center, Vector4Float padding,  float slotW,
-                         float slotH, int ci, float scrollY)
+static void DrawTextItem(int childId, Vector4Float childBounds, UI_CenterType childCenter, float scrollY)
 {
-    const char*  text      = uiState.item[idx].text.text;
-    size_t       tlen      = uiState.item[idx].text.textSize;
-    float        scale     = uiState.item[idx].text.scale;
-    TextureData* fontAtlas = uiState.item[idx].text.font;
+    const char*  text       = uiState.item[childId].text.text;
+    size_t       textLength = uiState.item[childId].text.textSize;
+    float        scale      = uiState.item[childId].text.scale;
+    TextureData* fontAtlas  = uiState.item[childId].text.font;
 
-    float slotX, slotY;
-    GetSlotPosition(frameBounds, layout, slotW, slotH, ci, scrollY, &slotX, &slotY);
+    float charWidth  = (fontAtlas ? (float)fontAtlas[0].size.x : 8.0f) * scale;
+    float charHeight = (fontAtlas ? (float)fontAtlas[0].size.y : 8.0f) * scale;
+    float textWidth  = textLength * charWidth;
 
-    float cw = (fontAtlas ? (float)fontAtlas[0].size.x : 8.0f) * scale;
-    float ch = (fontAtlas ? (float)fontAtlas[0].size.y : 8.0f) * scale;
-    float tw = tlen * cw;
+    float dx = childBounds.x;
+    float dy = childBounds.y;
+    if (childCenter == CenterHorizontal || childCenter == CenterBoth)
+        dx = childBounds.x + (childBounds.w - textWidth) * 0.5f;
+    if (childCenter == CenterVertical || childCenter == CenterBoth)
+        dy = childBounds.y + (childBounds.h - charHeight) * 0.5f;
 
-    float dx = slotX;
-    float dy = slotY;
-    if (center == CenterHorizontal || center == CenterBoth)
-        dx = slotX + (slotW - tw) * 0.5f;
-    if (center == CenterVertical || center == CenterBoth)
-        dy = slotY + (slotH - ch) * 0.5f;
-
-    for (size_t k = 0; k < tlen; k++)
+    for (size_t k = 0; k < textLength; k++)
     {
         Sprite s;
         Sprite_Initialize(&s);
@@ -327,7 +308,7 @@ static void DrawTextItem(int idx, Vector4Float frameBounds, UI_LayoutType layout
         if (fontAtlas)
             s.currentTexture = &fontAtlas[ch];
         s.scale      = scale;
-        s.position.x = dx + cw * k;
+        s.position.x = dx + charWidth * k;
         s.position.y = dy;
         s.parent     = uiParent;
         s.isVisible  = true;
@@ -335,25 +316,21 @@ static void DrawTextItem(int idx, Vector4Float frameBounds, UI_LayoutType layout
     }
 }
 
-static void DrawSpriteItem(int idx, Vector4Float frameBounds, UI_LayoutType layout, UI_CenterType center, Vector4Float padding,  float slotW,
-                           float slotH, int ci, float scrollY)
+static void DrawSpriteItem(int childId, Vector4Float childBounds, UI_CenterType childCenter, float scrollY)
 {
-    Sprite* src = uiState.item[idx].sprite.sprite;
+    Sprite* src = uiState.item[childId].sprite.sprite;
     if (!src || !src->currentTexture)
         return;
 
-    float slotX, slotY;
-    GetSlotPosition(frameBounds, layout, slotW, slotH, ci, scrollY, &slotX, &slotY);
+    float spriteWidth  = (float)src->currentTexture->size.x * src->scale;
+    float spriteHeight = (float)src->currentTexture->size.y * src->scale;
 
-    float sw = (float)src->currentTexture->size.x * src->scale;
-    float sh = (float)src->currentTexture->size.y * src->scale;
-
-    float dx = slotX;
-    float dy = slotY;
-    if (center == CenterHorizontal || center == CenterBoth)
-        dx = slotX + (slotW - sw) * 0.5f;
-    if (center == CenterVertical || center == CenterBoth)
-        dy = slotY + (slotH - sh) * 0.5f;
+    float dx = childBounds.x;
+    float dy = childBounds.y;
+    if (childCenter == CenterHorizontal || childCenter == CenterBoth)
+        dx = childBounds.x + (childBounds.w - spriteWidth) * 0.5f;
+    if (childCenter == CenterVertical || childCenter == CenterBoth)
+        dy = childBounds.y + (childBounds.h - spriteHeight) * 0.5f;
 
     Sprite s;
     Sprite_Initialize(&s);
@@ -367,35 +344,32 @@ static void DrawSpriteItem(int idx, Vector4Float frameBounds, UI_LayoutType layo
     PushSprite(s);
 }
 
-static void DrawButtonItem(int idx, Vector4Float frameBounds, UI_LayoutType layout, UI_CenterType center, Vector4Float padding,  float slotW,
-                           float slotH, int ci, float scrollY)
+static void DrawButtonItem(int childId, Vector4Float childBounds, UI_CenterType childCenter, float scrollY)
 {
-    const char*  text      = uiState.item[idx].button.text;
-    float        scale     = uiState.item[idx].button.scale;
-    uint16_t     wid       = uiState.item[idx].button.widgetId;
-    TextureData* fontAtlas = uiState.item[idx].button.font;
+    const char*  text      = uiState.item[childId].button.text;
+    float        scale     = uiState.item[childId].button.scale;
+    uint16_t     wid       = uiState.item[childId].button.widgetId;
+    TextureData* fontAtlas = uiState.item[childId].button.font;
 
-    float slotX, slotY;
-    GetSlotPosition(frameBounds, layout, slotW, slotH, ci, scrollY, &slotX, &slotY);
+    float  charWidth  = (fontAtlas ? (float)fontAtlas[0].size.x : 8.0f) * scale;
+    float  charHeight = (fontAtlas ? (float)fontAtlas[0].size.y : 8.0f) * scale;
+    size_t textLength = strlen(text);
+    float  textWidth  = textLength * charWidth;
+    float  textHeight = charHeight;
 
-    float  cw   = (fontAtlas ? (float)fontAtlas[0].size.x : 8.0f) * scale;
-    float  ch   = (fontAtlas ? (float)fontAtlas[0].size.y : 8.0f) * scale;
-    size_t tlen = strlen(text);
-    float  tw   = tlen * cw;
-    float  th   = ch;
-
-    float padX = slotW * 0.1f;
-    float padY = slotH * 0.15f;
-    float btnW = slotW - padX * 2;
-    float btnH = slotH - padY * 2;
+    float padX = childBounds.w * 0.1f;
+    float padY = childBounds.h * 0.15f;
+    float btnW = childBounds.w - padX * 2;
+    float btnH = childBounds.h - padY * 2;
     float invZ = 1.0f / Window_GetCamera()->zoom;
-    if (btnW < tw + 8.0f * invZ)
-        btnW = tw + 8.0f * invZ;
-    if (btnH < th + 4.0f * invZ)
-        btnH = th + 4.0f * invZ;
 
-    float bx = slotX + (slotW - btnW) * 0.5f;
-    float by = slotY + (slotH - btnH) * 0.5f;
+    if (btnW < textWidth + 8.0f * invZ)
+        btnW = textWidth + 8.0f * invZ;
+    if (btnH < textHeight + 4.0f * invZ)
+        btnH = textHeight + 4.0f * invZ;
+
+    float bx = childBounds.x + (childBounds.w - btnW) * 0.5f;
+    float by = childBounds.y + (childBounds.h - btnH) * 0.5f;
 
     Rectangle    rect    = { bx, by, btnW, btnH };
     Vector2Float mp      = GetMouseWorldPos();
@@ -407,10 +381,10 @@ static void DrawButtonItem(int idx, Vector4Float frameBounds, UI_LayoutType layo
     DrawFrameShape((Vector4Float){ rect.x, rect.y, rect.width, rect.height }, col);
     DrawFrameOutline((Vector4Float){ rect.x, rect.y, rect.width, rect.height }, pressed ? WHITE : frameOutline);
 
-    float dx = bx + (btnW - tw) * 0.5f;
-    float dy = by + (btnH - th) * 0.5f;
+    float dx = bx + (btnW - textWidth) * 0.5f;
+    float dy = by + (btnH - textHeight) * 0.5f;
 
-    for (size_t k = 0; k < tlen; k++)
+    for (size_t k = 0; k < textLength; k++)
     {
         Sprite s;
         Sprite_Initialize(&s);
@@ -418,7 +392,7 @@ static void DrawButtonItem(int idx, Vector4Float frameBounds, UI_LayoutType layo
         if (fontAtlas)
             s.currentTexture = &fontAtlas[c];
         s.scale      = scale;
-        s.position.x = dx + cw * k;
+        s.position.x = dx + charWidth * k;
         s.position.y = dy;
         s.parent     = uiParent;
         s.isVisible  = true;
@@ -429,22 +403,18 @@ static void DrawButtonItem(int idx, Vector4Float frameBounds, UI_LayoutType layo
         uiState.buttonClicked[wid] = true;
 }
 
-static void DrawSliderItem(int idx, Vector4Float frameBounds, UI_LayoutType layout, UI_CenterType center, Vector4Float padding,  float slotW,
-                           float slotH, int ci, float scrollY)
+static void DrawSliderItem(int childId, Vector4Float childBounds, UI_CenterType childCenter, float scrollY)
 {
-    uint16_t wid = uiState.item[idx].slider.widgetId;
-    float    val = uiState.sliderDragging[wid] ? uiState.sliderValue[wid] : uiState.item[idx].slider.value;
-    float    min = uiState.item[idx].slider.min;
-    float    max = uiState.item[idx].slider.max;
+    uint16_t wid = uiState.item[childId].slider.widgetId;
+    float    val = uiState.sliderDragging[wid] ? uiState.sliderValue[wid] : uiState.item[childId].slider.value;
+    float    min = uiState.item[childId].slider.min;
+    float    max = uiState.item[childId].slider.max;
 
-    float slotX, slotY;
-    GetSlotPosition(frameBounds, layout, slotW, slotH, ci, scrollY, &slotX, &slotY);
-
-    float trackH = slotH * 0.3f;
-    float trackY = slotY + (slotH - trackH) * 0.5f;
-    float padX   = slotW * 0.15f;
-    float trackW = slotW - padX * 2;
-    float trackX = slotX + padX;
+    float trackH = childBounds.h * 0.3f;
+    float trackY = childBounds.y + (childBounds.h - trackH) * 0.5f;
+    float padX   = childBounds.w * 0.15f;
+    float trackW = childBounds.w - padX * 2;
+    float trackX = childBounds.x + padX;
 
     Rectangle trackRect = { trackX, trackY, trackW, trackH };
     DrawFrameShape((Vector4Float){ trackRect.x, trackRect.y, trackRect.width, trackRect.height }, sliderTrack);
@@ -458,8 +428,8 @@ static void DrawSliderItem(int idx, Vector4Float frameBounds, UI_LayoutType layo
     Rectangle thumbRect = { thumbX, thumbY, thumbW, thumbH };
     DrawFrameShape((Vector4Float){ thumbRect.x, thumbRect.y, thumbRect.width, thumbRect.height }, sliderThumb);
 
-    Vector2Float mp      = GetMouseWorldPos();
-    bool         hovered = PointInRect(mp, trackRect) || PointInRect(mp, thumbRect);
+    Vector2Float mousePod = GetMouseWorldPos();
+    bool         hovered  = PointInRect(mousePod, trackRect) || PointInRect(mousePod, thumbRect);
 
     if (Input_IsMouseButtonPressed(INPUT_MOUSE_BUTTON_LEFT) && hovered)
         uiState.sliderDragging[wid] = true;
@@ -472,7 +442,7 @@ static void DrawSliderItem(int idx, Vector4Float frameBounds, UI_LayoutType layo
         }
         else
         {
-            float nt = (mp.x - trackX) / trackW;
+            float nt = (mousePod.x - trackX) / trackW;
             if (nt < 0)
                 nt = 0;
             if (nt > 1)
@@ -482,24 +452,20 @@ static void DrawSliderItem(int idx, Vector4Float frameBounds, UI_LayoutType layo
     }
 }
 
-static void DrawListItem(int idx, Vector4Float frameBounds, UI_LayoutType layout, UI_CenterType center, Vector4Float padding,  float slotW,
-                         float slotH, int ci, float scrollY)
+static void DrawListItem(int childId, Vector4Float childBounds, UI_CenterType childCenter, float scrollY)
 {
-    const char** items      = uiState.item[idx].list.items;
-    int          itemCount  = uiState.item[idx].list.itemCount;
-    float        textScale  = uiState.item[idx].list.textScale;
-    float        itemH      = uiState.item[idx].list.itemHeight;
-    uint16_t     wid        = uiState.item[idx].list.widgetId;
-    TextureData* fontAtlas  = uiState.item[idx].list.font;
-    bool         showScroll = uiState.item[idx].list.showScroll;
-    float        cw         = (fontAtlas ? (float)fontAtlas[0].size.x : 8.0f) * textScale;
+    const char** items      = uiState.item[childId].list.items;
+    int          itemCount  = uiState.item[childId].list.itemCount;
+    float        textScale  = uiState.item[childId].list.textScale;
+    float        itemH      = uiState.item[childId].list.itemHeight;
+    uint16_t     wid        = uiState.item[childId].list.widgetId;
+    TextureData* fontAtlas  = uiState.item[childId].list.font;
+    bool         showScroll = uiState.item[childId].list.showScroll;
+    float        charWidth  = (fontAtlas ? (float)fontAtlas[0].size.x : 8.0f) * textScale;
 
-    float slotX, slotY;
-    GetSlotPosition(frameBounds, layout, slotW, slotH, ci, scrollY, &slotX, &slotY);
-
-    float listScroll = uiState.scrollOffset[wid];
-    float totalH     = itemCount * itemH;
-    float maxScroll  = totalH - slotH;
+    float listScroll  = uiState.scrollOffset[wid];
+    float totalHeight = itemCount * itemH;
+    float maxScroll   = totalHeight - childBounds.h;
     if (maxScroll < 0)
         maxScroll = 0;
 
@@ -511,20 +477,20 @@ static void DrawListItem(int idx, Vector4Float frameBounds, UI_LayoutType layout
         listScroll = maxScroll;
     uiState.scrollOffset[wid] = listScroll;
 
-    float itemWidth      = slotW;
+    float itemWidth      = childBounds.w;
     float scrollbarWidth = 8;
     if (showScroll && maxScroll > 0)
-        itemWidth = slotW - scrollbarWidth;
+        itemWidth = childBounds.w - scrollbarWidth;
 
     Vector2Float mp = GetMouseWorldPos();
 
     for (int i = 0; i < itemCount; i++)
     {
-        float iy = slotY + i * itemH - listScroll;
-        if (iy + itemH < slotY || iy > slotY + slotH)
+        float iy = childBounds.y + i * itemH - listScroll;
+        if (iy + itemH < childBounds.y || iy > childBounds.y + childBounds.h)
             continue;
 
-        Rectangle itemRect = { slotX, iy, itemWidth, itemH };
+        Rectangle itemRect = { childBounds.x, iy, itemWidth, itemH };
         bool      hover    = PointInRect(mp, itemRect);
 
         Color bgCol = (i == uiState.listSelected[wid]) ? listSelected : (Color){ 0, 0, 0, 0 };
@@ -534,12 +500,12 @@ static void DrawListItem(int idx, Vector4Float frameBounds, UI_LayoutType layout
         if (bgCol.a > 0)
             DrawFrameShape((Vector4Float){ itemRect.x, itemRect.y, itemRect.width, itemRect.height }, bgCol);
 
-        const char* text = items[i];
-        size_t      tlen = strlen(text);
-        float       dx   = slotX + 4;
-        float       dy   = iy + (itemH - cw) * 0.5f;
+        const char* text       = items[i];
+        size_t      textLength = strlen(text);
+        float       dx         = childBounds.x + 4;
+        float       dy         = iy + (itemH - charWidth) * 0.5f;
 
-        for (size_t k = 0; k < tlen; k++)
+        for (size_t k = 0; k < textLength; k++)
         {
             Sprite s;
             Sprite_Initialize(&s);
@@ -547,7 +513,7 @@ static void DrawListItem(int idx, Vector4Float frameBounds, UI_LayoutType layout
             if (fontAtlas)
                 s.currentTexture = &fontAtlas[c];
             s.scale      = textScale;
-            s.position.x = dx + cw * k;
+            s.position.x = dx + charWidth * k;
             s.position.y = dy;
             s.parent     = uiParent;
             s.isVisible  = true;
@@ -560,45 +526,41 @@ static void DrawListItem(int idx, Vector4Float frameBounds, UI_LayoutType layout
 
     if (showScroll && maxScroll > 0)
     {
-        float sbx = slotX + itemWidth;
-        float sby = slotY;
-        DrawFrameShape((Vector4Float){ sbx, sby, scrollbarWidth, slotH }, sliderTrack);
+        float sbx = childBounds.x + itemWidth;
+        float sby = childBounds.y;
+        DrawFrameShape((Vector4Float){ sbx, sby, scrollbarWidth, childBounds.h }, sliderTrack);
 
-        float thumbH = (slotH / totalH) * slotH;
-        float thumbY = sby + (listScroll / totalH) * slotH;
+        float thumbH = (childBounds.h / totalHeight) * childBounds.h;
+        float thumbY = sby + (listScroll / totalHeight) * childBounds.h;
         DrawFrameShape((Vector4Float){ sbx, thumbY, scrollbarWidth, thumbH }, sliderThumb);
     }
 }
 
-static void DrawToggleItem(int idx, Vector4Float frameBounds, UI_LayoutType layout, UI_CenterType center, Vector4Float padding,  float slotW,
-                           float slotH, int ci, float scrollY)
+static void DrawToggleItem(int childId, Vector4Float childBounds, UI_CenterType childCenter, float scrollY)
 {
-    const char*  text      = uiState.item[idx].button.text;
-    float        scale     = uiState.item[idx].button.scale;
-    uint16_t     wid       = uiState.item[idx].button.widgetId;
-    TextureData* fontAtlas = uiState.item[idx].button.font;
+    const char*  text      = uiState.item[childId].button.text;
+    float        scale     = uiState.item[childId].button.scale;
+    uint16_t     wid       = uiState.item[childId].button.widgetId;
+    TextureData* fontAtlas = uiState.item[childId].button.font;
 
-    float slotX, slotY;
-    GetSlotPosition(frameBounds, layout, slotW, slotH, ci, scrollY, &slotX, &slotY);
+    float  charWidth  = (fontAtlas ? (float)fontAtlas[0].size.x : 8.0f) * scale;
+    float  ch         = (fontAtlas ? (float)fontAtlas[0].size.y : 8.0f) * scale;
+    size_t textLength = strlen(text);
+    float  tw         = textLength * charWidth;
+    float  th         = ch;
 
-    float  cw   = (fontAtlas ? (float)fontAtlas[0].size.x : 8.0f) * scale;
-    float  ch   = (fontAtlas ? (float)fontAtlas[0].size.y : 8.0f) * scale;
-    size_t tlen = strlen(text);
-    float  tw   = tlen * cw;
-    float  th   = ch;
-
-    float padX = slotW * 0.1f;
-    float padY = slotH * 0.15f;
-    float btnW = slotW - padX * 2;
-    float btnH = slotH - padY * 2;
+    float padX = childBounds.w * 0.1f;
+    float padY = childBounds.h * 0.15f;
+    float btnW = childBounds.w - padX * 2;
+    float btnH = childBounds.h - padY * 2;
     float invZ = 1.0f / Window_GetCamera()->zoom;
     if (btnW < tw + 8.0f * invZ)
         btnW = tw + 8.0f * invZ;
     if (btnH < th + 4.0f * invZ)
         btnH = th + 4.0f * invZ;
 
-    float bx = slotX + (slotW - btnW) * 0.5f;
-    float by = slotY + (slotH - btnH) * 0.5f;
+    float bx = childBounds.x + (childBounds.w - btnW) * 0.5f;
+    float by = childBounds.y + (childBounds.h - btnH) * 0.5f;
 
     Rectangle    rect    = { bx, by, btnW, btnH };
     Vector2Float mp      = GetMouseWorldPos();
@@ -621,7 +583,7 @@ static void DrawToggleItem(int idx, Vector4Float frameBounds, UI_LayoutType layo
     float dx = bx + (btnW - tw) * 0.5f;
     float dy = by + (btnH - th) * 0.5f;
 
-    for (size_t k = 0; k < tlen; k++)
+    for (size_t k = 0; k < textLength; k++)
     {
         Sprite s;
         Sprite_Initialize(&s);
@@ -629,7 +591,7 @@ static void DrawToggleItem(int idx, Vector4Float frameBounds, UI_LayoutType layo
         if (fontAtlas)
             s.currentTexture = &fontAtlas[c];
         s.scale      = scale;
-        s.position.x = dx + cw * k;
+        s.position.x = dx + charWidth * k;
         s.position.y = dy;
         s.parent     = uiParent;
         s.isVisible  = true;
@@ -640,24 +602,18 @@ static void DrawToggleItem(int idx, Vector4Float frameBounds, UI_LayoutType layo
         uiState.buttonClicked[wid] = true;
 }
 
-static void DrawSeparatorItem(int idx, Vector4Float frameBounds, UI_LayoutType layout, UI_CenterType center, Vector4Float padding, 
-                              float slotW, float slotH, int ci, float scrollY)
+static void DrawSeparatorItem(int childId, Vector4Float childBounds, UI_CenterType childCenter, float scrollY)
 {
-    (void)idx;
-    (void)center;
-    (void)ci;
+    (void)childId;
 
-    float slotX, slotY;
-    GetSlotPosition(frameBounds, layout, slotW, slotH, ci, scrollY, &slotX, &slotY);
-
-    float midY = slotY + slotH * 0.5f;
+    float midY = childBounds.y + childBounds.h * 0.5f;
 
     Shape2D line;
     Shape2D_Initialize(&line);
     line.type               = SHAPE2D_LINE;
-    line.position.x         = slotX;
+    line.position.x         = childBounds.x;
     line.position.y         = midY;
-    line.line.endPosition.x = slotX + slotW;
+    line.line.endPosition.x = childBounds.x + childBounds.w;
     line.line.endPosition.y = midY;
     line.line.thickness     = 1.0f / Window_GetCamera()->zoom;
     line.color              = separatorColor;
@@ -665,35 +621,31 @@ static void DrawSeparatorItem(int idx, Vector4Float frameBounds, UI_LayoutType l
     PushShape(line);
 }
 
-static void DrawTileGridItem(int idx, Vector4Float frameBounds, UI_LayoutType layout, UI_CenterType center, Vector4Float padding,  float slotW,
-                             float slotH, int ci, float scrollY)
+static void DrawTileGridItem(int childId, Vector4Float childBounds, UI_CenterType childCenter, float scrollY)
 {
-    (void)layout;
-    (void)center;
-    (void)ci;
     (void)scrollY;
 
-    TextureData* textures     = uiState.item[idx].tileGrid.textures;
-    int          textureCount = uiState.item[idx].tileGrid.textureCount;
-    int          cols         = uiState.item[idx].tileGrid.cols;
-    uint16_t     wid          = uiState.item[idx].tileGrid.widgetId;
+    TextureData* textures     = uiState.item[childId].tileGrid.textures;
+    int          textureCount = uiState.item[childId].tileGrid.textureCount;
+    int          cols         = uiState.item[childId].tileGrid.cols;
+    uint16_t     wid          = uiState.item[childId].tileGrid.widgetId;
     int          selectedTile = uiState.tileGridSelected[wid];
 
-    float cellSize = slotW / cols;
-    int   rows     = (textureCount + cols - 1) / cols;
-    float totalH   = rows * cellSize;
+    float cellSize    = childBounds.w / cols;
+    int   rows        = (textureCount + cols - 1) / cols;
+    float totalHeight = rows * cellSize;
 
     float gridScroll = uiState.scrollOffset[wid];
 
     Vector2Float mp        = GetMouseWorldPos();
-    Rectangle    frameRect = { frameBounds.x, frameBounds.y, slotW, slotH };
+    Rectangle    frameRect = { childBounds.x, childBounds.y, childBounds.w, childBounds.h };
     bool         hovered   = PointInRect(mp, frameRect);
 
     float wheel = GetMouseWheelMove();
     if (hovered && wheel != 0.0f)
     {
         gridScroll -= wheel * cellSize * 2.0f;
-        float maxScroll = totalH - slotH;
+        float maxScroll = totalHeight - childBounds.h;
         if (maxScroll < 0)
             maxScroll = 0;
         if (gridScroll < 0)
@@ -708,10 +660,10 @@ static void DrawTileGridItem(int idx, Vector4Float frameBounds, UI_LayoutType la
         int row = i / cols;
         int col = i % cols;
 
-        float bx = frameBounds.x + col * cellSize;
-        float by = frameBounds.y + row * cellSize - gridScroll;
+        float bx = childBounds.x + col * cellSize;
+        float by = childBounds.y + row * cellSize - gridScroll;
 
-        if (by + cellSize < frameBounds.y || by > frameBounds.y + slotH)
+        if (by + cellSize < childBounds.y || by > childBounds.y + childBounds.h)
             continue;
 
         Sprite sprite;
@@ -748,39 +700,37 @@ static bool IsChildRenderable(UI_StackType type)
            || type == StackType_Separator;
 }
 
-static void DispatchChild(int idx, Vector4Float fb, UI_LayoutType layout, UI_CenterType center, Vector4Float padding, float slotW,
-                          float slotH, int* ci, float scrollY)
+static void DispatchChild(int childId, Vector4Float childBounds, UI_CenterType childCenter, float scrollY)
 {
-    switch (uiState.item[idx].type)
+    switch (uiState.item[childId].type)
     {
         case StackType_Text:
-            DrawTextItem(idx, fb, layout, center, padding, slotW, slotH, *ci, scrollY);
+            DrawTextItem(childId, childBounds, childCenter, scrollY);
             break;
         case StackType_Sprite:
-            DrawSpriteItem(idx, fb, layout, center, padding, slotW, slotH, *ci, scrollY);
+            DrawSpriteItem(childId, childBounds, childCenter, scrollY);
             break;
         case StackType_Button:
-            DrawButtonItem(idx, fb, layout, center, padding, slotW, slotH, *ci, scrollY);
+            DrawButtonItem(childId, childBounds, childCenter, scrollY);
             break;
         case StackType_Slider:
-            DrawSliderItem(idx, fb, layout, center, padding, slotW, slotH, *ci, scrollY);
+            DrawSliderItem(childId, childBounds, childCenter, scrollY);
             break;
         case StackType_List:
-            DrawListItem(idx, fb, layout, center, padding, slotW, slotH, *ci, scrollY);
+            DrawListItem(childId, childBounds, childCenter, scrollY);
             break;
         case StackType_Toggle:
-            DrawToggleItem(idx, fb, layout, center, padding, slotW, slotH, *ci, scrollY);
+            DrawToggleItem(childId, childBounds, childCenter, scrollY);
             break;
         case StackType_Separator:
-            DrawSeparatorItem(idx, fb, layout, center, padding, slotW, slotH, *ci, scrollY);
+            DrawSeparatorItem(childId, childBounds, childCenter, scrollY);
             break;
         case StackType_TileGrid:
-            DrawTileGridItem(idx, fb, layout, center, padding, slotW, slotH, *ci, scrollY);
+            DrawTileGridItem(childId, childBounds, childCenter, scrollY);
             break;
         default:
             return;
     }
-    (*ci)++;
 }
 
 bool UI_IsMouseOverBounds(Vector4Float bounds)
@@ -911,17 +861,17 @@ void UI_End()
         if (childCount == 0)
             continue;
 
-        float slotW = (childLayout == LayoutHorizontal) ? frameBounds.w / childCount : frameBounds.w;
-        float slotH = (childLayout == LayoutVertical) ? frameBounds.h / childCount : frameBounds.h;
-        int   ci    = 0;
+        float slotW      = (childLayout == LayoutHorizontal) ? frameBounds.w / childCount : frameBounds.w;
+        float slotH      = (childLayout == LayoutVertical) ? frameBounds.h / childCount : frameBounds.h;
+        int   childIndex = 0;
 
-        for (int j = childStart; j < childEnd; j++)
+        for (int childId = childStart; childId < childEnd; childId++)
         {
-            if (!IsChildRenderable(uiState.item[j].type))
+            if (!IsChildRenderable(uiState.item[childId].type))
                 continue;
 
             Vector4Float childPadding = { 0, 0, 0, 0 };
-            for (int k = j; k > childStart; k--)
+            for (int k = childId; k > childStart; k--)
             {
                 if (uiState.item[k].type == StackType_Padding)
                 {
@@ -930,15 +880,124 @@ void UI_End()
                 }
             }
 
-            LOG_INF("Children: %d, Layout: %s, Centering: %s, Padding: (%.2f, %.2f)", childCount,
-                    (childLayout == LayoutVertical) ? "Vertical" : "Horizontal",
-                    (childCenter == CenterNone)       ? "None" :
-                    (childCenter == CenterHorizontal) ? "Horizontal" :
-                    (childCenter == CenterVertical)   ? "Vertical" :
-                                                        "Both",
-                    childPadding.x, childPadding.y);
-            DispatchChild(j, frameBounds, childLayout, childCenter, childPadding, slotW, slotH, &ci, scrollY);
+            Vector4Float childBounds = { frameBounds.x, frameBounds.y, frameBounds.w, frameBounds.h };
+
+            if (childLayout == LayoutVertical)
+            {
+                childBounds.x = frameBounds.x;
+                childBounds.y = frameBounds.y + (childIndex * slotH);
+                childBounds.w = slotW;
+                childBounds.h = slotH;
+            }
+            else
+            {
+                childBounds.x = frameBounds.x + (childIndex * slotW);
+                childBounds.y = frameBounds.y;
+                childBounds.w = slotW;
+                childBounds.h = slotH;
+            }
+
+            childBounds.x += childPadding.x;
+            childBounds.y += childPadding.y;
+            childBounds.w -= childPadding.w;
+            childBounds.h -= childPadding.h;
+
+            DispatchChild(childId, childBounds, childCenter, scrollY);
+            childIndex++;
         }
     }
     uiState.itemCount = 0;
+}
+
+Vector4Float UI_GetBounds(UI_AnchorType anchor, Vector4Float position)
+{
+    float aspect = Window_GetHeight();
+    if (Window_GetWidth() < Window_GetHeight())
+    {
+        aspect = Window_GetWidth();
+    }
+    switch (anchor)
+    {
+        case AnchorTopLeft:
+        {
+            Vector4Float bounds;
+            bounds.x = (Window_GetWidth() * -0.5f) + (aspect * position.x);
+            bounds.y = (Window_GetHeight() * -0.5f) + (aspect * position.y);
+            bounds.w = (aspect * position.w);
+            bounds.h = (aspect * position.h);
+            return bounds;
+        }
+        case AnchorTopCenter:
+        {
+            Vector4Float bounds;
+            bounds.x = -(aspect * position.x);
+            bounds.y = (Window_GetHeight() * -0.5f) + (aspect * position.y);
+            bounds.w = (aspect * position.w);
+            bounds.h = (aspect * position.h);
+            return bounds;
+        }
+        case AnchorTopRight:
+        {
+            Vector4Float bounds;
+            bounds.x = (Window_GetWidth() * 0.5f) - (aspect * position.w) - (aspect * position.x);
+            bounds.y = (Window_GetHeight() * -0.5f) + (aspect * position.y);
+            bounds.w = (aspect * position.w);
+            bounds.h = (aspect * position.h);
+            return bounds;
+        }
+        case AnchorMiddleLeft:
+        {
+            Vector4Float bounds;
+            bounds.x = (Window_GetWidth() * -0.5f) + (aspect * position.x);
+            bounds.y = -(aspect * position.y);
+            bounds.w = (aspect * position.w);
+            bounds.h = (aspect * position.h);
+            return bounds;
+        }
+        case AnchorMiddleCenter:
+        {
+            Vector4Float bounds;
+            bounds.x = -(aspect * position.x);
+            bounds.y = -(aspect * position.y);
+            bounds.w = (aspect * position.w);
+            bounds.h = (aspect * position.h);
+            return bounds;
+        }
+        case AnchorMiddleRight:
+        {
+            Vector4Float bounds;
+            bounds.x = (Window_GetWidth() * 0.5f) - (aspect * position.w) - (aspect * position.x);
+            bounds.y = -(aspect * position.y);
+            bounds.w = (aspect * position.w);
+            bounds.h = (aspect * position.h);
+            return bounds;
+        }
+        case AnchorBottomLeft:
+        {
+            Vector4Float bounds;
+            bounds.x = (Window_GetWidth() * -0.5f) + (aspect * position.x);
+            bounds.y = (Window_GetHeight() * 0.5f) - (aspect * position.h) - (aspect * position.y);
+            bounds.w = (aspect * position.w);
+            bounds.h = (aspect * position.h);
+            return bounds;
+        }
+        case AnchorBottomCenter:
+        {
+            Vector4Float bounds;
+            bounds.x = -(aspect * position.x);
+            bounds.y = (Window_GetHeight() * 0.5f) - (aspect * position.h) - (aspect * position.y);
+            bounds.w = (aspect * position.w);
+            bounds.h = (aspect * position.h);
+            return bounds;
+        }
+        case AnchorBottomRight:
+        {
+            Vector4Float bounds;
+            bounds.x = (Window_GetWidth() * 0.5f) - (aspect * position.w) - (aspect * position.x);
+            bounds.y = (Window_GetHeight() * 0.5f) - (aspect * position.h) - (aspect * position.y);
+            bounds.w = (aspect * position.w);
+            bounds.h = (aspect * position.h);
+            return bounds;
+        }
+    }
 }
