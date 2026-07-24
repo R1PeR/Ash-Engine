@@ -543,11 +543,11 @@ static void DrawToggleItem(int childId, Vector4Float childBounds, UI_CenterType 
     uint16_t     wid       = uiState.item[childId].button.widgetId;
     TextureData* fontAtlas = uiState.item[childId].button.font;
 
-    float  charWidth   = (fontAtlas ? (float)fontAtlas[0].size.x : 8.0f) * scale;
-    float  ch   = (fontAtlas ? (float)fontAtlas[0].size.y : 8.0f) * scale;
+    float  charWidth  = (fontAtlas ? (float)fontAtlas[0].size.x : 8.0f) * scale;
+    float  ch         = (fontAtlas ? (float)fontAtlas[0].size.y : 8.0f) * scale;
     size_t textLength = strlen(text);
-    float  tw   = textLength * charWidth;
-    float  th   = ch;
+    float  tw         = textLength * charWidth;
+    float  th         = ch;
 
     float padX = childBounds.w * 0.1f;
     float padY = childBounds.h * 0.15f;
@@ -631,9 +631,9 @@ static void DrawTileGridItem(int childId, Vector4Float childBounds, UI_CenterTyp
     uint16_t     wid          = uiState.item[childId].tileGrid.widgetId;
     int          selectedTile = uiState.tileGridSelected[wid];
 
-    float cellSize = childBounds.w / cols;
-    int   rows     = (textureCount + cols - 1) / cols;
-    float totalHeight   = rows * cellSize;
+    float cellSize    = childBounds.w / cols;
+    int   rows        = (textureCount + cols - 1) / cols;
+    float totalHeight = rows * cellSize;
 
     float gridScroll = uiState.scrollOffset[wid];
 
@@ -907,4 +907,97 @@ void UI_End()
         }
     }
     uiState.itemCount = 0;
+}
+
+Vector4Float UI_GetBounds(UI_AnchorType anchor, Vector4Float position)
+{
+    float aspect = Window_GetHeight();
+    if (Window_GetWidth() < Window_GetHeight())
+    {
+        aspect = Window_GetWidth();
+    }
+    switch (anchor)
+    {
+        case AnchorTopLeft:
+        {
+            Vector4Float bounds;
+            bounds.x = (Window_GetWidth() * -0.5f) + (aspect * position.x);
+            bounds.y = (Window_GetHeight() * -0.5f) + (aspect * position.y);
+            bounds.w = (aspect * position.w);
+            bounds.h = (aspect * position.h);
+            return bounds;
+        }
+        case AnchorTopCenter:
+        {
+            Vector4Float bounds;
+            bounds.x = -(aspect * position.x);
+            bounds.y = (Window_GetHeight() * -0.5f) + (aspect * position.y);
+            bounds.w = (aspect * position.w);
+            bounds.h = (aspect * position.h);
+            return bounds;
+        }
+        case AnchorTopRight:
+        {
+            Vector4Float bounds;
+            bounds.x = (Window_GetWidth() * 0.5f) - (aspect * position.w) - (aspect * position.x);
+            bounds.y = (Window_GetHeight() * -0.5f) + (aspect * position.y);
+            bounds.w = (aspect * position.w);
+            bounds.h = (aspect * position.h);
+            return bounds;
+        }
+        case AnchorMiddleLeft:
+        {
+            Vector4Float bounds;
+            bounds.x = (Window_GetWidth() * -0.5f) + (aspect * position.x);
+            bounds.y = -(aspect * position.y);
+            bounds.w = (aspect * position.w);
+            bounds.h = (aspect * position.h);
+            return bounds;
+        }
+        case AnchorMiddleCenter:
+        {
+            Vector4Float bounds;
+            bounds.x = -(aspect * position.x);
+            bounds.y = -(aspect * position.y);
+            bounds.w = (aspect * position.w);
+            bounds.h = (aspect * position.h);
+            return bounds;
+        }
+        case AnchorMiddleRight:
+        {
+            Vector4Float bounds;
+            bounds.x = (Window_GetWidth() * 0.5f) - (aspect * position.w) - (aspect * position.x);
+            bounds.y = -(aspect * position.y);
+            bounds.w = (aspect * position.w);
+            bounds.h = (aspect * position.h);
+            return bounds;
+        }
+        case AnchorBottomLeft:
+        {
+            Vector4Float bounds;
+            bounds.x = (Window_GetWidth() * -0.5f) + (aspect * position.x);
+            bounds.y = (Window_GetHeight() * 0.5f) - (aspect * position.h) - (aspect * position.y);
+            bounds.w = (aspect * position.w);
+            bounds.h = (aspect * position.h);
+            return bounds;
+        }
+        case AnchorBottomCenter:
+        {
+            Vector4Float bounds;
+            bounds.x = -(aspect * position.x);
+            bounds.y = (Window_GetHeight() * 0.5f) - (aspect * position.h) - (aspect * position.y);
+            bounds.w = (aspect * position.w);
+            bounds.h = (aspect * position.h);
+            return bounds;
+        }
+        case AnchorBottomRight:
+        {
+            Vector4Float bounds;
+            bounds.x = (Window_GetWidth() * 0.5f) - (aspect * position.w) - (aspect * position.x);
+            bounds.y = (Window_GetHeight() * 0.5f) - (aspect * position.h) - (aspect * position.y);
+            bounds.w = (aspect * position.w);
+            bounds.h = (aspect * position.h);
+            return bounds;
+        }
+    }
 }

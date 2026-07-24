@@ -21,6 +21,19 @@ enum UI_CenterType
     CenterBoth
 };
 
+enum UI_AnchorType
+{
+    AnchorTopLeft,
+    AnchorTopCenter,
+    AnchorTopRight,
+    AnchorMiddleLeft,
+    AnchorMiddleCenter,
+    AnchorMiddleRight,
+    AnchorBottomLeft,
+    AnchorBottomCenter,
+    AnchorBottomRight
+};
+
 typedef Vector4Float UI_PaddingData;
 
 struct UI_TextData
@@ -161,5 +174,7 @@ int  UI_TileGrid(TextureData* textures, int textureCount, int cols, int selected
 bool UI_IsMouseOverBounds(Vector4Float bounds);
 
 void UI_End();
+
+Vector4Float UI_GetBounds(UI_AnchorType anchor, Vector4Float position);
 
 #endif
