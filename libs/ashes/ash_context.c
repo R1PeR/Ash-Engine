@@ -13,6 +13,7 @@ uint8_t    screenCount     = 0;
 uint8_t    updatablesCount = 0;
 bool       currentFinished = false;
 bool       resumed         = false;
+bool       exitAll         = false;
 
 void Context_SetMode(Mode* mode)
 {
@@ -29,7 +30,7 @@ void Context_SetMode(Mode* mode)
         screenCount += 1;
         currentFinished = false;
         screen[screenCount - 1]->OnStart();
-        while (!currentFinished && !WindowShouldClose())
+        while (!currentFinished && !exitAll)
         {
             BeginDrawing();
             rlImGuiBegin();
@@ -51,7 +52,12 @@ void Context_SetMode(Mode* mode)
             DrawFPS(10, 10);
             rlImGuiEnd();
             EndDrawing();
+            if (WindowShouldClose())
+            {
+                exitAll = true;
+            }
         }
+
         screen[screenCount - 1]->OnStop();
         screenCount -= 1;
         if (screenCount != 0)
