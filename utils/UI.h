@@ -147,6 +147,8 @@ struct UI_State
     size_t    drawableArrayMaxSize;
 
     Vector4Float bounds;
+
+    bool mouseCaptured;
 };
 
 void UI_Initialize(Drawable* drawableArray, size_t* drawableArraySize, size_t drawableArrayMaxSize);
@@ -176,5 +178,7 @@ bool UI_IsMouseOverBounds(Vector4Float bounds);
 void UI_End();
 
 Vector4Float UI_GetBounds(UI_AnchorType anchor, Vector4Float position);
+Vector4Float UI_GetSize(Vector4Float position);
+bool         UI_GetMouseCaptured();
 
 #endif

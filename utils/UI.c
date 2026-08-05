@@ -48,6 +48,7 @@ void UI_Begin(Vector4Float bounds)
     uiState.bounds          = bounds;
     uiState.itemCount       = 0;
     uiState.widgetIdCounter = 0;
+    uiState.mouseCaptured   = false;
 }
 
 void UI_Layout(UI_LayoutType layout)
@@ -242,13 +243,20 @@ static void PushShape(Shape2D shape)
 
 static Vector2Float GetMouseWorldPos()
 {
-    Camera2D*    cam = Window_GetCamera();
-    Vector2Float s   = { (float)Input_GetMouseX(), (float)Input_GetMouseY() };
-    return Utils_ScreenToWorld2D(s, *cam);
+    Camera2D*    cam      = Window_GetCamera();
+    Vector2Float mousePos = { (float)Input_GetMouseX(), (float)Input_GetMouseY() };
+    return Utils_ScreenToWorld2D(mousePos, *cam);
 }
 
 static bool PointInRect(Vector2Float point, Rectangle rectangle)
 {
+    if (uiParent != NULL)
+    {
+        point.x -= uiParent->position.x;
+        point.y -= uiParent->position.y;
+        point.x /= uiParent->scale;
+        point.y /= uiParent->scale;
+    }
     return point.x >= rectangle.x && point.x <= rectangle.x + rectangle.width && point.y >= rectangle.y
            && point.y <= rectangle.y + rectangle.height;
 }
@@ -332,16 +340,16 @@ static void DrawSpriteItem(int childId, Vector4Float childBounds, UI_CenterType 
     if (childCenter == CenterVertical || childCenter == CenterBoth)
         dy = childBounds.y + (childBounds.h - spriteHeight) * 0.5f;
 
-    Sprite s;
-    Sprite_Initialize(&s);
-    s.currentTexture = src->currentTexture;
-    s.scale          = src->scale;
-    s.position.x     = dx;
-    s.position.y     = dy;
-    s.parent         = uiParent;
-    s.isVisible      = true;
-    s.tint           = src->tint;
-    PushSprite(s);
+    Sprite sprite;
+    Sprite_Initialize(&sprite);
+    sprite.currentTexture = src->currentTexture;
+    sprite.scale          = src->scale;
+    sprite.position.x     = dx;
+    sprite.position.y     = dy;
+    sprite.parent         = uiParent;
+    sprite.isVisible      = true;
+    sprite.tint           = src->tint;
+    PushSprite(sprite);
 }
 
 static void DrawButtonItem(int childId, Vector4Float childBounds, UI_CenterType childCenter, float scrollY)
@@ -357,16 +365,8 @@ static void DrawButtonItem(int childId, Vector4Float childBounds, UI_CenterType 
     float  textWidth  = textLength * charWidth;
     float  textHeight = charHeight;
 
-    float padX = childBounds.w * 0.1f;
-    float padY = childBounds.h * 0.15f;
-    float btnW = childBounds.w - padX * 2;
-    float btnH = childBounds.h - padY * 2;
-    float invZ = 1.0f / Window_GetCamera()->zoom;
-
-    if (btnW < textWidth + 8.0f * invZ)
-        btnW = textWidth + 8.0f * invZ;
-    if (btnH < textHeight + 4.0f * invZ)
-        btnH = textHeight + 4.0f * invZ;
+    float btnW = childBounds.w;
+    float btnH = childBounds.h;
 
     float bx = childBounds.x + (childBounds.w - btnW) * 0.5f;
     float by = childBounds.y + (childBounds.h - btnH) * 0.5f;
@@ -412,9 +412,8 @@ static void DrawSliderItem(int childId, Vector4Float childBounds, UI_CenterType 
 
     float trackH = childBounds.h * 0.3f;
     float trackY = childBounds.y + (childBounds.h - trackH) * 0.5f;
-    float padX   = childBounds.w * 0.15f;
-    float trackW = childBounds.w - padX * 2;
-    float trackX = childBounds.x + padX;
+    float trackW = childBounds.w;
+    float trackX = childBounds.x;
 
     Rectangle trackRect = { trackX, trackY, trackW, trackH };
     DrawFrameShape((Vector4Float){ trackRect.x, trackRect.y, trackRect.width, trackRect.height }, sliderTrack);
@@ -482,7 +481,7 @@ static void DrawListItem(int childId, Vector4Float childBounds, UI_CenterType ch
     if (showScroll && maxScroll > 0)
         itemWidth = childBounds.w - scrollbarWidth;
 
-    Vector2Float mp = GetMouseWorldPos();
+    Vector2Float mousePos = GetMouseWorldPos();
 
     for (int i = 0; i < itemCount; i++)
     {
@@ -491,7 +490,7 @@ static void DrawListItem(int childId, Vector4Float childBounds, UI_CenterType ch
             continue;
 
         Rectangle itemRect = { childBounds.x, iy, itemWidth, itemH };
-        bool      hover    = PointInRect(mp, itemRect);
+        bool      hover    = PointInRect(mousePos, itemRect);
 
         Color bgCol = (i == uiState.listSelected[wid]) ? listSelected : (Color){ 0, 0, 0, 0 };
         if (hover && i != uiState.listSelected[wid])
@@ -544,28 +543,21 @@ static void DrawToggleItem(int childId, Vector4Float childBounds, UI_CenterType 
     TextureData* fontAtlas = uiState.item[childId].button.font;
 
     float  charWidth  = (fontAtlas ? (float)fontAtlas[0].size.x : 8.0f) * scale;
-    float  ch         = (fontAtlas ? (float)fontAtlas[0].size.y : 8.0f) * scale;
+    float  charHeight = (fontAtlas ? (float)fontAtlas[0].size.y : 8.0f) * scale;
     size_t textLength = strlen(text);
-    float  tw         = textLength * charWidth;
-    float  th         = ch;
+    float  textWidth  = textLength * charWidth;
+    float  textHeight = charHeight;
 
-    float padX = childBounds.w * 0.1f;
-    float padY = childBounds.h * 0.15f;
-    float btnW = childBounds.w - padX * 2;
-    float btnH = childBounds.h - padY * 2;
-    float invZ = 1.0f / Window_GetCamera()->zoom;
-    if (btnW < tw + 8.0f * invZ)
-        btnW = tw + 8.0f * invZ;
-    if (btnH < th + 4.0f * invZ)
-        btnH = th + 4.0f * invZ;
+    float btnW = childBounds.w;
+    float btnH = childBounds.h;
 
     float bx = childBounds.x + (childBounds.w - btnW) * 0.5f;
     float by = childBounds.y + (childBounds.h - btnH) * 0.5f;
 
-    Rectangle    rect    = { bx, by, btnW, btnH };
-    Vector2Float mp      = GetMouseWorldPos();
-    bool         hovered = PointInRect(mp, rect);
-    bool         pressed = Input_IsMouseButtonDown(INPUT_MOUSE_BUTTON_LEFT) && hovered;
+    Rectangle    rect     = { bx, by, btnW, btnH };
+    Vector2Float mousePos = GetMouseWorldPos();
+    bool         hovered  = PointInRect(mousePos, rect);
+    bool         pressed  = Input_IsMouseButtonDown(INPUT_MOUSE_BUTTON_LEFT) && hovered;
 
     bool  active = uiState.toggleState[wid];
     Color col;
@@ -580,8 +572,8 @@ static void DrawToggleItem(int childId, Vector4Float childBounds, UI_CenterType 
     DrawFrameOutline((Vector4Float){ rect.x, rect.y, rect.width, rect.height },
                      active ? (Color){ 180, 200, 255, 255 } : frameOutline);
 
-    float dx = bx + (btnW - tw) * 0.5f;
-    float dy = by + (btnH - th) * 0.5f;
+    float dx = bx + (btnW - textWidth) * 0.5f;
+    float dy = by + (btnH - textHeight) * 0.5f;
 
     for (size_t k = 0; k < textLength; k++)
     {
@@ -615,7 +607,7 @@ static void DrawSeparatorItem(int childId, Vector4Float childBounds, UI_CenterTy
     line.position.y         = midY;
     line.line.endPosition.x = childBounds.x + childBounds.w;
     line.line.endPosition.y = midY;
-    line.line.thickness     = 1.0f / Window_GetCamera()->zoom;
+    line.line.thickness     = 1.0f;
     line.color              = separatorColor;
     line.parent             = uiParent;
     PushShape(line);
@@ -644,7 +636,7 @@ static void DrawTileGridItem(int childId, Vector4Float childBounds, UI_CenterTyp
     float wheel = GetMouseWheelMove();
     if (hovered && wheel != 0.0f)
     {
-        gridScroll -= wheel * cellSize * 2.0f;
+        gridScroll -= wheel * cellSize;
         float maxScroll = totalHeight - childBounds.h;
         if (maxScroll < 0)
             maxScroll = 0;
@@ -663,19 +655,24 @@ static void DrawTileGridItem(int childId, Vector4Float childBounds, UI_CenterTyp
         float bx = childBounds.x + col * cellSize;
         float by = childBounds.y + row * cellSize - gridScroll;
 
-        if (by + cellSize < childBounds.y || by > childBounds.y + childBounds.h)
+        if (by < childBounds.y || by > childBounds.y + childBounds.h)
+        {
             continue;
+        }
 
         Sprite sprite;
         Sprite_Initialize(&sprite);
         sprite.currentTexture = &textures[i];
-        sprite.scale          = (cellSize - 1.0f / Window_GetCamera()->zoom) / 16.0f;
+        sprite.scale          = cellSize / sprite.currentTexture->size.x;
         sprite.position.x     = bx;
         sprite.position.y     = by;
+        sprite.parent         = uiParent;
         sprite.isVisible      = true;
 
         if (i == selectedTile)
+        {
             sprite.tint = (Color){ 120, 200, 255, 255 };
+        }
 
         PushSprite(sprite);
 
@@ -809,14 +806,16 @@ void UI_End()
         DrawFrameShape(frameBounds, frameBg);
         DrawFrameOutline(frameBounds, frameOutline);
 
+        bool mouseOverFrame =
+            PointInRect(mousePos, (Rectangle){ frameBounds.x, frameBounds.y, frameBounds.w, frameBounds.h });
+        uiState.mouseCaptured |= mouseOverFrame;
+
         float scrollY = 0;
         if (uiState.item[current].frame.scrollable)
         {
             uint16_t wid = uiState.item[current].frame.widgetId;
             scrollY      = uiState.scrollOffset[wid];
 
-            bool mouseOverFrame =
-                PointInRect(mousePos, (Rectangle){ frameBounds.x, frameBounds.y, frameBounds.w, frameBounds.h });
             if (mouseOverFrame)
             {
                 float wheel = GetMouseWheelMove();
@@ -899,8 +898,8 @@ void UI_End()
 
             childBounds.x += childPadding.x;
             childBounds.y += childPadding.y;
-            childBounds.w -= childPadding.w;
-            childBounds.h -= childPadding.h;
+            childBounds.w -= childPadding.w + childPadding.x;
+            childBounds.h -= childPadding.h + childPadding.h;
 
             DispatchChild(childId, childBounds, childCenter, scrollY);
             childIndex++;
@@ -1000,4 +999,24 @@ Vector4Float UI_GetBounds(UI_AnchorType anchor, Vector4Float position)
             return bounds;
         }
     }
+    return (Vector4Float){ 0, 0, 0, 0 };
+}
+
+Vector4Float UI_GetSize(Vector4Float position)
+{
+    float aspect = Window_GetHeight();
+    if (Window_GetWidth() < Window_GetHeight())
+    {
+        aspect = Window_GetWidth();
+    }
+    Vector4Float bounds;
+    bounds.x = aspect * position.x;
+    bounds.y = aspect * position.y;
+    bounds.w = aspect * position.w;
+    bounds.h = aspect * position.h;
+    return bounds;
+}
+bool UI_GetMouseCaptured()
+{
+    return uiState.mouseCaptured;
 }

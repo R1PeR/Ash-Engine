@@ -44,6 +44,7 @@ void MenuMode_OnStart()
     cameraEntity.scale      = 1.0f / camera->zoom;
 
     UI_Initialize(drawables, (size_t*)&drawableCount, DRAWABLE_MAX);
+    UI_SetParentEntity(&cameraEntity);
 }
 
 void MenuMode_OnPause()
@@ -71,6 +72,7 @@ void MenuMode_Update()
         {
             UI_Layout(LayoutVertical);
             UI_Center(CenterBoth);
+            UI_Padding(UI_GetSize({0.01, 0.01, 0.01, 0.01}));
             if (UI_Button("Start Game", 2.0f, fontTextures))
                 Context_SetMode(&mainMode);
             if (UI_Button("Map Editor", 2.0f, fontTextures))
