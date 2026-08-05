@@ -48,16 +48,14 @@ static Entity2D cameraEntity;
 struct EditorData
 {
     MapData  mapData;
-    uint8_t  activeLayer  = 0;
-    int32_t  selectedTile = -1;
-    TileType tileType     = TILE_TYPE_SOLID;
-    bool     showTypes    = false;
-    bool     showGrid     = true;
-    bool     isErasing    = false;
+    uint8_t  activeLayer    = 0;
+    int32_t  selectedTile   = -1;
+    TileType tileType       = TILE_TYPE_SOLID;
+    bool     showTypes      = false;
+    bool     showGrid       = true;
+    bool     isErasing      = false;
+    bool     uiInputHandled = false;
 } data;
-
-static Vector4Float g_texturePaneBounds = { 0, 0, 0, 0 };
-static Vector4Float g_infoPaneBounds    = { 0, 0, 0, 0 };
 
 void HandleCameraInput();
 void DrawGrid();
@@ -116,25 +114,24 @@ void PlaceTileAt(Vector3Int gridPos)
 
 void HandleCameraInput()
 {
+    if (data.uiInputHandled)
+        return;
+
     float wheel = GetMouseWheelMove();
 
     if (wheel != 0.0f)
     {
-        bool mouseOverUI = UI_IsMouseOverBounds(g_texturePaneBounds) || UI_IsMouseOverBounds(g_infoPaneBounds);
-        if (!mouseOverUI)
-        {
-            Vector2Float mw = Utils_ScreenToWorld2D(
-                (Vector2Float){ (float)Input_GetMouseX(), (float)Input_GetMouseY() }, *Window_GetCamera());
-            float oldZoom = Window_GetCamera()->zoom;
-            Window_GetCamera()->zoom += wheel * ZOOM_STEP;
-            if (Window_GetCamera()->zoom < ZOOM_MIN)
-                Window_GetCamera()->zoom = ZOOM_MIN;
-            if (Window_GetCamera()->zoom > ZOOM_MAX)
-                Window_GetCamera()->zoom = ZOOM_MAX;
-            float ratio                  = Window_GetCamera()->zoom / oldZoom;
-            Window_GetCamera()->target.x = mw.x - (mw.x - Window_GetCamera()->target.x) / ratio;
-            Window_GetCamera()->target.y = mw.y - (mw.y - Window_GetCamera()->target.y) / ratio;
-        }
+        Vector2Float mw = Utils_ScreenToWorld2D((Vector2Float){ (float)Input_GetMouseX(), (float)Input_GetMouseY() },
+                                                *Window_GetCamera());
+        float        oldZoom = Window_GetCamera()->zoom;
+        Window_GetCamera()->zoom += wheel * ZOOM_STEP;
+        if (Window_GetCamera()->zoom < ZOOM_MIN)
+            Window_GetCamera()->zoom = ZOOM_MIN;
+        if (Window_GetCamera()->zoom > ZOOM_MAX)
+            Window_GetCamera()->zoom = ZOOM_MAX;
+        float ratio                  = Window_GetCamera()->zoom / oldZoom;
+        Window_GetCamera()->target.x = mw.x - (mw.x - Window_GetCamera()->target.x) / ratio;
+        Window_GetCamera()->target.y = mw.y - (mw.y - Window_GetCamera()->target.y) / ratio;
     }
 
     if (Input_IsMouseButtonDown(MOUSE_BUTTON_RIGHT))
@@ -167,8 +164,6 @@ void DrawGrid()
 
 void DrawWorldTiles()
 {
-    // Camera2D camera = *Window_GetCamera();
-
     for (uint8_t l = 0; l < MAP_MAX_LAYERS; l++)
     {
         TileLayer* layer = &data.mapData.layers[l];
@@ -214,7 +209,7 @@ void DrawWorldTiles()
 
 void HandleTilePlacement()
 {
-    if (UI_IsMouseOverBounds(g_texturePaneBounds) || UI_IsMouseOverBounds(g_infoPaneBounds))
+    if (data.uiInputHandled)
         return;
 
     Camera2D     camera = *Window_GetCamera();
@@ -247,35 +242,44 @@ void HandleTilePlacement()
 
 void DrawTexturePane()
 {
-    Camera2D* cam = Window_GetCamera();
-
     static const char* typeLabels[] = { "EMPT", "SOLI", "JUMP", "PLYR", "ENMY" };
+    char               label[MAP_MAX_LAYERS][8];
 
-    UI_Begin(g_texturePaneBounds);
-    UI_FrameSize(0.08f);
+    UI_Begin(UI_GetBounds(AnchorTopRight, { 0.0, 0.0, 0.5, 1.0 }));
+    UI_FrameSize(0.2f);
     UI_Layout(LayoutHorizontal);
+    UI_Center(CenterBoth);
+    UI_Padding(UI_GetSize({ 0.01, 0.01, 0.01, 0.01 }));
     for (int l = 0; l < MAP_MAX_LAYERS; l++)
     {
-        char label[8];
-        snprintf(label, sizeof(label), "L%d", l);
-        if (UI_Toggle(label, l == data.activeLayer, 1.0, fontTextures))
+        snprintf(label[l], sizeof(label), "L%d", l);
+        if (UI_Toggle(label[l], l == data.activeLayer, 1.0, fontTextures))
+        {
             data.activeLayer = (uint8_t)l;
+        }
     }
 
-    UI_FrameSize(0.08f);
+    UI_FrameSize(0.05f);
+    UI_Layout(LayoutVertical);
+    UI_Separator();
+
+    UI_FrameSize(0.2f);
     UI_Layout(LayoutHorizontal);
+    UI_Center(CenterBoth);
+    UI_Padding(UI_GetSize({ 0.01, 0.01, 0.01, 0.01 }));
     for (int t = 0; t < 5; t++)
     {
         if (UI_Toggle(typeLabels[t], data.tileType == (TileType)t, 1.0, fontTextures))
+        {
             data.tileType = (TileType)t;
+        }
     }
-
-    UI_FrameSize(0.02f);
-    UI_Separator();
 
     UI_Frame();
     data.selectedTile = UI_TileGrid(tileTextures, TILESET_COUNT, PANE_TILE_COLS, data.selectedTile);
     UI_End();
+
+    data.uiInputHandled |= UI_GetMouseCaptured();
 }
 
 void DrawInfoPane()
@@ -307,6 +311,7 @@ void DrawInfoPane()
     UI_Text("F2:SAVE  F3:LOAD  F9:CLR", 1.0, fontTextures);
     UI_Text("F5:TEST  (PAN:RMB)", 1.0, fontTextures);
     UI_End();
+    data.uiInputHandled |= UI_GetMouseCaptured();
 }
 
 void HandleKeyboardShortcuts()
@@ -565,29 +570,22 @@ void MapEditorMode_Update()
     cameraEntity.position.y = Window_GetCamera()->target.y;
     cameraEntity.scale      = 1.0f / Window_GetCamera()->zoom;
 
-    drawableCount = 0;
+    drawableCount       = 0;
+    data.uiInputHandled = false;
     DeltaTime_Update();
 
-    // uint32_t screenW = Window_GetWidth();
-    // uint32_t screenH = Window_GetHeight();
-    // texPane.position = (Vector2Float){ (float)screenW - TEX_PANE_W, 0.0f };
-    // texPane.size     = (Vector2Float){ TEX_PANE_W, (float)screenH };
-
-    HandleTilePlacement();
-    HandleKeyboardShortcuts();
-
-
     DrawGrid();
-    // DrawTest();
     DrawWorldTiles();
     DrawTexturePane();
     DrawInfoPane();
+    // DrawTest();
 
+    HandleTilePlacement();
+    HandleKeyboardShortcuts();
+    HandleCameraInput();
 
     for (size_t i = 0; i < drawableCount; i++)
         Drawable_Draw(&drawables[i]);
-
-    HandleCameraInput();
 }
 
 void MapEditorMode_OnStop()

@@ -12,15 +12,15 @@
 #include <raylib.h>
 #include <stdio.h>
 
-#define DRAWABLE_MAX    4096
-#define FONT_ATLAS_COLS 16
-#define FONT_ATLAS_ROWS 16
+#define DRAWABLE_MAX     4096
+#define FONT_ATLAS_COLS  16
+#define FONT_ATLAS_ROWS  16
 #define FONT_GLYPH_COUNT (FONT_ATLAS_COLS * FONT_ATLAS_ROWS)
 
 Mode menuMode = MODE_FROM_CLASSNAME(MenuMode);
 
 static Drawable drawables[DRAWABLE_MAX];
-static size_t  drawableCount = 0;
+static size_t   drawableCount = 0;
 
 static TextureData fontTextures[FONT_GLYPH_COUNT];
 static TextureData fontAtlasBase;
@@ -44,6 +44,7 @@ void MenuMode_OnStart()
     cameraEntity.scale      = 1.0f / camera->zoom;
 
     UI_Initialize(drawables, (size_t*)&drawableCount, DRAWABLE_MAX);
+    UI_SetParentEntity(&cameraEntity);
 }
 
 void MenuMode_OnPause()
@@ -71,6 +72,7 @@ void MenuMode_Update()
         {
             UI_Layout(LayoutVertical);
             UI_Center(CenterBoth);
+            UI_Padding(UI_GetSize({0.01, 0.01, 0.01, 0.01}));
             if (UI_Button("Start Game", 2.0f, fontTextures))
                 Context_SetMode(&mainMode);
             if (UI_Button("Map Editor", 2.0f, fontTextures))
@@ -91,4 +93,13 @@ void MenuMode_OnStop()
 
 void MenuMode_OnResume()
 {
+    Camera2D* camera = Window_GetCamera();
+    camera->zoom     = 1.0f;
+    camera->target   = (Vector2){ 0.0f, 0.0f };
+
+    cameraEntity.position.x = camera->target.x;
+    cameraEntity.position.y = camera->target.y;
+    cameraEntity.scale      = 1.0f / camera->zoom;
+
+    UI_Initialize(drawables, (size_t*)&drawableCount, DRAWABLE_MAX);
 }
