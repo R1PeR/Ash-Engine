@@ -53,9 +53,6 @@ void MenuMode_OnPause()
 
 void MenuMode_Update()
 {
-    cameraEntity.position.x = Window_GetCamera()->target.x;
-    cameraEntity.position.y = Window_GetCamera()->target.y;
-    cameraEntity.scale      = 1.0f / Window_GetCamera()->zoom;
 
     drawableCount = 0;
     DeltaTime_Update();
@@ -72,7 +69,7 @@ void MenuMode_Update()
         {
             UI_Layout(LayoutVertical);
             UI_Center(CenterBoth);
-            UI_Padding(UI_GetSize({0.01, 0.01, 0.01, 0.01}));
+            UI_Padding(UI_GetSize({ 0.01, 0.01, 0.01, 0.01 }));
             if (UI_Button("Start Game", 2.0f, fontTextures))
                 Context_SetMode(&mainMode);
             if (UI_Button("Map Editor", 2.0f, fontTextures))
@@ -82,7 +79,10 @@ void MenuMode_Update()
         }
     }
     UI_End();
+}
 
+void MenuMode_Draw()
+{
     for (size_t i = 0; i < drawableCount; i++)
         Drawable_Draw(&drawables[i]);
 }

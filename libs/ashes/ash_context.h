@@ -5,8 +5,9 @@
 #define MAX_MODES      8
 #define MAX_UPDATABLES 8
 #define LIBS_ENGINE_UPDATABLE_H
-#define MODE_FROM_CLASSNAME(className) \
-    { className##_OnStart, className##_OnPause, className##_Update, className##_OnStop, className##_OnResume }
+#define MODE_FROM_CLASSNAME(className)                              \
+    { className##_OnStart, className##_OnPause, className##_Update, \
+      className##_Draw,    className##_OnStop,  className##_OnResume }
 
 /* Structs, Enums, and Unions */
 typedef struct Updatable Updatable;
@@ -19,6 +20,8 @@ typedef struct Mode
     void (*OnPause)();
     // Update runs every frame
     void (*Update)();
+    // Draw runs every frame after Update
+    void (*Draw)();
     // OnStop runs once when mode is stopped
     void (*OnStop)();
     // OnResume runs once when mode is resumed

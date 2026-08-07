@@ -58,12 +58,12 @@ struct EditorData
 } data;
 
 void HandleCameraInput();
-void DrawGrid();
-void DrawWorldTiles();
+void UpdateGrid();
+void UpdateWorldTiles();
 void HandleTilePlacement();
 void HandleKeyboardShortcuts();
-void DrawTexturePane();
-void DrawInfoPane();
+void UpdateTexturePane();
+void UpdateInfoPane();
 void EraseTileAt(Vector3Int gridPos);
 void PlaceTileAt(Vector3Int gridPos);
 void SaveMap(const char* filename);
@@ -143,7 +143,7 @@ void HandleCameraInput()
     }
 }
 
-void DrawGrid()
+void UpdateGrid()
 {
     if (!data.showGrid)
         return;
@@ -157,12 +157,38 @@ void DrawGrid()
     int   endY      = ((int)(endPos.y / TILE_SIZE) + 1) * TILE_SIZE;
     float thickness = 1.0f / cam->zoom;
     for (int x = startX; x <= endX; x += TILE_SIZE)
-        DrawLineEx((Vector2){ (float)x, (float)startY }, (Vector2){ (float)x, (float)endY }, thickness, GRID_COLOR);
+    {
+        Shape2D line;
+        Shape2D_Initialize(&line);
+        line.type               = SHAPE2D_LINE;
+        line.position.x         = x;
+        line.position.y         = startY;
+        line.line.endPosition.x = x;
+        line.line.endPosition.y = endY;
+        line.line.thickness     = thickness;
+        line.color              = GRID_COLOR;
+        drawables[drawableCount].type = DRAWABLE_SHAPE;
+        drawables[drawableCount].shape = line;
+        drawableCount++;
+    }
     for (int y = startY; y <= endY; y += TILE_SIZE)
-        DrawLineEx((Vector2){ (float)startX, (float)y }, (Vector2){ (float)endX, (float)y }, thickness, GRID_COLOR);
+    {
+        Shape2D line;
+        Shape2D_Initialize(&line);
+        line.type               = SHAPE2D_LINE;
+        line.position.x         = startX;
+        line.position.y         = y;
+        line.line.endPosition.x = endX;
+        line.line.endPosition.y = y;
+        line.line.thickness     = thickness;
+        line.color              = GRID_COLOR;
+        drawables[drawableCount].type = DRAWABLE_SHAPE;
+        drawables[drawableCount].shape = line;
+        drawableCount++;
+    }
 }
 
-void DrawWorldTiles()
+void UpdateWorldTiles()
 {
     for (uint8_t l = 0; l < MAP_MAX_LAYERS; l++)
     {
@@ -240,7 +266,7 @@ void HandleTilePlacement()
     }
 }
 
-void DrawTexturePane()
+void UpdateTexturePane()
 {
     static const char* typeLabels[] = { "EMPT", "SOLI", "JUMP", "PLYR", "ENMY" };
     char               label[MAP_MAX_LAYERS][8];
@@ -282,7 +308,7 @@ void DrawTexturePane()
     data.uiInputHandled |= UI_GetMouseCaptured();
 }
 
-void DrawInfoPane()
+void UpdateInfoPane()
 {
     Camera2D*          camera      = Window_GetCamera();
     static const char* typeNames[] = { "EMPTY", "SOLID", "JUMP", "PSPAWN", "ESPAWN" };
@@ -450,6 +476,7 @@ void MapEditorMode_OnStart()
         LOG_ERR("MapEditor: failed to create tile atlas");
 
     fontAtlasBase = Texture_LoadTexture("resources/sprites/Anikki_square_8x8.png");
+    LOG_INF("MapEditor: font atlas %dx%d", fontAtlasBase.size.x, fontAtlasBase.size.y);
     if (!Texture_CreateTextureAtlas(fontAtlasBase, FONT_ATLAS_COLS, FONT_ATLAS_ROWS, fontTextures))
         LOG_ERR("MapEditor: failed to create font atlas");
 
@@ -566,24 +593,27 @@ void DrawTest()
 
 void MapEditorMode_Update()
 {
-    cameraEntity.position.x = Window_GetCamera()->target.x;
-    cameraEntity.position.y = Window_GetCamera()->target.y;
-    cameraEntity.scale      = 1.0f / Window_GetCamera()->zoom;
-
     drawableCount       = 0;
     data.uiInputHandled = false;
     DeltaTime_Update();
 
-    DrawGrid();
-    DrawWorldTiles();
-    DrawTexturePane();
-    DrawInfoPane();
+    UpdateGrid();
+    UpdateWorldTiles();
+    UpdateTexturePane();
+    UpdateInfoPane();
     // DrawTest();
 
     HandleTilePlacement();
     HandleKeyboardShortcuts();
     HandleCameraInput();
 
+    cameraEntity.position.x = Window_GetCamera()->target.x;
+    cameraEntity.position.y = Window_GetCamera()->target.y;
+    cameraEntity.scale      = 1.0f / Window_GetCamera()->zoom;
+}
+
+void MapEditorMode_Draw()
+{
     for (size_t i = 0; i < drawableCount; i++)
         Drawable_Draw(&drawables[i]);
 }

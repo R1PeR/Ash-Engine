@@ -55,6 +55,7 @@ extern Mode mapEditorMode;
 void MapEditorMode_OnStart();
 void MapEditorMode_OnPause();
 void MapEditorMode_Update();
+void MapEditorMode_Draw();
 void MapEditorMode_OnStop();
 void MapEditorMode_OnResume();
 

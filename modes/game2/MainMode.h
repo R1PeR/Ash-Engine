@@ -9,6 +9,7 @@ extern Mode mainMode;
 void MainMode_OnStart();
 void MainMode_OnPause();
 void MainMode_Update();
+void MainMode_Draw();
 void MainMode_OnStop();
 void MainMode_OnResume();
 

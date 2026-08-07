@@ -1,12 +1,23 @@
 #include "MainMode.h"
-#include "MapEditorMode.h"
 
+#include "MapEditorMode.h"
 #include "ashes/ash_components.h"
 #include "ashes/ash_context.h"
 #include "ashes/ash_debug.h"
 #include "ashes/ash_io.h"
 #include "ashes/ash_misc.h"
+#include "utils/UI.h"
 
+#include <stdio.h>
+#include <string.h>
+
+#define TILESET_ATLAS_COLS     MAP_TILESET_COLS
+#define TILESET_ATLAS_ROWS     MAP_TILESET_ROWS
+#define TILESET_COUNT          MAP_TILESET_COUNT
+#define FONT_ATLAS_COLS        16
+#define FONT_ATLAS_ROWS        16
+#define FONT_GLYPH_COUNT       (FONT_ATLAS_COLS * FONT_ATLAS_ROWS)
+#define DRAWABLE_MAX           4096
 #define DIRECTION_SPEED_GROUND 1200.0f
 #define DIRECTION_SPEED_AIR    600.0f
 #define FRICTION_GROUND        600.0f
@@ -53,52 +64,90 @@ struct GameData
 
 } gameData;
 
-TextureData textures[512];
-TextureData texture;
-Sprite      sprites[2048];
-uint16_t    spriteCount = 0;
+static TextureData tileTextures[TILESET_COUNT];
+static TextureData tileAtlasBase;
+
+static TextureData fontTextures[FONT_GLYPH_COUNT];
+static TextureData fontAtlasBase;
+
+static Drawable drawables[DRAWABLE_MAX];
+static size_t   drawableCount = 0;
 
 static TextureData editorTileTextures[MAP_TILESET_COUNT];
 static TextureData editorTileAtlasBase;
 static bool        editorTilesLoaded = false;
 
-void DrawDebug()
+static Entity2D cameraEntity;
+
+void UpdateDebug()
 {
-    Vector2Float originPoint = { -400, -300 };
-    DrawText(
-        TextFormat("Player Pos: (%.2f, %.2f)", gameData.player.entity.position.x, gameData.player.entity.position.y),
-        originPoint.x, originPoint.y, 20, WHITE);
-    DrawText(TextFormat("Player Vel: (%.2f, %.2f)", gameData.player.velocity.x, gameData.player.velocity.y),
-             originPoint.x, originPoint.y + 30, 20, WHITE);
-    DrawText(TextFormat("Player onGround: %s", gameData.player.onGround ? "true" : "false"), originPoint.x,
-             originPoint.y + 60, 20, WHITE);
-    DrawText(TextFormat("Player onWall: %s", (gameData.player.onWall != 0) ? "true" : "false"), originPoint.x,
-             originPoint.y + 90, 20, WHITE);
-    //print coyote times
-    DrawText(TextFormat("Player jumpCoyoteTime: %s", Stopwatch_IsRunning(&gameData.player.jumpCoyoteTime) ? "true" : "false"), originPoint.x,
-             originPoint.y + 120, 20, WHITE);
-    DrawText(TextFormat("Player wallCoyoteTime: %s", Stopwatch_IsRunning(&gameData.player.wallCoyoteTime) ? "true" : "false"), originPoint.x,
-             originPoint.y + 150, 20, WHITE);
+    char fps[32];
+    snprintf(fps, sizeof(fps), "FPS: %d", (int)(1.0f / gameData.dt));
+    char deltaTime[32];
+    snprintf(deltaTime, sizeof(deltaTime), "Delta Time: %.4f", gameData.dt);
+    char playerPos[32];
+    snprintf(playerPos, sizeof(playerPos), "Player Pos: (%.2f, %.2f)", gameData.player.entity.position.x,
+             gameData.player.entity.position.y);
+    char playerVel[32];
+    snprintf(playerVel, sizeof(playerVel), "Player Vel: (%.2f, %.2f)", gameData.player.velocity.x,
+             gameData.player.velocity.y);
+    char playerOnGround[32];
+    snprintf(playerOnGround, sizeof(playerOnGround), "Player onGround: %s",
+             gameData.player.onGround ? "true" : "false");
+    char playerOnWall[32];
+    snprintf(playerOnWall, sizeof(playerOnWall), "Player onWall: %s", (gameData.player.onWall != 0) ? "true" : "false");
+    char playerJumpCoyoteTime[32];
+    snprintf(playerJumpCoyoteTime, sizeof(playerJumpCoyoteTime), "Player jumpCoyoteTime: %s",
+             Stopwatch_IsRunning(&gameData.player.jumpCoyoteTime) ? "true" : "false");
+    char playerWallCoyoteTime[32];
+    snprintf(playerWallCoyoteTime, sizeof(playerWallCoyoteTime), "Player wallCoyoteTime: %s",
+             Stopwatch_IsRunning(&gameData.player.wallCoyoteTime) ? "true" : "false");
+    char cameraPos[32];
+    snprintf(cameraPos, sizeof(cameraPos), "Camera Pos: (%.2f, %.2f)", Window_GetCamera()->target.x,
+             Window_GetCamera()->target.y);
+
+
+    UI_Begin(UI_GetBounds(AnchorTopLeft, { 0, 0, 0.4, 0.3 }));
+    UI_Frame();
+    {
+        UI_Layout(LayoutVertical);
+        // UI_Center(Center);
+        UI_Padding(UI_GetSize({ 0.01, 0.01, 0.01, 0.01 }));
+        UI_Text("DEBUG INFO", 2.0f, fontTextures);
+        UI_Text(fps, 1.0f, fontTextures);
+        UI_Text(deltaTime, 1.0f, fontTextures);
+        UI_Text(playerPos, 1.0f, fontTextures);
+        UI_Text(playerVel, 1.0f, fontTextures);
+        UI_Text(playerOnGround, 1.0f, fontTextures);
+        UI_Text(playerOnWall, 1.0f, fontTextures);
+        UI_Text(playerJumpCoyoteTime, 1.0f, fontTextures);
+        UI_Text(playerWallCoyoteTime, 1.0f, fontTextures);
+        UI_Text(cameraPos, 1.0f, fontTextures);
+    }
+    UI_End();
 }
 
-static void DrawEditorTiles()
+void UpdateEditorTiles()
 {
     if (!g_editorTestMapData.isValid || !editorTilesLoaded)
         return;
     for (int l = 0; l < MAP_MAX_LAYERS; l++)
     {
         TileLayer* layer = &g_editorTestMapData.mapData.layers[l];
-        for (int i = 0; i < (int)layer->tileCount && spriteCount < 2047; i++)
+        for (int i = 0; i < (int)layer->tileCount && drawableCount < DRAWABLE_MAX; i++)
         {
             Tile* tile = &layer->tiles[i];
             if (tile->textureId >= MAP_TILESET_COUNT)
                 continue;
-            Sprite_Initialize(&sprites[spriteCount]);
-            sprites[spriteCount].currentTexture = &editorTileTextures[tile->textureId];
-            sprites[spriteCount].position.x     = (float)(tile->position.x * TILE_SIZE);
-            sprites[spriteCount].position.y     = (float)(tile->position.y * TILE_SIZE);
-            sprites[spriteCount].scale          = 2.0f;
-            spriteCount++;
+            Sprite sprite;
+            Sprite_Initialize(&sprite);
+            sprite.currentTexture           = &editorTileTextures[tile->textureId];
+            sprite.position.x               = (float)(tile->position.x * TILE_SIZE);
+            sprite.position.y               = (float)(tile->position.y * TILE_SIZE);
+            sprite.scale                    = 2.0f;
+            drawables[drawableCount].sprite = sprite;
+            drawables[drawableCount].type   = DRAWABLE_SPRITE;
+            drawableCount++;
         }
     }
 }
@@ -172,8 +221,8 @@ void UpdateGame()
                 gameData.player.velocity.x = -PLAYER_JUMP_FORCE / 2;
                 if (Stopwatch_IsRunning(&gameData.player.wallCoyoteTime))
                 {
-                    gameData.player.velocity.x -= Utils_AbsFloat(gameData.player.velocityBeforeCollision.x)/2;
-                    gameData.player.velocity.y -= Utils_AbsFloat(gameData.player.velocityBeforeCollision.x)/2;
+                    gameData.player.velocity.x -= Utils_AbsFloat(gameData.player.velocityBeforeCollision.x) / 2;
+                    gameData.player.velocity.y -= Utils_AbsFloat(gameData.player.velocityBeforeCollision.x) / 2;
                 }
             }
             else
@@ -181,8 +230,8 @@ void UpdateGame()
                 gameData.player.velocity.x = PLAYER_JUMP_FORCE / 2;
                 if (Stopwatch_IsRunning(&gameData.player.wallCoyoteTime))
                 {
-                    gameData.player.velocity.x += Utils_AbsFloat(gameData.player.velocityBeforeCollision.x)/2;
-                    gameData.player.velocity.y -= Utils_AbsFloat(gameData.player.velocityBeforeCollision.x)/2;
+                    gameData.player.velocity.x += Utils_AbsFloat(gameData.player.velocityBeforeCollision.x) / 2;
+                    gameData.player.velocity.y -= Utils_AbsFloat(gameData.player.velocityBeforeCollision.x) / 2;
                 }
             }
             gameData.player.onWall = false;
@@ -299,18 +348,45 @@ void UpdateGame()
         }
     };
 
-    // Update sprites
-    sprites[spriteCount].position.x     = gameData.player.entity.position.x;
-    sprites[spriteCount].position.y     = gameData.player.entity.position.y;
-    sprites[spriteCount].currentTexture = &textures[0];
-    sprites[spriteCount].scale          = 2.0f;
-    spriteCount++;
+    // // Update sprites
+    // Sprite sprite;
+    // Sprite_Initialize(&sprite);
+    // sprite.position.x             = gameData.player.entity.position.x;
+    // sprite.position.y             = gameData.player.entity.position.y;
+    // sprite.currentTexture         = &tileTextures[0];
+    // sprite.scale                  = 2.0f;
+    // drawables[drawableCount].type = DRAWABLE_SPRITE;
+    // drawableCount++;
 
     // Draw debug
-    Collider2D_DrawDebug(&gameData.player.collider);
+    Shape2D shape;
+    Shape2D_Initialize(&shape);
+    shape.type                       = SHAPE2D_RECTANGLE_LINES;
+    shape.parent                     = &gameData.player.entity;
+    shape.position.x                 = gameData.player.collider.position.x;
+    shape.position.y                 = gameData.player.collider.position.y;
+    shape.rectangle.width            = gameData.player.collider.size.x;
+    shape.rectangle.height           = gameData.player.collider.size.y;
+    shape.color                      = (Color){ 255, 0, 0, 255 };
+    shape.rectangle.outlineThickness = 1.0f;
+    drawables[drawableCount].shape   = shape;
+    drawables[drawableCount].type    = DRAWABLE_SHAPE;
+    drawableCount++;
+
     for (uint32_t i = 0; i < gameData.map.platformCount; i++)
     {
-        Collider2D_DrawDebug(&gameData.map.platforms[i].collider);
+        Platform* platform = &gameData.map.platforms[i];
+        Shape2D_Initialize(&shape);
+        shape.type                     = SHAPE2D_RECTANGLE_LINES;
+        shape.parent                   = &platform->entity;
+        shape.position.x               = platform->collider.position.x;
+        shape.position.y               = platform->collider.position.y;
+        shape.rectangle.width          = platform->collider.size.x;
+        shape.rectangle.height         = platform->collider.size.y;
+        shape.color                    = (Color){ 0, 255, 0, 255 };
+        drawables[drawableCount].shape = shape;
+        drawables[drawableCount].type  = DRAWABLE_SHAPE;
+        drawableCount++;
     }
 }
 
@@ -318,6 +394,7 @@ void MainMode_OnStart()
 {
     editorTilesLoaded          = false;
     gameData.map.platformCount = 0;
+
     Entity2D_Initialize(&gameData.player.entity);
     Collider2D_Initialize(&gameData.player.collider);
     gameData.player.entity.position = (Vector2Float){ 0.0f, 0.0f };
@@ -385,17 +462,28 @@ void MainMode_OnStart()
         gameData.map.platformCount++;
     }
 
-    texture = Texture_LoadTexture("resources/sprites/font.png");
-    LOG_INF("Loaded texture: %s, width: %d, height: %d", "resources/sprites/player.png", texture.size.x,
-            texture.size.y);
-    if (!Texture_CreateTextureAtlas(texture, 16, 16, textures))
-    {
-        LOG_ERR("Failed to create texture atlas");
-    }
-    for (uint32_t i = 0; i < 2048; i++)
-    {
-        Sprite_Initialize(&sprites[i]);
-    }
+    tileAtlasBase = Texture_LoadTexture("resources/sprites/tileset.png");
+    LOG_INF("MainMode: tile atlas %dx%d", tileAtlasBase.size.x, tileAtlasBase.size.y);
+    if (!Texture_CreateTextureAtlas(tileAtlasBase, TILESET_ATLAS_COLS, TILESET_ATLAS_ROWS, tileTextures))
+        LOG_ERR("MainMode: failed to create tile atlas");
+
+    fontAtlasBase = Texture_LoadTexture("resources/sprites/Anikki_square_8x8.png");
+    LOG_INF("MainMode: font atlas %dx%d", fontAtlasBase.size.x, fontAtlasBase.size.y);
+    if (!Texture_CreateTextureAtlas(fontAtlasBase, FONT_ATLAS_COLS, FONT_ATLAS_ROWS, fontTextures))
+        LOG_ERR("MainMode: failed to create font atlas");
+
+    Entity2D_Initialize(&cameraEntity);
+
+    Camera2D* camera = Window_GetCamera();
+    camera->zoom     = 1.0f;
+    camera->target   = (Vector2){ 0.0f, 0.0f };
+
+    cameraEntity.position.x = camera->target.x;
+    cameraEntity.position.y = camera->target.y;
+    cameraEntity.scale      = 1.0f / camera->zoom;
+
+    UI_Initialize(drawables, (size_t*)&drawableCount, DRAWABLE_MAX);
+    UI_SetParentEntity(&cameraEntity);
 }
 
 void MainMode_OnPause()
@@ -404,25 +492,39 @@ void MainMode_OnPause()
 
 void MainMode_Update()
 {
-    spriteCount = 0;
+
+    drawableCount = 0;
     DeltaTime_Update();
     gameData.dt = DeltaTime_GetDeltaTime();
 
     if (Input_IsKeyPressed(KEY_ESCAPE))
         Context_FinishMode();
 
-    DrawEditorTiles();
-    UpdateGame();
-
     /* Camera follows player */
-    Camera2D* camera    = Window_GetCamera();
-    camera->target.x    = gameData.player.entity.position.x;
-    camera->target.y    = gameData.player.entity.position.y;
+    UpdateGame();
+    UpdateEditorTiles();
+    UpdateDebug();
 
-    for (uint16_t i = 0; i < spriteCount; i++)
-        Sprite_Draw(&sprites[i]);
+    Camera2D* camera        = Window_GetCamera();
+    camera->target.x        = gameData.player.entity.position.x;
+    camera->target.y        = gameData.player.entity.position.y;
+    cameraEntity.position.x = Window_GetCamera()->target.x;
+    cameraEntity.position.y = Window_GetCamera()->target.y;
+    cameraEntity.scale      = 1.0f / Window_GetCamera()->zoom;
 
-    DrawDebug();
+    // if (Input_IsMouseButtonDown(MOUSE_BUTTON_RIGHT))
+    // {
+    //     float dx = (float)Input_GetMouseDeltaX() / Window_GetCamera()->zoom;
+    //     float dy = (float)Input_GetMouseDeltaY() / Window_GetCamera()->zoom;
+    //     Window_GetCamera()->target.x -= dx;
+    //     Window_GetCamera()->target.y -= dy;
+    // }
+}
+
+void MainMode_Draw()
+{
+    for (size_t i = 0; i < drawableCount; i++)
+        Drawable_Draw(&drawables[i]);
 }
 
 void MainMode_OnStop()

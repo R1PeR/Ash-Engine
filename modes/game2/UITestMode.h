@@ -11,6 +11,7 @@ extern Mode uiTestMode;
 void UITestMode_OnStart();
 void UITestMode_OnPause();
 void UITestMode_Update();
+void UITestMode_Draw();
 void UITestMode_OnStop();
 void UITestMode_OnResume();
 

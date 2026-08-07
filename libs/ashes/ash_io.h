@@ -151,10 +151,10 @@ int16_t Input_GetMouseY(void);
 int16_t Input_GetMouseDeltaX(void);
 int16_t Input_GetMouseDeltaY(void);
 
-void         Window_Init(uint16_t width, uint16_t height, const char* title);
-void         Window_Deinit();
-Camera2D*    Window_GetCamera();
-uint32_t     Window_GetWidth();
-uint32_t     Window_GetHeight();
+void      Window_Init(uint16_t width, uint16_t height, const char* title);
+void      Window_Deinit();
+Camera2D* Window_GetCamera();
+uint32_t  Window_GetWidth();
+uint32_t  Window_GetHeight();
 
 #endif  // ASH_IO_H

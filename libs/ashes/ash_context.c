@@ -32,10 +32,6 @@ void Context_SetMode(Mode* mode)
         screen[screenCount - 1]->OnStart();
         while (!currentFinished && !exitAll)
         {
-            BeginDrawing();
-            rlImGuiBegin();
-            ClearBackground(BLACK);
-            BeginMode2D(*Window_GetCamera());
             for (int i = 0; i < updatablesCount; i++)
             {
                 updatables[i]->Update();
@@ -48,8 +44,13 @@ void Context_SetMode(Mode* mode)
                 resumed = false;
             }
             screen[screenCount - 1]->Update();
+            //drawing
+            BeginDrawing();
+            rlImGuiBegin();
+            ClearBackground(BLACK);
+            BeginMode2D(*Window_GetCamera());
+            screen[screenCount - 1]->Draw();
             EndMode2D();
-            DrawFPS(10, 10);
             rlImGuiEnd();
             EndDrawing();
             if (WindowShouldClose())

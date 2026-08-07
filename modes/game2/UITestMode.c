@@ -28,7 +28,7 @@
 Mode uiTestMode = MODE_FROM_CLASSNAME(UITestMode);
 
 static Drawable drawables[DRAWABLE_MAX];
-static size_t  drawableCount = 0;
+static size_t   drawableCount = 0;
 
 static TextureData tileTextures[TILESET_COUNT];
 static TextureData tileAtlasBase;
@@ -36,15 +36,17 @@ static TextureData tileAtlasBase;
 static TextureData fontTextures[FONT_GLYPH_COUNT];
 static TextureData fontAtlasBase;
 
-static Entity2D  cameraEntity;
-static Sprite    testSprite;
+static Entity2D cameraEntity;
+static Sprite   testSprite;
 
-static float    sliderVal = 0.5f;
-static int      listChoice = -1;
-static int      btnCount = 0;
-static char     btnLabel[64];
-static const char* listItems[] = { "Apples", "Bananas", "Cherries", "Dates", "Elderberries", "Figs", "Grapes", "Honeydew", "Indian Fig", "Jackfruit", "Kiwi", "Lemon", "Mango", "Nectarine", "Orange", "Papaya" };
-static int      listItemCount = sizeof(listItems) / sizeof(listItems[0]);
+static float       sliderVal  = 0.5f;
+static int         listChoice = -1;
+static int         btnCount   = 0;
+static char        btnLabel[64];
+static const char* listItems[]   = { "Apples", "Bananas",   "Cherries",   "Dates",     "Elderberries", "Figs",
+                                     "Grapes", "Honeydew",  "Indian Fig", "Jackfruit", "Kiwi",         "Lemon",
+                                     "Mango",  "Nectarine", "Orange",     "Papaya" };
+static int         listItemCount = sizeof(listItems) / sizeof(listItems[0]);
 
 static void UITestExampleGUI()
 {
@@ -140,6 +142,10 @@ void UITestMode_Update()
     DeltaTime_Update();
 
     UITestExampleGUI();
+}
+
+void UITestMode_Draw()
+{
     for (size_t i = 0; i < drawableCount; i++)
         Drawable_Draw(&drawables[i]);
 }

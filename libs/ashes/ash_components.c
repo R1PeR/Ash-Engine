@@ -388,13 +388,13 @@ void Entity2D_Initialize(Entity2D* ent)
 
 void Shape2D_Initialize(Shape2D* shape)
 {
-    shape->parent              = NULL;
-    shape->position            = { 0.0f, 0.0f };
-    shape->scale               = 1.0f;
-    shape->color               = WHITE;
-    shape->type                = SHAPE2D_RECTANGLE;
-    shape->rectangle.width     = 0.0f;
-    shape->rectangle.height    = 0.0f;
+    shape->parent                     = NULL;
+    shape->position                   = { 0.0f, 0.0f };
+    shape->scale                      = 1.0f;
+    shape->color                      = WHITE;
+    shape->type                       = SHAPE2D_RECTANGLE;
+    shape->rectangle.width            = 0.0f;
+    shape->rectangle.height           = 0.0f;
     shape->rectangle.outlineThickness = 1.0f;
 }
 
@@ -413,20 +413,15 @@ void Shape2D_Draw(Shape2D* shape)
     switch (shape->type)
     {
         case SHAPE2D_RECTANGLE:
-            DrawRectangleRec(
-                (Rectangle){ worldPosition.x, worldPosition.y,
-                             shape->rectangle.width  * worldScale,
-                             shape->rectangle.height * worldScale },
-                shape->color);
+            DrawRectangleRec((Rectangle){ worldPosition.x, worldPosition.y, shape->rectangle.width * worldScale,
+                                          shape->rectangle.height * worldScale },
+                             shape->color);
             break;
 
         case SHAPE2D_RECTANGLE_LINES:
-            DrawRectangleLinesEx(
-                (Rectangle){ worldPosition.x, worldPosition.y,
-                             shape->rectangle.width  * worldScale,
-                             shape->rectangle.height * worldScale },
-                shape->rectangle.outlineThickness * worldScale,
-                shape->color);
+            DrawRectangleLinesEx((Rectangle){ worldPosition.x, worldPosition.y, shape->rectangle.width * worldScale,
+                                              shape->rectangle.height * worldScale },
+                                 shape->rectangle.outlineThickness * worldScale, shape->color);
             break;
 
         case SHAPE2D_LINE:
