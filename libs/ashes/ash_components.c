@@ -268,6 +268,8 @@ bool Collider2D_CheckCollider(Collider2D* a, Collider2D* b)
     {
         aPos = { a->parent->position.x + (a->position.x * a->parent->scale),
                  a->parent->position.y + (a->position.y * a->parent->scale) };
+        aSize.x *= a->parent->scale;
+        aSize.y *= a->parent->scale;
     }
     else
     {
@@ -277,6 +279,8 @@ bool Collider2D_CheckCollider(Collider2D* a, Collider2D* b)
     {
         bPos = { b->parent->position.x + (b->position.x * b->parent->scale),
                  b->parent->position.y + (b->position.y * b->parent->scale) };
+        bSize.x *= b->parent->scale;
+        bSize.y *= b->parent->scale;
     }
     else
     {

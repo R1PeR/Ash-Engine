@@ -160,14 +160,14 @@ void UpdateGrid()
     {
         Shape2D line;
         Shape2D_Initialize(&line);
-        line.type               = SHAPE2D_LINE;
-        line.position.x         = x;
-        line.position.y         = startY;
-        line.line.endPosition.x = x;
-        line.line.endPosition.y = endY;
-        line.line.thickness     = thickness;
-        line.color              = GRID_COLOR;
-        drawables[drawableCount].type = DRAWABLE_SHAPE;
+        line.type                      = SHAPE2D_LINE;
+        line.position.x                = x;
+        line.position.y                = startY;
+        line.line.endPosition.x        = x;
+        line.line.endPosition.y        = endY;
+        line.line.thickness            = thickness;
+        line.color                     = GRID_COLOR;
+        drawables[drawableCount].type  = DRAWABLE_SHAPE;
         drawables[drawableCount].shape = line;
         drawableCount++;
     }
@@ -175,14 +175,14 @@ void UpdateGrid()
     {
         Shape2D line;
         Shape2D_Initialize(&line);
-        line.type               = SHAPE2D_LINE;
-        line.position.x         = startX;
-        line.position.y         = y;
-        line.line.endPosition.x = endX;
-        line.line.endPosition.y = y;
-        line.line.thickness     = thickness;
-        line.color              = GRID_COLOR;
-        drawables[drawableCount].type = DRAWABLE_SHAPE;
+        line.type                      = SHAPE2D_LINE;
+        line.position.x                = startX;
+        line.position.y                = y;
+        line.line.endPosition.x        = endX;
+        line.line.endPosition.y        = y;
+        line.line.thickness            = thickness;
+        line.color                     = GRID_COLOR;
+        drawables[drawableCount].type  = DRAWABLE_SHAPE;
         drawables[drawableCount].shape = line;
         drawableCount++;
     }
@@ -272,37 +272,39 @@ void UpdateTexturePane()
     char               label[MAP_MAX_LAYERS][8];
 
     UI_Begin(UI_GetBounds(AnchorTopRight, { 0.0, 0.0, 0.5, 1.0 }));
-    UI_FrameSize(0.2f);
-    UI_Layout(LayoutHorizontal);
-    UI_Center(CenterBoth);
-    UI_Padding(UI_GetSize({ 0.01, 0.01, 0.01, 0.01 }));
-    for (int l = 0; l < MAP_MAX_LAYERS; l++)
     {
-        snprintf(label[l], sizeof(label), "L%d", l);
-        if (UI_Toggle(label[l], l == data.activeLayer, 1.0, fontTextures))
+        UI_FrameSize(0.2f);
+        UI_Layout(LayoutHorizontal);
+        UI_Center(CenterBoth);
+        UI_Padding(UI_GetSize({ 0.01, 0.01, 0.01, 0.01 }));
+        for (int l = 0; l < MAP_MAX_LAYERS; l++)
         {
-            data.activeLayer = (uint8_t)l;
+            snprintf(label[l], sizeof(label), "L%d", l);
+            if (UI_Toggle(label[l], l == data.activeLayer, 1.0, fontTextures))
+            {
+                data.activeLayer = (uint8_t)l;
+            }
         }
-    }
 
-    UI_FrameSize(0.05f);
-    UI_Layout(LayoutVertical);
-    UI_Separator();
+        UI_FrameSize(0.05f);
+        UI_Layout(LayoutVertical);
+        UI_Separator();
 
-    UI_FrameSize(0.2f);
-    UI_Layout(LayoutHorizontal);
-    UI_Center(CenterBoth);
-    UI_Padding(UI_GetSize({ 0.01, 0.01, 0.01, 0.01 }));
-    for (int t = 0; t < 5; t++)
-    {
-        if (UI_Toggle(typeLabels[t], data.tileType == (TileType)t, 1.0, fontTextures))
+        UI_FrameSize(0.2f);
+        UI_Layout(LayoutHorizontal);
+        UI_Center(CenterBoth);
+        UI_Padding(UI_GetSize({ 0.01, 0.01, 0.01, 0.01 }));
+        for (int t = 0; t < 5; t++)
         {
-            data.tileType = (TileType)t;
+            if (UI_Toggle(typeLabels[t], data.tileType == (TileType)t, 1.0, fontTextures))
+            {
+                data.tileType = (TileType)t;
+            }
         }
-    }
 
-    UI_Frame();
-    data.selectedTile = UI_TileGrid(tileTextures, TILESET_COUNT, PANE_TILE_COLS, data.selectedTile);
+        UI_Frame();
+        data.selectedTile = UI_TileGrid(tileTextures, TILESET_COUNT, PANE_TILE_COLS, data.selectedTile);
+    }
     UI_End();
 
     data.uiInputHandled |= UI_GetMouseCaptured();
@@ -323,19 +325,21 @@ void UpdateInfoPane()
     snprintf(zoom, sizeof(zoom), "ZOOM:  %2.2fx  (WHEEL)", camera->zoom);
 
     UI_Begin(UI_GetBounds(AnchorTopLeft, { 0.0, 0.0, 0.3, 0.3 }));
-    UI_Frame();
-    UI_Layout(LayoutVertical);
-    UI_Center(CenterVertical);
-    UI_Padding({ 5, 5, 5, 5 });
-    UI_Text(layer, 1.0, fontTextures);
-    UI_Text(type, 1.0, fontTextures);
-    UI_Text(tile, 1.0, fontTextures);
-    UI_Text(zoom, 1.0, fontTextures);
-    UI_Text(data.isErasing ? "MODE:  ERASE  (E)" : "MODE:  DRAW   (E)", 1.0, fontTextures);
-    UI_Text(data.showTypes ? "TYPES: ON  (T)" : "TYPES: OFF (T)", 1.0, fontTextures);
-    UI_Text(data.showGrid ? "GRID:  ON  (G)" : "GRID:  OFF (G)", 1.0, fontTextures);
-    UI_Text("F2:SAVE  F3:LOAD  F9:CLR", 1.0, fontTextures);
-    UI_Text("F5:TEST  (PAN:RMB)", 1.0, fontTextures);
+    {
+        UI_Frame();
+        UI_Layout(LayoutVertical);
+        UI_Center(CenterVertical);
+        UI_Padding({ 5, 5, 5, 5 });
+        UI_Text(layer, 1.0, fontTextures);
+        UI_Text(type, 1.0, fontTextures);
+        UI_Text(tile, 1.0, fontTextures);
+        UI_Text(zoom, 1.0, fontTextures);
+        UI_Text(data.isErasing ? "MODE:  ERASE  (E)" : "MODE:  DRAW   (E)", 1.0, fontTextures);
+        UI_Text(data.showTypes ? "TYPES: ON  (T)" : "TYPES: OFF (T)", 1.0, fontTextures);
+        UI_Text(data.showGrid ? "GRID:  ON  (G)" : "GRID:  OFF (G)", 1.0, fontTextures);
+        UI_Text("F2:SAVE  F3:LOAD  F9:CLR", 1.0, fontTextures);
+        UI_Text("F5:TEST  (PAN:RMB)", 1.0, fontTextures);
+    }
     UI_End();
     data.uiInputHandled |= UI_GetMouseCaptured();
 }
@@ -615,7 +619,9 @@ void MapEditorMode_Update()
 void MapEditorMode_Draw()
 {
     for (size_t i = 0; i < drawableCount; i++)
+    {
         Drawable_Draw(&drawables[i]);
+    }
 }
 
 void MapEditorMode_OnStop()

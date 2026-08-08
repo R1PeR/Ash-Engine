@@ -57,7 +57,7 @@ void MenuMode_Update()
     drawableCount = 0;
     DeltaTime_Update();
 
-    UI_Begin((Vector4Float){ -640.0f, -360.0f, 1280.0f, 720.0f });
+    UI_Begin(UI_GetBounds(AnchorTopCenter, { 0.5, 0.0, 1.0, 1.0 }));
     {
         UI_Frame();
         {

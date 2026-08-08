@@ -20,11 +20,11 @@
 
 typedef enum Shape2DType
 {
-    SHAPE2D_RECTANGLE,        /* filled rectangle          */
-    SHAPE2D_RECTANGLE_LINES,  /* outline rectangle         */
-    SHAPE2D_LINE,             /* line segment with thickness */
-    SHAPE2D_CIRCLE,           /* filled circle             */
-    SHAPE2D_CIRCLE_LINES,     /* outline circle (ring)     */
+    SHAPE2D_RECTANGLE,       /* filled rectangle          */
+    SHAPE2D_RECTANGLE_LINES, /* outline rectangle         */
+    SHAPE2D_LINE,            /* line segment with thickness */
+    SHAPE2D_CIRCLE,          /* filled circle             */
+    SHAPE2D_CIRCLE_LINES,    /* outline circle (ring)     */
 } Shape2DType;
 
 typedef struct Entity2D Entity2D;
@@ -32,8 +32,8 @@ typedef struct Entity2D Entity2D;
 typedef struct Shape2D
 {
     Entity2D*    parent;
-    Vector2Float position;  /* local-space: top-left for rects, center for circles, start for lines */
-    float        scale;     /* multiplied with parent scale for all sizes */
+    Vector2Float position; /* local-space: top-left for rects, center for circles, start for lines */
+    float        scale;    /* multiplied with parent scale for all sizes */
     Color        color;
     Shape2DType  type;
     union
@@ -42,17 +42,17 @@ typedef struct Shape2D
         {
             float width;
             float height;
-            float outlineThickness;  /* RECTANGLE_LINES only */
+            float outlineThickness; /* RECTANGLE_LINES only */
         } rectangle;
         struct
         {
-            Vector2Float endPosition;  /* local-space end point */
+            Vector2Float endPosition; /* local-space end point */
             float        thickness;
         } line;
         struct
         {
             float radius;
-            float outlineThickness;  /* CIRCLE_LINES: ring width */
+            float outlineThickness; /* CIRCLE_LINES: ring width */
         } circle;
     };
 } Shape2D;

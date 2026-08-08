@@ -274,7 +274,8 @@ void UpdateGame()
         // Apply gravity
         gameData.player.velocity.y += GRAVITY * gameData.dt;
         // Apply air movement
-        if (gameData.player.velocity.x < PLAYER_MAX_SPEED && gameData.player.velocity.x > -PLAYER_MAX_SPEED)
+        if ((gameData.player.velocity.x < PLAYER_MAX_SPEED || directionX < 0)
+            && (gameData.player.velocity.x > -PLAYER_MAX_SPEED || directionX > 0))
         {
             gameData.player.velocity.x += (directionX * DIRECTION_SPEED_AIR * gameData.dt);
         }
@@ -292,71 +293,67 @@ void UpdateGame()
     gameData.player.velocity.x =
         Utils_ClampFloat(gameData.player.velocity.x, -PLAYER_MAX_VELOCITY, PLAYER_MAX_VELOCITY);
 
-
-    gameData.player.entity.position.y += gameData.player.velocity.y * gameData.dt;
-    gameData.player.entity.position.x += gameData.player.velocity.x * gameData.dt;
-
     // check collisions
     gameData.player.onGround = false;
+
+    gameData.player.entity.position.x += gameData.player.velocity.x * gameData.dt;
     for (uint32_t i = 0; i < gameData.map.platformCount; i++)
     {
         if (Collider2D_CheckCollider(&gameData.player.collider, &gameData.map.platforms[i].collider))
         {
-            Vector2Float playerPos    = { gameData.player.entity.position.x, gameData.player.entity.position.y };
-            Vector2Float playerSize   = { gameData.player.collider.size.x, gameData.player.collider.size.y };
-            Vector2Float platformPos  = { gameData.map.platforms[i].entity.position.x,
-                                          gameData.map.platforms[i].entity.position.y };
-            Vector2Float platformSize = { gameData.map.platforms[i].collider.size.x,
-                                          gameData.map.platforms[i].collider.size.y };
-
-            float overlapX = Utils_MinFloat(playerPos.x + playerSize.x, platformPos.x + platformSize.x)
-                             - Utils_MaxFloat(playerPos.x, platformPos.x);
-            float overlapY = Utils_MinFloat(playerPos.y + playerSize.y, platformPos.y + platformSize.y)
-                             - Utils_MaxFloat(playerPos.y, platformPos.y);
+            float playerPos    = gameData.player.entity.position.x;
+            float playerSize   = gameData.player.collider.size.x;
+            float platformPos  = gameData.map.platforms[i].entity.position.x;
+            float platformSize = gameData.map.platforms[i].collider.size.x;
+            float overlapX     = Utils_MinFloat(playerPos + playerSize, platformPos + platformSize)
+                             - Utils_MaxFloat(playerPos, platformPos);
 
             gameData.player.velocityBeforeCollision.x = gameData.player.velocity.x;
-            gameData.player.velocityBeforeCollision.y = gameData.player.velocity.y;
-            if (overlapX < overlapY)
+
+            // Resolve X-overlap
+            if (playerPos < platformPos)
             {
-                if (playerPos.x < platformPos.x)
-                {
-                    gameData.player.entity.position.x -= overlapX;
-                    gameData.player.onWall = 1;
-                }
-                else
-                {
-                    gameData.player.entity.position.x += overlapX;
-                    gameData.player.onWall = -1;
-                }
-                Stopwatch_Start(&gameData.player.wallCoyoteTime, 100);
-                gameData.player.velocity.x = 0.0f;
+                gameData.player.entity.position.x -= overlapX;
+                gameData.player.onWall = 1;
             }
             else
             {
-                if (playerPos.y < platformPos.y)
-                {
-                    gameData.player.entity.position.y -= overlapY;
-                    gameData.player.velocity.y = 0.0f;
-                    gameData.player.onGround   = true;
-                }
-                else
-                {
-                    gameData.player.entity.position.y += overlapY;
-                    gameData.player.velocity.y = 0.0f;
-                }
+                gameData.player.entity.position.x += overlapX;
+                gameData.player.onWall = -1;
+            }
+            Stopwatch_Start(&gameData.player.wallCoyoteTime, 100);
+            gameData.player.velocity.x = 0.0f;
+        }
+    }
+
+    gameData.player.entity.position.y += gameData.player.velocity.y * gameData.dt;
+    for (uint32_t i = 0; i < gameData.map.platformCount; i++)
+    {
+        if (Collider2D_CheckCollider(&gameData.player.collider, &gameData.map.platforms[i].collider))
+        {
+            float playerPos    = gameData.player.entity.position.y;
+            float playerSize   = gameData.player.collider.size.y;
+            float platformPos  = gameData.map.platforms[i].entity.position.y;
+            float platformSize = gameData.map.platforms[i].collider.size.y;
+            float overlapY     = Utils_MinFloat(playerPos + playerSize, platformPos + platformSize)
+                             - Utils_MaxFloat(playerPos, platformPos);
+
+            gameData.player.velocityBeforeCollision.y = gameData.player.velocity.y;
+
+            // Resolve X-overlap
+            if (playerPos < platformPos)
+            {
+                gameData.player.entity.position.y -= overlapY;
+                gameData.player.velocity.y = 0.0f;
+                gameData.player.onGround   = true;
+            }
+            else
+            {
+                gameData.player.entity.position.y += overlapY;
+                gameData.player.velocity.y = 0.0f;
             }
         }
-    };
-
-    // // Update sprites
-    // Sprite sprite;
-    // Sprite_Initialize(&sprite);
-    // sprite.position.x             = gameData.player.entity.position.x;
-    // sprite.position.y             = gameData.player.entity.position.y;
-    // sprite.currentTexture         = &tileTextures[0];
-    // sprite.scale                  = 2.0f;
-    // drawables[drawableCount].type = DRAWABLE_SPRITE;
-    // drawableCount++;
+    }
 
     // Draw debug
     Shape2D shape;
@@ -511,14 +508,6 @@ void MainMode_Update()
     cameraEntity.position.x = Window_GetCamera()->target.x;
     cameraEntity.position.y = Window_GetCamera()->target.y;
     cameraEntity.scale      = 1.0f / Window_GetCamera()->zoom;
-
-    // if (Input_IsMouseButtonDown(MOUSE_BUTTON_RIGHT))
-    // {
-    //     float dx = (float)Input_GetMouseDeltaX() / Window_GetCamera()->zoom;
-    //     float dy = (float)Input_GetMouseDeltaY() / Window_GetCamera()->zoom;
-    //     Window_GetCamera()->target.x -= dx;
-    //     Window_GetCamera()->target.y -= dy;
-    // }
 }
 
 void MainMode_Draw()
@@ -530,7 +519,9 @@ void MainMode_Draw()
 void MainMode_OnStop()
 {
     if (editorTilesLoaded)
+    {
         Texture_UnloadTexture(&editorTileAtlasBase);
+    }
     g_editorTestMapData.isValid = false;
 }
 
