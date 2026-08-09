@@ -3,7 +3,7 @@
 #include "ashes/ash_components.h"
 #include "ashes/ash_misc.h"
 
-#include <cstdint>
+#include <stdint.h>
 
 struct Button
 {

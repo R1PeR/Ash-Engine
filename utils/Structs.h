@@ -3,7 +3,6 @@
 #include "ashes/ash_components.h"
 #include "ashes/ash_misc.h"
 
-#include <cstdint>
 #include <stdint.h>
 
 #define MAX_LAYERS        8

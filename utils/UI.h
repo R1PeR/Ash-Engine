@@ -3,7 +3,7 @@
 #include "ashes/ash_components.h"
 #include "ashes/ash_misc.h"
 
-#include <cstdint>
+#include <stdint.h>
 #define UI_MAX_STACK_DEPTH 32
 #define UI_MAX_WIDGETS     64
 
