@@ -2,6 +2,7 @@
 #define ASH_MISC_H
 
 #include "ashes/ash_platform.h"
+
 #include <stdint.h>
 
 #define CLOCKS_PER_MS        CLOCKS_PER_SEC / 1000

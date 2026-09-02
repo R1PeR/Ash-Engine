@@ -416,7 +416,8 @@ void Shape2D_Draw(Shape2D* shape)
     switch (shape->type)
     {
         case SHAPE2D_RECTANGLE:
-            Platform_DrawRectangleRec((Rectangle){ worldPosition.x, worldPosition.y, shape->rectangle.width * worldScale,
+            Platform_DrawRectangleRec((Rectangle){ worldPosition.x, worldPosition.y,
+                                                   shape->rectangle.width * worldScale,
                                                    shape->rectangle.height * worldScale },
                                       shape->color);
             break;

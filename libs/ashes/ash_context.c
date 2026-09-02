@@ -43,7 +43,7 @@ void Context_SetMode(Mode* mode)
                 resumed = false;
             }
             screen[screenCount - 1]->Update();
-            //drawing
+            // drawing
             Platform_BeginDrawing();
             Platform_ImGuiBegin();
             Platform_ClearBackground(BLACK);
