@@ -32,15 +32,16 @@ Mode mainMode = MODE_FROM_CLASSNAME(MainMode);
 
 struct Player
 {
-    Entity2D     entity;
-    Vector2Float velocity;
-    Collider2D   collider;
-    uint8_t      collisionFlags;
-    bool         onGround;
-    int8_t       onWall;
-    Vector2Float velocityBeforeCollision;
-    Stopwatch    jumpCoyoteTime;
-    Stopwatch    wallCoyoteTime;
+    Entity2D       entity;
+    Vector2Float   velocity;
+    Collider2D     collider;
+    uint8_t        collisionFlags;
+    bool           onGround;
+    int8_t         onWall;
+    Vector2Float   velocityBeforeCollision;
+    Stopwatch      jumpCoyoteTime;
+    Stopwatch      wallCoyoteTime;
+    AnimatedSprite sprite;
 };
 
 struct Platform
@@ -58,9 +59,14 @@ struct Map
 
 struct GameData
 {
-    float  dt;
-    Player player;
-    Map    map;
+    float         dt;
+    Player        player;
+    Map           map;
+    AnimationData playerIdleAnimation;
+    AnimationData playerWalkAnimation;
+    AnimationData playerAirIdleAnimation;
+    AnimationData playerAirMoveAnimation;
+    AnimationData playerWallSlideAnimation;
 
 } gameData;
 
@@ -177,6 +183,10 @@ void UpdateGame()
             {
                 gameData.player.velocity.x -= deltaFriction;
             }
+            if (gameData.player.sprite.currentAnimation != &gameData.playerWalkAnimation)
+            {
+                AnimatedSprite_Play(&gameData.player.sprite, &gameData.playerWalkAnimation, true);
+            }
         }
         if (gameData.player.velocity.x < 0.0f)
         {
@@ -189,6 +199,17 @@ void UpdateGame()
             {
                 gameData.player.velocity.x += deltaFriction;
             }
+            if (gameData.player.sprite.currentAnimation != &gameData.playerWalkAnimation)
+            {
+                AnimatedSprite_Play(&gameData.player.sprite, &gameData.playerWalkAnimation, true);
+            }
+        }
+        if (gameData.player.velocity.x == 0.0f)
+        {
+            if (gameData.player.sprite.currentAnimation != &gameData.playerIdleAnimation)
+            {
+                AnimatedSprite_Play(&gameData.player.sprite, &gameData.playerIdleAnimation, true);
+            }
         }
         // Apply ground movement
         if (gameData.player.velocity.x < PLAYER_MAX_SPEED && gameData.player.velocity.x > -PLAYER_MAX_SPEED)
@@ -199,6 +220,11 @@ void UpdateGame()
     }
     else if (gameData.player.onWall != 0)
     {
+        if (gameData.player.sprite.currentAnimation != &gameData.playerWallSlideAnimation)
+        {
+            AnimatedSprite_Play(&gameData.player.sprite, &gameData.playerWallSlideAnimation, true);
+        }
+
         Stopwatch_Stop(&gameData.player.jumpCoyoteTime);
         // Apply gravity
         gameData.player.velocity.y += GRAVITY * gameData.dt;
@@ -258,6 +284,10 @@ void UpdateGame()
             {
                 gameData.player.velocity.x -= deltaFriction;
             }
+            if (gameData.player.sprite.currentAnimation != &gameData.playerAirMoveAnimation)
+            {
+                AnimatedSprite_Play(&gameData.player.sprite, &gameData.playerAirMoveAnimation, true);
+            }
         }
         if (gameData.player.velocity.x < 0.0f)
         {
@@ -269,6 +299,17 @@ void UpdateGame()
             else
             {
                 gameData.player.velocity.x += deltaFriction;
+            }
+            if (gameData.player.sprite.currentAnimation != &gameData.playerAirMoveAnimation)
+            {
+                AnimatedSprite_Play(&gameData.player.sprite, &gameData.playerAirMoveAnimation, true);
+            }
+        }
+        if (gameData.player.velocity.x == 0.0f)
+        {
+            if (gameData.player.sprite.currentAnimation != &gameData.playerAirIdleAnimation)
+            {
+                AnimatedSprite_Play(&gameData.player.sprite, &gameData.playerAirIdleAnimation, true);
             }
         }
         // Apply gravity
@@ -385,6 +426,7 @@ void UpdateGame()
         drawables[drawableCount].type  = DRAWABLE_SHAPE;
         drawableCount++;
     }
+    AnimatedSprite_Update(&gameData.player.sprite);
 }
 
 void MainMode_OnStart()
@@ -398,6 +440,7 @@ void MainMode_OnStart()
     gameData.player.velocity        = (Vector2Float){ 0.0f, 0.0f };
     gameData.player.collider.parent = &gameData.player.entity;
     gameData.player.collider.size   = (Vector2Float){ 16.0f, 16.0f };
+    AnimatedSprite_Initialize(&gameData.player.sprite);
 
     if (g_editorTestMapData.isValid)
     {
