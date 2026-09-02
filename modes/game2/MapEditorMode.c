@@ -6,9 +6,9 @@
 #include "ashes/ash_debug.h"
 #include "ashes/ash_io.h"
 #include "ashes/ash_misc.h"
+#include "ashes/ash_platform.h"
 #include "utils/UI.h"
 
-#include <raylib.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -117,7 +117,7 @@ void HandleCameraInput()
     if (data.uiInputHandled)
         return;
 
-    float wheel = GetMouseWheelMove();
+    float wheel = Platform_GetMouseWheelMove();
 
     if (wheel != 0.0f)
     {

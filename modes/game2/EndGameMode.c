@@ -3,7 +3,7 @@
 #include "ashes/ash_components.h"
 #include "ashes/ash_io.h"
 #include "ashes/ash_misc.h"
-#include "raylib.h"
+#include "ashes/ash_platform.h"
 #include "utils/UI_old.h"
 
 #include <stdio.h>

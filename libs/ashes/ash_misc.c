@@ -1,7 +1,7 @@
 #include "ash_misc.h"
 
 #include "ash_debug.h"
-#include "raylib.h"
+#include "ash_platform.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -220,12 +220,12 @@ float DeltaTime_GetDeltaTime()
 
 void Logger_Init()
 {
-    SetTraceLogLevel(LOG_ALL);
+    Platform_SetTraceLogLevel(LOG_ALL);
 }
 
 void Logger_Deinit()
 {
-    SetTraceLogLevel(LOG_NONE);
+    Platform_SetTraceLogLevel(LOG_NONE);
 }
 
 void Stopwatch_Start(Stopwatch* stopwatch, uint32_t milis)
@@ -302,14 +302,14 @@ float Utils_AbsFloat(float value)
 
 Vector2Float Utils_WorldToScreen2D(Vector2Float position, Camera2D camera)
 {
-    Vector2      screenPosition      = GetWorldToScreen2D({ position.x, position.y }, camera);
+    Vector2      screenPosition      = Platform_GetWorldToScreen2D({ position.x, position.y }, camera);
     Vector2Float screenPositionFloat = { screenPosition.x, screenPosition.y };
     return screenPositionFloat;
 }
 
 Vector2Float Utils_ScreenToWorld2D(Vector2Float position, Camera2D camera)
 {
-    Vector2      worldPosition      = GetScreenToWorld2D({ position.x, position.y }, camera);
+    Vector2      worldPosition      = Platform_GetScreenToWorld2D({ position.x, position.y }, camera);
     Vector2Float worldPositionFloat = { worldPosition.x, worldPosition.y };
     return worldPositionFloat;
 }

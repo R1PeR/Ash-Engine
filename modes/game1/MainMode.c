@@ -5,8 +5,8 @@
 #include "ashes/ash_context.h"
 #include "ashes/ash_io.h"
 #include "ashes/ash_misc.h"
+#include "ashes/ash_platform.h"
 #include "imgui.h"
-#include "raylib.h"
 #include "utils/Prefabs.h"
 #include "utils/Stats.h"
 #include "utils/Structs.h"
@@ -306,7 +306,7 @@ void DrawDebug()
         {
             for (int x = -5; x < 5; x++)
             {
-                DrawRectangleLines(
+                Platform_DrawRectangleLines(
                     CHUNK_SIZE * TEXTURE_SIZE * TEXTURE_SCALE * x, CHUNK_SIZE * TEXTURE_SIZE * TEXTURE_SCALE * y,
                     CHUNK_SIZE * TEXTURE_SIZE * TEXTURE_SCALE, CHUNK_SIZE * TEXTURE_SIZE * TEXTURE_SCALE, RED);
             }
@@ -315,7 +315,7 @@ void DrawDebug()
     if (debugData.isVisible)
     {
         Vector2 mousePos     = { (float)(Input_GetMouseX()), (float)(Input_GetMouseY()) };
-        Vector2 worldPos     = GetScreenToWorld2D(mousePos, *Window_GetCamera());
+        Vector2 worldPos     = Platform_GetScreenToWorld2D(mousePos, *Window_GetCamera());
         Vector2 worldPosCam  = { worldPos.x - Window_GetCamera()->target.x, worldPos.y - Window_GetCamera()->target.y };
         Vector3Int gridPos   = Utils_WorldToGrid(worldPos, TEXTURE_SIZE * TEXTURE_SCALE);
         gridPos.z            = gameData.currentZPos;
@@ -867,7 +867,7 @@ void UpdateUI()
 {
     char buffer[32];
 
-    snprintf(buffer, sizeof(buffer), "FPS: %d", GetFPS());
+    snprintf(buffer, sizeof(buffer), "FPS: %d", Platform_GetFPS());
     Text text;
     text.position   = (Vector2Float){ -540.0f, -340.0f };
     text.buffer     = buffer;
@@ -958,7 +958,7 @@ void UpdateDragItems()
     {
         // LOG_INF("Mouse button down");
         Vector2    mousePos = { (float)(Input_GetMouseX()), (float)(Input_GetMouseY()) };
-        Vector2    worldPos = GetScreenToWorld2D(mousePos, *Window_GetCamera());
+        Vector2    worldPos = Platform_GetScreenToWorld2D(mousePos, *Window_GetCamera());
         Vector3Int gridPos  = Utils_WorldToGrid(worldPos, TEXTURE_SIZE * TEXTURE_SCALE);
         Object*    objects[MAX_LAYERS];
         uint8_t    objCount = GetObjectsAtPosition(gridPos, objects);
@@ -999,7 +999,7 @@ void UpdateDragItems()
             }
             LOG_INF("Dropping dragged object id %d", gameData.draggedObject->id);
             Vector2    mousePos              = { (float)(Input_GetMouseX()), (float)(Input_GetMouseY()) };
-            Vector2    worldPos              = GetScreenToWorld2D(mousePos, *Window_GetCamera());
+            Vector2    worldPos              = Platform_GetScreenToWorld2D(mousePos, *Window_GetCamera());
             Vector3Int gridPos               = Utils_WorldToGrid(worldPos, TEXTURE_SIZE * TEXTURE_SCALE);
             gameData.draggedObject->position = gridPos;
             gameData.isDraggingObject        = false;

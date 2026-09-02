@@ -4,6 +4,7 @@
 #include "ashes/ash_debug.h"
 #include "ashes/ash_io.h"
 #include "ashes/ash_misc.h"
+#include "ashes/ash_platform.h"
 
 #include <stdio.h>
 Entity2D  uiParentEntity       = { 0 };
@@ -714,28 +715,28 @@ bool UI_old_TextureButton9Slice(Button9Slice* button)
     Color tint = button->isPressed ? (Color){ 180, 180, 180, 255 } : WHITE;
 
     /* Top row */
-    DrawTexturePro(tex, (Rectangle){ 0.0f, 0.0f, tileW, tileH },
-                   (Rectangle){ posX, posY, crnW, crnH }, (Vector2){ 0, 0 }, 0.0f, tint);
-    DrawTexturePro(tex, (Rectangle){ tileW, 0.0f, tileW, tileH },
-                   (Rectangle){ posX + crnW, posY, midW, crnH }, (Vector2){ 0, 0 }, 0.0f, tint);
-    DrawTexturePro(tex, (Rectangle){ 2.0f * tileW, 0.0f, tileW, tileH },
-                   (Rectangle){ posX + crnW + midW, posY, crnW, crnH }, (Vector2){ 0, 0 }, 0.0f, tint);
+    Platform_DrawTexturePro(tex, (Rectangle){ 0.0f, 0.0f, tileW, tileH },
+                            (Rectangle){ posX, posY, crnW, crnH }, (Vector2){ 0, 0 }, 0.0f, tint);
+    Platform_DrawTexturePro(tex, (Rectangle){ tileW, 0.0f, tileW, tileH },
+                            (Rectangle){ posX + crnW, posY, midW, crnH }, (Vector2){ 0, 0 }, 0.0f, tint);
+    Platform_DrawTexturePro(tex, (Rectangle){ 2.0f * tileW, 0.0f, tileW, tileH },
+                            (Rectangle){ posX + crnW + midW, posY, crnW, crnH }, (Vector2){ 0, 0 }, 0.0f, tint);
 
     /* Middle row */
-    DrawTexturePro(tex, (Rectangle){ 0.0f, tileH, tileW, tileH },
-                   (Rectangle){ posX, posY + crnH, crnW, midH }, (Vector2){ 0, 0 }, 0.0f, tint);
-    DrawTexturePro(tex, (Rectangle){ tileW, tileH, tileW, tileH },
-                   (Rectangle){ posX + crnW, posY + crnH, midW, midH }, (Vector2){ 0, 0 }, 0.0f, tint);
-    DrawTexturePro(tex, (Rectangle){ 2.0f * tileW, tileH, tileW, tileH },
-                   (Rectangle){ posX + crnW + midW, posY + crnH, crnW, midH }, (Vector2){ 0, 0 }, 0.0f, tint);
+    Platform_DrawTexturePro(tex, (Rectangle){ 0.0f, tileH, tileW, tileH },
+                            (Rectangle){ posX, posY + crnH, crnW, midH }, (Vector2){ 0, 0 }, 0.0f, tint);
+    Platform_DrawTexturePro(tex, (Rectangle){ tileW, tileH, tileW, tileH },
+                            (Rectangle){ posX + crnW, posY + crnH, midW, midH }, (Vector2){ 0, 0 }, 0.0f, tint);
+    Platform_DrawTexturePro(tex, (Rectangle){ 2.0f * tileW, tileH, tileW, tileH },
+                            (Rectangle){ posX + crnW + midW, posY + crnH, crnW, midH }, (Vector2){ 0, 0 }, 0.0f, tint);
 
     /* Bottom row */
-    DrawTexturePro(tex, (Rectangle){ 0.0f, 2.0f * tileH, tileW, tileH },
-                   (Rectangle){ posX, posY + crnH + midH, crnW, crnH }, (Vector2){ 0, 0 }, 0.0f, tint);
-    DrawTexturePro(tex, (Rectangle){ tileW, 2.0f * tileH, tileW, tileH },
-                   (Rectangle){ posX + crnW, posY + crnH + midH, midW, crnH }, (Vector2){ 0, 0 }, 0.0f, tint);
-    DrawTexturePro(tex, (Rectangle){ 2.0f * tileW, 2.0f * tileH, tileW, tileH },
-                   (Rectangle){ posX + crnW + midW, posY + crnH + midH, crnW, crnH }, (Vector2){ 0, 0 }, 0.0f, tint);
+    Platform_DrawTexturePro(tex, (Rectangle){ 0.0f, 2.0f * tileH, tileW, tileH },
+                            (Rectangle){ posX, posY + crnH + midH, crnW, crnH }, (Vector2){ 0, 0 }, 0.0f, tint);
+    Platform_DrawTexturePro(tex, (Rectangle){ tileW, 2.0f * tileH, tileW, tileH },
+                            (Rectangle){ posX + crnW, posY + crnH + midH, midW, crnH }, (Vector2){ 0, 0 }, 0.0f, tint);
+    Platform_DrawTexturePro(tex, (Rectangle){ 2.0f * tileW, 2.0f * tileH, tileW, tileH },
+                            (Rectangle){ posX + crnW + midW, posY + crnH + midH, crnW, crnH }, (Vector2){ 0, 0 }, 0.0f, tint);
 
     return UI_old_CheckBounds(button->bounds) && Input_IsMouseButtonPressed(INPUT_MOUSE_BUTTON_LEFT);
 }

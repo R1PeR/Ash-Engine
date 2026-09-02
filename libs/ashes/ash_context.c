@@ -2,8 +2,7 @@
 
 #include "ash_debug.h"
 #include "ash_io.h"
-#include "raylib.h"
-#include "rlImGui.h"
+#include "ash_platform.h"
 
 #include <stdint.h>
 
@@ -22,9 +21,9 @@ void Context_SetMode(Mode* mode)
         if (screenCount != 0)
         {
             screen[screenCount - 1]->OnPause();
-            EndMode2D();
-            rlImGuiEnd();
-            EndDrawing();
+            Platform_EndMode2D();
+            Platform_ImGuiEnd();
+            Platform_EndDrawing();
         }
         screen[screenCount] = mode;
         screenCount += 1;
@@ -45,15 +44,15 @@ void Context_SetMode(Mode* mode)
             }
             screen[screenCount - 1]->Update();
             //drawing
-            BeginDrawing();
-            rlImGuiBegin();
-            ClearBackground(BLACK);
-            BeginMode2D(*Window_GetCamera());
+            Platform_BeginDrawing();
+            Platform_ImGuiBegin();
+            Platform_ClearBackground(BLACK);
+            Platform_BeginMode2D(*Window_GetCamera());
             screen[screenCount - 1]->Draw();
-            EndMode2D();
-            rlImGuiEnd();
-            EndDrawing();
-            if (WindowShouldClose())
+            Platform_EndMode2D();
+            Platform_ImGuiEnd();
+            Platform_EndDrawing();
+            if (Platform_WindowShouldClose())
             {
                 exitAll = true;
             }

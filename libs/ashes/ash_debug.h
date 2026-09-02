@@ -2,6 +2,7 @@
 #define ASH_DEBUG_H
 
 #include "ash_components.h"
+#include "ash_platform.h"
 
 #define LOG_LEVEL_DEBUG   4
 #define LOG_LEVEL_INFO    3
@@ -11,25 +12,25 @@
 #ifdef DEBUG
 #    ifdef LOG_LEVEL
 #        if (LOG_LEVEL >= LOG_LEVEL_DEBUG)
-#            define LOG_DBG(...) TraceLog(LOG_INFO, __VA_ARGS__)
+#            define LOG_DBG(...) Platform_TraceLog(LOG_INFO, __VA_ARGS__)
 #        else
 #            define LOG_DBG(...) (void)0
 #        endif
 
 #        if (LOG_LEVEL >= LOG_LEVEL_INFO)
-#            define LOG_INF(...) TraceLog(LOG_INFO, __VA_ARGS__)
+#            define LOG_INF(...) Platform_TraceLog(LOG_INFO, __VA_ARGS__)
 #        else
 #            define LOG_INF(...) (void)0
 #        endif
 
 #        if (LOG_LEVEL >= LOG_LEVEL_WARNING)
-#            define LOG_WRN(...) TraceLog(LOG_WARNING, __VA_ARGS__)
+#            define LOG_WRN(...) Platform_TraceLog(LOG_WARNING, __VA_ARGS__)
 #        else
 #            define LOG_WRN(...) (void)0
 #        endif
 
 #        if (LOG_LEVEL >= LOG_LEVEL_ERROR)
-#            define LOG_ERR(...) TraceLog(LOG_ERROR, __VA_ARGS__)
+#            define LOG_ERR(...) Platform_TraceLog(LOG_ERROR, __VA_ARGS__)
 #        else
 #            define LOG_ERR(...) (void)0
 #        endif

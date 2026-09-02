@@ -2,7 +2,7 @@
 
 #include "ash_debug.h"
 #include "ash_misc.h"
-#include "raylib.h"
+#include "ash_platform.h"
 
 #include <cstring>
 #include <stdio.h>
@@ -192,13 +192,12 @@ void AsciiWindow_DrawString(AsciiWindow* window, uint8_t x, uint8_t y, const cha
 
 bool Audio_Init()
 {
-    InitAudioDevice();
-    return IsAudioDeviceReady();
+    return Platform_InitAudioDevice();
 }
 
 void Audio_Deinit()
 {
-    CloseAudioDevice();
+    Platform_CloseAudioDevice();
 }
 
 AudioData Audio_LoadAudio(const char* fileName)
@@ -207,7 +206,7 @@ AudioData Audio_LoadAudio(const char* fileName)
     {
         return (AudioData){ 0 };
     }
-    Sound     sound = LoadSound(fileName);
+    Sound     sound = Platform_LoadSound(fileName);
     AudioData audio;
     audio.sound = sound;
     return audio;
@@ -215,17 +214,17 @@ AudioData Audio_LoadAudio(const char* fileName)
 
 void Audio_UnloadAudio(AudioData* audio)
 {
-    UnloadSound(audio->sound);
+    Platform_UnloadSound(audio->sound);
 }
 
 void AudioPlayer_Stop(AudioData* audio)
 {
-    StopSound(audio->sound);
+    Platform_StopSound(audio->sound);
 }
 
 void AudioPlayer_Start(AudioData* audio)
 {
-    PlaySound(audio->sound);
+    Platform_PlaySound(audio->sound);
 }
 
 void Collider2D_Initialize(Collider2D* col)
@@ -248,13 +247,13 @@ void Collider2D_DrawDebug(Collider2D* col)
     }
     if (col->parent == NULL)
     {
-        DrawRectangleLines(col->position.x, col->position.y, col->size.x, col->size.y, YELLOW);
+        Platform_DrawRectangleLines(col->position.x, col->position.y, col->size.x, col->size.y, YELLOW);
     }
     else
     {
-        DrawRectangleLines(col->parent->position.x + (col->position.x * col->parent->scale),
-                           col->parent->position.y + (col->position.y * col->parent->scale),
-                           col->size.x * col->parent->scale, col->size.y * col->parent->scale, YELLOW);
+        Platform_DrawRectangleLines(col->parent->position.x + (col->position.x * col->parent->scale),
+                                    col->parent->position.y + (col->position.y * col->parent->scale),
+                                    col->size.x * col->parent->scale, col->size.y * col->parent->scale, YELLOW);
     }
 }
 
@@ -417,15 +416,16 @@ void Shape2D_Draw(Shape2D* shape)
     switch (shape->type)
     {
         case SHAPE2D_RECTANGLE:
-            DrawRectangleRec((Rectangle){ worldPosition.x, worldPosition.y, shape->rectangle.width * worldScale,
-                                          shape->rectangle.height * worldScale },
-                             shape->color);
+            Platform_DrawRectangleRec((Rectangle){ worldPosition.x, worldPosition.y, shape->rectangle.width * worldScale,
+                                                   shape->rectangle.height * worldScale },
+                                      shape->color);
             break;
 
         case SHAPE2D_RECTANGLE_LINES:
-            DrawRectangleLinesEx((Rectangle){ worldPosition.x, worldPosition.y, shape->rectangle.width * worldScale,
-                                              shape->rectangle.height * worldScale },
-                                 shape->rectangle.outlineThickness * worldScale, shape->color);
+            Platform_DrawRectangleLinesEx((Rectangle){ worldPosition.x, worldPosition.y,
+                                                       shape->rectangle.width * worldScale,
+                                                       shape->rectangle.height * worldScale },
+                                          shape->rectangle.outlineThickness * worldScale, shape->color);
             break;
 
         case SHAPE2D_LINE:
@@ -441,12 +441,12 @@ void Shape2D_Draw(Shape2D* shape)
                 worldEnd.x = shape->line.endPosition.x;
                 worldEnd.y = shape->line.endPosition.y;
             }
-            DrawLineEx(worldPosition, worldEnd, shape->line.thickness * worldScale, shape->color);
+            Platform_DrawLineEx(worldPosition, worldEnd, shape->line.thickness * worldScale, shape->color);
             break;
         }
 
         case SHAPE2D_CIRCLE:
-            DrawCircleV(worldPosition, shape->circle.radius * worldScale, shape->color);
+            Platform_DrawCircleV(worldPosition, shape->circle.radius * worldScale, shape->color);
             break;
 
         case SHAPE2D_CIRCLE_LINES:
@@ -455,7 +455,7 @@ void Shape2D_Draw(Shape2D* shape)
             float innerRadius = outerRadius - shape->circle.outlineThickness * worldScale;
             if (innerRadius < 0.0f)
                 innerRadius = 0.0f;
-            DrawRing(worldPosition, innerRadius, outerRadius, 0.0f, 360.0f, 36, shape->color);
+            Platform_DrawRing(worldPosition, innerRadius, outerRadius, 0.0f, 360.0f, 36, shape->color);
             break;
         }
     }
@@ -523,7 +523,7 @@ void Sprite_Draw(Sprite* spr)
         destRect.width -= (1.0 - spr->portionRect.width) * spr->currentTexture->size.x * scale;
         destRect.height -= (1.0 - spr->portionRect.height) * spr->currentTexture->size.y * scale;
     }
-    DrawTexturePro(spr->currentTexture->texture, sourceRect, destRect, { 0, 0 }, rotation, spr->tint);
+    Platform_DrawTexturePro(spr->currentTexture->texture, sourceRect, destRect, { 0, 0 }, rotation, spr->tint);
 }
 
 TextureData Texture_LoadTexture(const char* fileName)
@@ -533,7 +533,7 @@ TextureData Texture_LoadTexture(const char* fileName)
         LOG_ERR("Texture: LoadTexture() failed, fileName is nullptr");
         return (TextureData){ 0 };
     }
-    Texture2D   texture = LoadTexture(fileName);
+    Texture2D   texture = Platform_LoadTexture(fileName);
     TextureData textureData;
     textureData.texture = texture;
     textureData.uv      = { 0.0f, 0.0f, (float)textureData.texture.width, (float)textureData.texture.height };
@@ -577,7 +577,7 @@ bool Texture_CreateTextureAtlas(TextureData texture, uint32_t columns, uint32_t 
 
 void Texture_UnloadTexture(TextureData* textureData)
 {
-    UnloadTexture(textureData->texture);
+    Platform_UnloadTexture(textureData->texture);
 }
 
 void Drawable_Draw(Drawable* drawable)

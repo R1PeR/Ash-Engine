@@ -3,9 +3,9 @@
 #include "ashes/ash_components.h"
 #include "ashes/ash_debug.h"
 #include "ashes/ash_io.h"
+#include "ashes/ash_platform.h"
 
 #include <assert.h>
-#include <raylib.h>
 #include <string.h>
 
 UI_State uiState = {};
@@ -468,7 +468,7 @@ static void DrawListItem(int childId, Vector4Float childBounds, UI_CenterType ch
     if (maxScroll < 0)
         maxScroll = 0;
 
-    float wheel = GetMouseWheelMove();
+    float wheel = Platform_GetMouseWheelMove();
     listScroll -= wheel * 30.0f;
     if (listScroll < 0)
         listScroll = 0;
@@ -633,7 +633,7 @@ static void DrawTileGridItem(int childId, Vector4Float childBounds, UI_CenterTyp
     Rectangle    frameRect = { childBounds.x, childBounds.y, childBounds.w, childBounds.h };
     bool         hovered   = PointInRect(mp, frameRect);
 
-    float wheel = GetMouseWheelMove();
+    float wheel = Platform_GetMouseWheelMove();
     if (hovered && wheel != 0.0f)
     {
         gridScroll -= wheel * cellSize;
@@ -818,7 +818,7 @@ void UI_End()
 
             if (mouseOverFrame)
             {
-                float wheel = GetMouseWheelMove();
+                float wheel = Platform_GetMouseWheelMove();
                 scrollY -= wheel * 30.0f;
                 float maxScroll = uiState.item[current].frame.contentHeight - frameBounds.h;
                 if (maxScroll < 0)

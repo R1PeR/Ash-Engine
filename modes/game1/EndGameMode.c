@@ -3,7 +3,7 @@
 #include "ashes/ash_components.h"
 #include "ashes/ash_io.h"
 #include "ashes/ash_misc.h"
-#include "raylib.h"
+#include "ashes/ash_platform.h"
 #include "utils/UI_old.h"
 
 #include <stdio.h>
@@ -31,7 +31,7 @@ void EndGameMode_Update()
 
     char buffer[32];
 
-    snprintf(buffer, sizeof(buffer), "FPS: %d", GetFPS());
+    snprintf(buffer, sizeof(buffer), "FPS: %d", Platform_GetFPS());
     Text text;
     text.position   = (Vector2Float){ -540.0f, -340.0f };
     text.buffer     = buffer;

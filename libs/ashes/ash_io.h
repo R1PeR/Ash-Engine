@@ -4,7 +4,6 @@
 /* Includes */
 #include "ashes/ash_misc.h"
 
-#include <raylib.h>
 #include <stdint.h>
 
 /* Structs, Enums, and Unions */
