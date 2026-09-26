@@ -6,6 +6,7 @@
 #include "modes/game2/MapEditorMode.h"
 #include "modes/game2/UITestMode.h"
 #include "modes/game2/MenuMode.h"
+#include "modes/minesweeper/MinesweeperMode.h"
 
 #include <cstdint>
 
