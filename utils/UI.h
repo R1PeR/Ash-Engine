@@ -4,8 +4,8 @@
 #include "ashes/ash_misc.h"
 
 #include <stdint.h>
-#define UI_MAX_STACK_DEPTH 32
-#define UI_MAX_WIDGETS     64
+#define UI_MAX_STACK_DEPTH 256
+#define UI_MAX_WIDGETS     128
 
 enum UI_LayoutType
 {
@@ -35,6 +35,31 @@ enum UI_AnchorType
 };
 
 typedef Vector4Float UI_PaddingData;
+
+struct UI_Theme
+{
+    Color frameBg;
+    Color frameOutline;
+    Color frameHighlight;
+    Color frameShadow;
+    Color buttonBg;
+    Color buttonHover;
+    Color buttonActive;
+    Color buttonHighlight;
+    Color buttonShadow;
+    Color sliderTrack;
+    Color sliderThumb;
+    Color sliderHighlight;
+    Color sliderShadow;
+    Color listHover;
+    Color listSelected;
+    Color toggleActive;
+    Color toggleInactive;
+    Color toggleHover;
+    Color toggleActiveHover;
+    Color separatorColor;
+    float bevel;
+};
 
 struct UI_TextData
 {
@@ -153,6 +178,7 @@ struct UI_State
 
 void UI_Initialize(Drawable* drawableArray, size_t* drawableArraySize, size_t drawableArrayMaxSize);
 void UI_SetParentEntity(Entity2D* entity);
+void UI_SetTheme(struct UI_Theme theme);
 
 void UI_Begin(Vector4Float bounds);
 

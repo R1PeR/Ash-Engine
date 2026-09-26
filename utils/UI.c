@@ -11,20 +11,30 @@
 UI_State uiState = {};
 
 static Entity2D* uiParent;
-static Color     frameBg           = { 30, 30, 45, 200 };
-static Color     frameOutline      = { 80, 80, 120, 255 };
-static Color     buttonBg          = { 60, 60, 80, 255 };
-static Color     buttonHover       = { 80, 80, 110, 255 };
-static Color     buttonActive      = { 100, 100, 140, 255 };
-static Color     sliderTrack       = { 50, 50, 65, 255 };
-static Color     sliderThumb       = { 130, 140, 180, 255 };
-static Color     listHover         = { 70, 70, 95, 255 };
-static Color     listSelected      = { 50, 80, 120, 255 };
-static Color     toggleActive      = { 100, 140, 220, 255 };
-static Color     toggleInactive    = { 60, 80, 120, 255 };
-static Color     toggleHover       = { 80, 100, 140, 255 };
-static Color     toggleActiveHover = { 130, 170, 240, 255 };
-static Color     separatorColor    = { 100, 100, 100, 200 };
+
+static struct UI_Theme uiTheme = {
+    { 30, 30, 45, 200 }, /* frameBg             */
+    { 80, 80, 120, 255 }, /* frameOutline        */
+    { 95, 95, 140, 255 }, /* frameHighlight      */
+    { 15, 15, 25, 255 },  /* frameShadow         */
+    { 60, 60, 80, 255 },  /* buttonBg            */
+    { 80, 80, 110, 255 }, /* buttonHover         */
+    { 100, 100, 140, 255 },/* buttonActive       */
+    { 130, 130, 165, 255 },/* buttonHighlight    */
+    { 30, 30, 45, 255 },  /* buttonShadow        */
+    { 50, 50, 65, 255 },  /* sliderTrack         */
+    { 130, 140, 180, 255 },/* sliderThumb        */
+    { 170, 180, 215, 255 },/* sliderHighlight    */
+    { 70, 75, 100, 255 }, /* sliderShadow        */
+    { 70, 70, 95, 255 },  /* listHover           */
+    { 50, 80, 120, 255 }, /* listSelected        */
+    { 100, 140, 220, 255 },/* toggleActive       */
+    { 60, 80, 120, 255 }, /* toggleInactive      */
+    { 80, 100, 140, 255 },/* toggleHover         */
+    { 130, 170, 240, 255 },/* toggleActiveHover  */
+    { 100, 100, 100, 200 },/* separatorColor     */
+    2.0f                   /* bevel               */
+};
 
 void UI_Initialize(Drawable* drawableArray, size_t* drawableArraySize, size_t drawableArrayMaxSize)
 {
@@ -41,6 +51,11 @@ void UI_SetParentEntity(Entity2D* entity)
 {
     assert(entity != NULL);
     uiParent = entity;
+}
+
+void UI_SetTheme(struct UI_Theme theme)
+{
+    uiTheme = theme;
 }
 
 void UI_Begin(Vector4Float bounds)
@@ -275,19 +290,39 @@ static void DrawFrameShape(Vector4Float rectangle, Color background)
     PushShape(s);
 }
 
-static void DrawFrameOutline(Vector4Float rectangle, Color color)
+static void DrawLine(Vector2Float a, Vector2Float b, float thickness, Color color)
 {
     Shape2D s;
     Shape2D_Initialize(&s);
-    s.type                       = SHAPE2D_RECTANGLE_LINES;
-    s.position.x                 = rectangle.x;
-    s.position.y                 = rectangle.y;
-    s.rectangle.width            = rectangle.w;
-    s.rectangle.height           = rectangle.h;
-    s.rectangle.outlineThickness = 1.0f;
-    s.color                      = color;
-    s.parent                     = uiParent;
+    s.type               = SHAPE2D_LINE;
+    s.position.x         = a.x;
+    s.position.y         = a.y;
+    s.line.endPosition.x = b.x;
+    s.line.endPosition.y = b.y;
+    s.line.thickness     = thickness;
+    s.color              = color;
+    s.parent             = uiParent;
     PushShape(s);
+}
+
+/* Draws a raised (true) or pressed/inset (false) 3D bevel around a filled rectangle. */
+static void DrawBevel(Vector4Float rect, Color base, bool raised)
+{
+    DrawFrameShape(rect, base);
+
+    Color hi = raised ? uiTheme.buttonHighlight : uiTheme.buttonShadow;
+    Color lo = raised ? uiTheme.buttonShadow : uiTheme.buttonHighlight;
+
+    float b = uiTheme.bevel;
+    float x0 = rect.x;
+    float y0 = rect.y;
+    float x1 = rect.x + rect.w;
+    float y1 = rect.y + rect.h;
+
+    DrawLine((Vector2Float){ x0, y0 },           (Vector2Float){ x1, y0 },           b, hi);
+    DrawLine((Vector2Float){ x0, y0 },           (Vector2Float){ x0, y1 },           b, hi);
+    DrawLine((Vector2Float){ x0, y1 },           (Vector2Float){ x1, y1 },           b, lo);
+    DrawLine((Vector2Float){ x1, y0 },           (Vector2Float){ x1, y1 },           b, lo);
 }
 
 static void DrawTextItem(int childId, Vector4Float childBounds, UI_CenterType childCenter, float scrollY)
@@ -376,10 +411,10 @@ static void DrawButtonItem(int childId, Vector4Float childBounds, UI_CenterType 
     bool         hovered = PointInRect(mp, rect);
     bool         pressed = Input_IsMouseButtonDown(INPUT_MOUSE_BUTTON_LEFT) && hovered;
 
-    Color col = pressed ? buttonActive : (hovered ? buttonHover : buttonBg);
+    Color col = pressed ? uiTheme.buttonActive : (hovered ? uiTheme.buttonHover : uiTheme.buttonBg);
 
-    DrawFrameShape((Vector4Float){ rect.x, rect.y, rect.width, rect.height }, col);
-    DrawFrameOutline((Vector4Float){ rect.x, rect.y, rect.width, rect.height }, pressed ? WHITE : frameOutline);
+    /* pressed -> inset (shadow on top/left), otherwise raised bevel */
+    DrawBevel((Vector4Float){ rect.x, rect.y, rect.width, rect.height }, col, !pressed);
 
     float dx = bx + (btnW - textWidth) * 0.5f;
     float dy = by + (btnH - textHeight) * 0.5f;
@@ -416,7 +451,8 @@ static void DrawSliderItem(int childId, Vector4Float childBounds, UI_CenterType 
     float trackX = childBounds.x;
 
     Rectangle trackRect = { trackX, trackY, trackW, trackH };
-    DrawFrameShape((Vector4Float){ trackRect.x, trackRect.y, trackRect.width, trackRect.height }, sliderTrack);
+    DrawBevel((Vector4Float){ trackRect.x, trackRect.y, trackRect.width, trackRect.height }, uiTheme.sliderTrack,
+              false);
 
     float t      = (max > min) ? (val - min) / (max - min) : 0;
     float thumbW = trackH * 1.5f;
@@ -425,7 +461,8 @@ static void DrawSliderItem(int childId, Vector4Float childBounds, UI_CenterType 
     float thumbY = trackY - (thumbH - trackH) * 0.5f;
 
     Rectangle thumbRect = { thumbX, thumbY, thumbW, thumbH };
-    DrawFrameShape((Vector4Float){ thumbRect.x, thumbRect.y, thumbRect.width, thumbRect.height }, sliderThumb);
+    DrawBevel((Vector4Float){ thumbRect.x, thumbRect.y, thumbRect.width, thumbRect.height }, uiTheme.sliderThumb,
+              true);
 
     Vector2Float mousePod = GetMouseWorldPos();
     bool         hovered  = PointInRect(mousePod, trackRect) || PointInRect(mousePod, thumbRect);
@@ -492,9 +529,9 @@ static void DrawListItem(int childId, Vector4Float childBounds, UI_CenterType ch
         Rectangle itemRect = { childBounds.x, iy, itemWidth, itemH };
         bool      hover    = PointInRect(mousePos, itemRect);
 
-        Color bgCol = (i == uiState.listSelected[wid]) ? listSelected : (Color){ 0, 0, 0, 0 };
+        Color bgCol = (i == uiState.listSelected[wid]) ? uiTheme.listSelected : (Color){ 0, 0, 0, 0 };
         if (hover && i != uiState.listSelected[wid])
-            bgCol = listHover;
+            bgCol = uiTheme.listHover;
 
         if (bgCol.a > 0)
             DrawFrameShape((Vector4Float){ itemRect.x, itemRect.y, itemRect.width, itemRect.height }, bgCol);
@@ -527,11 +564,11 @@ static void DrawListItem(int childId, Vector4Float childBounds, UI_CenterType ch
     {
         float sbx = childBounds.x + itemWidth;
         float sby = childBounds.y;
-        DrawFrameShape((Vector4Float){ sbx, sby, scrollbarWidth, childBounds.h }, sliderTrack);
+        DrawFrameShape((Vector4Float){ sbx, sby, scrollbarWidth, childBounds.h }, uiTheme.sliderTrack);
 
         float thumbH = (childBounds.h / totalHeight) * childBounds.h;
         float thumbY = sby + (listScroll / totalHeight) * childBounds.h;
-        DrawFrameShape((Vector4Float){ sbx, thumbY, scrollbarWidth, thumbH }, sliderThumb);
+        DrawBevel((Vector4Float){ sbx, thumbY, scrollbarWidth, thumbH }, uiTheme.sliderThumb, true);
     }
 }
 
@@ -562,15 +599,13 @@ static void DrawToggleItem(int childId, Vector4Float childBounds, UI_CenterType 
     bool  active = uiState.toggleState[wid];
     Color col;
     if (active)
-        col = hovered ? toggleActiveHover : toggleActive;
+        col = hovered ? uiTheme.toggleActiveHover : uiTheme.toggleActive;
     else
-        col = hovered ? toggleHover : toggleInactive;
+        col = hovered ? uiTheme.toggleHover : uiTheme.toggleInactive;
     if (pressed)
-        col = toggleActive;
+        col = uiTheme.toggleActive;
 
-    DrawFrameShape((Vector4Float){ rect.x, rect.y, rect.width, rect.height }, col);
-    DrawFrameOutline((Vector4Float){ rect.x, rect.y, rect.width, rect.height },
-                     active ? (Color){ 180, 200, 255, 255 } : frameOutline);
+    DrawBevel((Vector4Float){ rect.x, rect.y, rect.width, rect.height }, col, !active);
 
     float dx = bx + (btnW - textWidth) * 0.5f;
     float dy = by + (btnH - textHeight) * 0.5f;
@@ -608,7 +643,7 @@ static void DrawSeparatorItem(int childId, Vector4Float childBounds, UI_CenterTy
     line.line.endPosition.x = childBounds.x + childBounds.w;
     line.line.endPosition.y = midY;
     line.line.thickness     = 1.0f;
-    line.color              = separatorColor;
+    line.color              = uiTheme.separatorColor;
     line.parent             = uiParent;
     PushShape(line);
 }
@@ -803,8 +838,7 @@ void UI_End()
             frameBounds = (Vector4Float){ cursor, root.y, frameSpan, root.h };
         cursor += frameSpan;
 
-        DrawFrameShape(frameBounds, frameBg);
-        DrawFrameOutline(frameBounds, frameOutline);
+        DrawBevel(frameBounds, uiTheme.frameBg, true);
 
         bool mouseOverFrame =
             PointInRect(mousePos, (Rectangle){ frameBounds.x, frameBounds.y, frameBounds.w, frameBounds.h });
