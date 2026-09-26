@@ -1,5 +1,6 @@
 ./
 modes/game2/
+modes/minesweeper/
 libs/ashes/
 libs/rlImGui/
 libs/imgui/

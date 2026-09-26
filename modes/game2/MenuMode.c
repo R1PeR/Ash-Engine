@@ -2,6 +2,7 @@
 
 #include "MainMode.h"
 #include "MapEditorMode.h"
+#include "../minesweeper/MinesweeperMode.h"
 #include "ashes/ash_components.h"
 #include "ashes/ash_context.h"
 #include "ashes/ash_debug.h"
@@ -77,6 +78,8 @@ void MenuMode_Update()
                 Context_SetMode(&mainMode);
             if (UI_Button("Map Editor", 2.0f, fontTextures))
                 Context_SetMode(&mapEditorMode);
+            if (UI_Button("Minesweeper", 2.0f, fontTextures))
+                Context_SetMode(&minesweeperMode);
             if (UI_Button("Exit", 2.0f, fontTextures))
                 Context_FinishMode();
         }
