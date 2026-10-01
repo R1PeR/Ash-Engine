@@ -38,7 +38,7 @@ void* Arena_Allocate(Arena* arena, size_t size)
         return NULL;
     }
     arena->used += size;
-    return arena->buffer + arena->used;
+    return arena->buffer + arena->used - size;
 }
 
 size_t Arena_GetSize(Arena* arena)
