@@ -25,18 +25,20 @@ void Arena_Destroy(Arena* arena)
     arena->used   = 0;
 }
 
-void Arena_Allocate(Arena* arena, size_t size, void** outPtr)
+// #define Arena_Allocate(arena, size)                                                                                  \
+//     ((arena)->used + (size) <= (arena)->size ? ((arena)->used += (size), (arena)->buffer + (arena)->used - (size)) : \
+//                                                NULL)
+
+void* Arena_Allocate(Arena* arena, size_t size)
 {
     if (arena->used + size > arena->size)
     {
         // Not enough space in the arena
-        *outPtr = NULL;
         LOG_ERR("Arena allocation failed: Not enough space in the arena.");
-        return;
+        return NULL;
     }
-
-    *outPtr = arena->buffer + arena->used;
     arena->used += size;
+    return arena->buffer + arena->used;
 }
 
 size_t Arena_GetSize(Arena* arena)

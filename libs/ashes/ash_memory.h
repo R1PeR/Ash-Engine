@@ -9,10 +9,10 @@ typedef struct Arena
     size_t   used;
 } Arena;
 
-void   Arena_Init(Arena* arena, uint8_t* buffer, size_t size);
-void   Arena_Reset(Arena* arena);
-void   Arena_Destroy(Arena* arena);
-void   Arena_Allocate(Arena* arena, size_t size, void** outPtr);
+void Arena_Init(Arena* arena, uint8_t* buffer, size_t size);
+void Arena_Reset(Arena* arena);
+void Arena_Destroy(Arena* arena);
+void*  Arena_Allocate(Arena* arena, size_t size);
 size_t Arena_GetSize(Arena* arena);
 size_t Arena_GetUsed(Arena* arena);
 
