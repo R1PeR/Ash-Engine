@@ -5,29 +5,46 @@
 
 #include <stdlib.h>
 
+Arena* Arena_Create(size_t size)
+{
+    Arena* arena = (Arena*)malloc(sizeof(Arena));
+    if (!arena)
+    {
+        LOG_ERR("Arena creation failed: Unable to allocate memory for Arena structure.");
+        return NULL;
+    }
+    arena->buffer = (uint8_t*)malloc(size);
+    if (!arena->buffer)
+    {
+        LOG_ERR("Arena creation failed: Unable to allocate memory for buffer.");
+        free(arena);
+        return NULL;
+    }
+    arena->size = size;
+    arena->used = 0;
+    return arena;
+}
+
 void Arena_Init(Arena* arena, size_t size)
 {
     arena->buffer = (uint8_t*)malloc(size);
     arena->size   = size;
 }
 
-void Arena_Reset(Arena* arena)
+void Arena_Release(Arena* arena)
 {
     // Reset the arena by setting the size to 0
     arena->used = 0;
 }
 
-void Arena_Destroy(Arena* arena)
+void Arena_Free(Arena* arena)
 {
     free(arena->buffer);
     arena->buffer = NULL;
     arena->size   = 0;
     arena->used   = 0;
+    free(arena);
 }
-
-// #define Arena_Allocate(arena, size)                                                                                  \
-//     ((arena)->used + (size) <= (arena)->size ? ((arena)->used += (size), (arena)->buffer + (arena)->used - (size)) : \
-//                                                NULL)
 
 void* Arena_Allocate(Arena* arena, size_t size)
 {

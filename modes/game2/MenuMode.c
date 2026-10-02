@@ -6,6 +6,7 @@
 #include "ashes/ash_context.h"
 #include "ashes/ash_debug.h"
 #include "ashes/ash_io.h"
+#include "ashes/ash_memory.h"
 #include "ashes/ash_misc.h"
 #include "ashes/ash_platform.h"
 #include "utils/UI.h"
@@ -31,7 +32,9 @@ void MenuMode_OnStart()
 {
     fontAtlasBase = Texture_LoadTexture("resources/sprites/Anikki_square_8x8.png");
     if (!Texture_CreateTextureAtlas(fontAtlasBase, FONT_ATLAS_COLS, FONT_ATLAS_ROWS, fontTextures))
+    {
         LOG_ERR("MenuMode: failed to create font atlas");
+    }
 
     Entity2D_Initialize(&cameraEntity);
 
