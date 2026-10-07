@@ -67,3 +67,21 @@ size_t Arena_GetUsed(Arena* arena)
 {
     return arena->used;
 }
+
+Arena Arena_ScratchCreate(Arena* arena)
+{
+    Arena scratch;
+    scratch.buffer = arena->buffer + arena->used;
+    scratch.size   = arena->size - arena->used;
+    scratch.used   = 0;
+    arena->used += scratch.size;
+    return scratch;
+}
+
+void Arena_ScratchFree(Arena* arena, Arena* scratch)
+{
+    scratch->used   = 0;
+    scratch->buffer = NULL;
+    scratch->size   = 0;
+    arena->used -= scratch->size;
+}
