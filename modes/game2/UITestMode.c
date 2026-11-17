@@ -6,154 +6,133 @@
 #include "ashes/ash_io.h"
 #include "ashes/ash_misc.h"
 #include "ashes/ash_platform.h"
-#include "utils/UI.h"
 
 #include <stdio.h>
 #include <string.h>
 
-#define DRAWABLE_MAX 4096
-
-#define MAP_TILESET_COLS  24
-#define MAP_TILESET_ROWS  16
-#define MAP_TILESET_COUNT (MAP_TILESET_COLS * MAP_TILESET_ROWS)
-
-#define TILESET_ATLAS_COLS MAP_TILESET_COLS
-#define TILESET_ATLAS_ROWS MAP_TILESET_ROWS
-#define TILESET_COUNT      MAP_TILESET_COUNT
-
-#define FONT_ATLAS_COLS  16
-#define FONT_ATLAS_ROWS  16
-#define FONT_GLYPH_COUNT (FONT_ATLAS_COLS * FONT_ATLAS_ROWS)
-
-Mode uiTestMode = MODE_FROM_CLASSNAME(UITestMode);
-
-static Drawable drawables[DRAWABLE_MAX];
-static size_t   drawableCount = 0;
-
-static TextureData tileTextures[TILESET_COUNT];
-static TextureData tileAtlasBase;
-
-static TextureData fontTextures[FONT_GLYPH_COUNT];
-static TextureData fontAtlasBase;
-
-static Entity2D cameraEntity;
-static Sprite   testSprite;
-
-static float       sliderVal  = 0.5f;
-static int         listChoice = -1;
-static int         btnCount   = 0;
-static char        btnLabel[64];
-static const char* listItems[]   = { "Apples", "Bananas",   "Cherries",   "Dates",     "Elderberries", "Figs",
-                                     "Grapes", "Honeydew",  "Indian Fig", "Jackfruit", "Kiwi",         "Lemon",
-                                     "Mango",  "Nectarine", "Orange",     "Papaya" };
-static int         listItemCount = sizeof(listItems) / sizeof(listItems[0]);
-
-static void UITestExampleGUI()
+static void UITestExampleGUI(Context* context, UITestMode* state)
 {
-    UI_Begin((Vector4Float){ -640.0f, -360.0f, 1280.0f, 720.0f });
+    (void)context;
+    UI_Begin(&state->uiState, (Vector4Float){ -640.0f, -360.0f, 1280.0f, 720.0f });
     {
-        UI_Frame();
+        UI_Frame(&state->uiState);
         {
-            UI_Layout(LayoutVertical);
-            UI_Center(CenterBoth);
-            UI_Text("Hello UI_V2!", 3.0f, fontTextures);
-            UI_Text("Immediate Mode UI", 2.0f, fontTextures);
+            UI_Layout(&state->uiState, LayoutVertical);
+            UI_Center(&state->uiState, CenterBoth);
+            UI_Text(&state->uiState, "Hello UI_V2!", 3.0f, state->fontTextures);
+            UI_Text(&state->uiState, "Immediate Mode UI", 2.0f, state->fontTextures);
         }
-        UI_Frame();
+        UI_Frame(&state->uiState);
         {
-            UI_Layout(LayoutVertical);
-            UI_Center(CenterBoth);
-            UI_Text("Button Demo", 1.5f, fontTextures);
-            if (UI_Button("Click Me", 2.0f, fontTextures))
-                btnCount++;
-            snprintf(btnLabel, sizeof(btnLabel), "Clicked: %d", btnCount);
-            UI_Text(btnLabel, 1.5f, fontTextures);
+            UI_Layout(&state->uiState, LayoutVertical);
+            UI_Center(&state->uiState, CenterBoth);
+            UI_Text(&state->uiState, "Button Demo", 1.5f, state->fontTextures);
+            if (UI_Button(&state->uiState, "Click Me", 2.0f, state->fontTextures))
+                state->btnCount++;
+            snprintf(state->btnLabel, sizeof(state->btnLabel), "Clicked: %d", state->btnCount);
+            UI_Text(&state->uiState, state->btnLabel, 1.5f, state->fontTextures);
         }
-        UI_Frame();
+        UI_Frame(&state->uiState);
         {
-            UI_Layout(LayoutVertical);
-            UI_Center(CenterBoth);
-            UI_Text("Slider Demo", 1.5f, fontTextures);
-            sliderVal = UI_Slider(sliderVal, 0.0f, 1.0f);
+            UI_Layout(&state->uiState, LayoutVertical);
+            UI_Center(&state->uiState, CenterBoth);
+            UI_Text(&state->uiState, "Slider Demo", 1.5f, state->fontTextures);
+            state->sliderVal = UI_Slider(&state->uiState, state->sliderVal, 0.0f, 1.0f);
             {
                 char buf[32];
-                snprintf(buf, sizeof(buf), "Value: %.2f", sliderVal);
-                UI_Text(buf, 1.5f, fontTextures);
+                snprintf(buf, sizeof(buf), "Value: %.2f", state->sliderVal);
+                UI_Text(&state->uiState, buf, 1.5f, state->fontTextures);
             }
         }
-        UI_Frame();
+        UI_Frame(&state->uiState);
         {
-            UI_Layout(LayoutVertical);
-            UI_Center(CenterBoth);
-            UI_Text("List Demo", 1.5f, fontTextures);
-            listChoice = UI_List(listItems, listItemCount, 1.2f, 18.0f, fontTextures, true);
+            UI_Layout(&state->uiState, LayoutVertical);
+            UI_Center(&state->uiState, CenterBoth);
+            UI_Text(&state->uiState, "List Demo", 1.5f, state->fontTextures);
+            state->listChoice = UI_List(&state->uiState, state->listItems, state->listItemCount, 1.2f, 18.0f,
+                                        state->fontTextures, true);
             {
                 char buf[64];
-                if (listChoice >= 0)
-                    snprintf(buf, sizeof(buf), "Selected: %s", listItems[listChoice]);
+                if (state->listChoice >= 0)
+                    snprintf(buf, sizeof(buf), "Selected: %s", state->listItems[state->listChoice]);
                 else
                     snprintf(buf, sizeof(buf), "Nothing selected");
-                UI_Text(buf, 1.2f, fontTextures);
+                UI_Text(&state->uiState, buf, 1.2f, state->fontTextures);
             }
         }
     }
-    UI_End();
+    UI_End(&state->uiState);
 }
 
-void UITestMode_OnStart()
+void UITestMode_OnStart(Context* context, void* data)
 {
-    tileAtlasBase = Texture_LoadTexture("resources/sprites/tileset.png");
-    LOG_INF("UITestMode: tile atlas %dx%d", tileAtlasBase.size.x, tileAtlasBase.size.y);
-    if (!Texture_CreateTextureAtlas(tileAtlasBase, TILESET_ATLAS_COLS, TILESET_ATLAS_ROWS, tileTextures))
+    (void)context;
+    UITestMode* state    = (UITestMode*)data;
+    state->tileAtlasBase = Texture_LoadTexture("resources/sprites/tileset.png", NULL);
+    LOG_INF("UITestMode: tile atlas %dx%d", state->tileAtlasBase.size.x, state->tileAtlasBase.size.y);
+    if (!Texture_CreateTextureAtlas(state->tileAtlasBase, TILESET_ATLAS_COLS, TILESET_ATLAS_ROWS, state->tileTextures))
         LOG_ERR("MapEditor: failed to create tile atlas");
 
-    fontAtlasBase = Texture_LoadTexture("resources/sprites/Anikki_square_8x8.png");
-    if (!Texture_CreateTextureAtlas(fontAtlasBase, FONT_ATLAS_COLS, FONT_ATLAS_ROWS, fontTextures))
+    state->fontAtlasBase = Texture_LoadTexture("resources/sprites/Anikki_square_8x8.png", NULL);
+    if (!Texture_CreateTextureAtlas(state->fontAtlasBase, FONT_ATLAS_COLS, FONT_ATLAS_ROWS, state->fontTextures))
         LOG_ERR("MapEditor: failed to create font atlas");
 
-    Entity2D_Initialize(&cameraEntity);
+    Entity2D_Initialize(&state->cameraEntity);
 
-    Camera2D* camera = Window_GetCamera();
-    camera->zoom     = 1.0f;
-    camera->target   = (Vector2){ 0.0f, 0.0f };
+    state->camera.zoom     = 1.0f;
+    state->camera.rotation = 0.0f;
+    state->camera.offset   = (Vector2Float){ 0.0f, 0.0f };
+    state->camera.position = (Vector2Float){ 0.0f, 0.0f };
 
-    cameraEntity.position.x = camera->target.x;
-    cameraEntity.position.y = camera->target.y;
-    cameraEntity.scale      = 1.0f / camera->zoom;
+    state->cameraEntity.position.x = state->camera.position.x;
+    state->cameraEntity.position.y = state->camera.position.y;
+    state->cameraEntity.scale      = 1.0f / state->camera.zoom;
 
-    UI_Initialize(drawables, (size_t*)&drawableCount, DRAWABLE_MAX);
+    UI_Initialize(&state->uiState, state->renderStackItems, (size_t*)&state->renderStackItemCount, RENDERSTACKITEM_MAX,
+                  state->window, &state->camera);
 
-    Sprite_Initialize(&testSprite);
-    testSprite.currentTexture = &tileTextures[0];
-    testSprite.scale          = 4.0f;
+    Sprite_Initialize(&state->testSprite);
+    state->testSprite.currentTexture = &state->tileTextures[0];
+    state->testSprite.scale          = 4.0f;
 }
 
-void UITestMode_OnPause()
+void UITestMode_OnPause(Context* context, void* data)
 {
+    (void)context;
+    (void)data;
 }
 
-void UITestMode_Update()
+void UITestMode_Update(Context* context, void* data)
 {
-    cameraEntity.position.x = Window_GetCamera()->target.x;
-    cameraEntity.position.y = Window_GetCamera()->target.y;
-    cameraEntity.scale      = 1.0f / Window_GetCamera()->zoom;
+    (void)context;
+    UITestMode* state              = (UITestMode*)data;
+    state->cameraEntity.position.x = state->camera.position.x;
+    state->cameraEntity.position.y = state->camera.position.y;
+    state->cameraEntity.scale      = 1.0f / state->camera.zoom;
 
-    drawableCount = 0;
-    DeltaTime_Update();
+    state->renderStackItemCount = 0;
+    DeltaTime_Update(&state->deltaTime);
 
-    UITestExampleGUI();
+    UITestExampleGUI(context, state);
 }
 
-void UITestMode_Draw()
+void UITestMode_Draw(Context* context, void* data)
 {
-    for (size_t i = 0; i < drawableCount; i++)
-        Drawable_Draw(&drawables[i]);
+    (void)context;
+    UITestMode* state            = (UITestMode*)data;
+    state->renderStack.stack     = state->renderStackItems;
+    state->renderStack.stackSize = state->renderStackItemCount;
+    RenderStack_Draw(&state->renderStack);
 }
 
-void UITestMode_OnStop()
+void UITestMode_OnStop(Context* context, void* data)
 {
+    (void)context;
+    (void)data;
 }
 
-void UITestMode_OnResume()
+void UITestMode_OnResume(Context* context, void* data)
 {
+    (void)context;
+    (void)data;
 }

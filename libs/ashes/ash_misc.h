@@ -1,7 +1,7 @@
 #ifndef ASH_MISC_H
 #define ASH_MISC_H
 
-#include "ashes/ash_platform.h"
+#include "ashes/ash_memory.h"
 
 #include <stdint.h>
 
@@ -10,78 +10,100 @@
 #define Utils_AddToArray(arr, value, currentSize, maxSize) \
     (((currentSize) < (maxSize)) ? ((arr)[(currentSize)++] = (value), true) : false)
 
+// typedef bool boolean;
+
 /* Structs, Enums, and Unions */
 typedef struct Vector2Int
 {
     int32_t x;
     int32_t y;
 } Vector2Int;
+
 typedef struct Vector3Int
 {
     int32_t x;
     int32_t y;
     int32_t z;
 } Vector3Int;
+
 typedef struct Vector2Int16
 {
     int16_t x;
     int16_t y;
 } Vector2Int16;
+
 typedef struct Vector3Int16
 {
     int16_t x;
     int16_t y;
     int16_t z;
 } Vector3Int16;
+
 typedef struct Vector2Int8
 {
     int8_t x;
     int8_t y;
 } Vector2Int8;
+
 typedef struct Vector3Int8
 {
     int8_t x;
     int8_t y;
     int8_t z;
 } Vector3Int8;
+
 typedef struct Vector2UInt
 {
     uint32_t x;
     uint32_t y;
 } Vector2UInt;
+
 typedef struct Vector3UInt
 {
     uint32_t x;
     uint32_t y;
     uint32_t z;
 } Vector3UInt;
+
 typedef struct Vector2UInt16
 {
     uint16_t x;
     uint16_t y;
 } Vector2UInt16;
+
 typedef struct Vector3UInt16
 {
     uint16_t x;
     uint16_t y;
     uint16_t z;
 } Vector3Uuint16;
+
 typedef struct Vector2UInt8
 {
     uint8_t x;
     uint8_t y;
 } Vector2UInt8;
+
 typedef struct Vector3UInt8
 {
     uint8_t x;
     uint8_t y;
     uint8_t z;
 } Vector3UInt8;
+
 typedef struct Vector2Float
 {
     float x;
     float y;
 } Vector2Float;
+
+typedef struct Vector3Float
+{
+    float x;
+    float y;
+    float z;
+} Vector3Float;
+
 typedef struct Vector4Float
 {
     float x;
@@ -89,6 +111,7 @@ typedef struct Vector4Float
     float w;
     float h;
 } Vector4Float;
+
 typedef struct Vector4UInt
 {
     uint32_t x;
@@ -96,11 +119,14 @@ typedef struct Vector4UInt
     uint32_t w;
     uint32_t h;
 } Vector4UInt;
+
 typedef struct Stopwatch
 {
     uint32_t startTime;
     uint32_t endTime;
 } Stopwatch;
+
+typedef struct AStar_Node AStar_Node;
 typedef struct AStar_Node
 {
     Vector2Int  position;
@@ -112,6 +138,80 @@ typedef struct AStar_Node
     bool        valid;
 } AStar_Node;
 
+typedef struct Camera2D
+{
+    Vector2Float position;
+    Vector2Float offset;
+    float        rotation;
+    float        zoom;
+} Camera2D;
+
+typedef struct Color
+{
+    uint8_t r;
+    uint8_t g;
+    uint8_t b;
+    uint8_t a;
+} Color;
+
+typedef struct Rectangle
+{
+    float x;
+    float y;
+    float width;
+    float height;
+} Rectangle;
+
+typedef struct Texture2D
+{
+    uint32_t id;
+    int32_t  width;
+    int32_t  height;
+    int32_t  mipmaps;
+    int32_t  format;
+} Texture2D;
+
+typedef struct Sound
+{
+    void*    data;
+    uint32_t sampleCount;
+    uint32_t sampleRate;
+    uint32_t channels;
+} Sound;
+
+typedef struct DeltaTime
+{
+    long  lastClock;
+    long  deltaClock;
+    float deltaTime;
+} DeltaTime;
+
+#define COLOR_LIGHTGRAY  (Color){ 200, 200, 200, 255 }  // Light Gray
+#define COLOR_GRAY       (Color){ 130, 130, 130, 255 }  // Gray
+#define COLOR_DARKGRAY   (Color){ 80, 80, 80, 255 }     // Dark Gray
+#define COLOR_YELLOW     (Color){ 253, 249, 0, 255 }    // Yellow
+#define COLOR_GOLD       (Color){ 255, 203, 0, 255 }    // Gold
+#define COLOR_ORANGE     (Color){ 255, 161, 0, 255 }    // Orange
+#define COLOR_PINK       (Color){ 255, 109, 194, 255 }  // Pink
+#define COLOR_RED        (Color){ 230, 41, 55, 255 }    // Red
+#define COLOR_MAROON     (Color){ 190, 33, 55, 255 }    // Maroon
+#define COLOR_GREEN      (Color){ 0, 228, 48, 255 }     // Green
+#define COLOR_LIME       (Color){ 0, 158, 47, 255 }     // Lime
+#define COLOR_DARKGREEN  (Color){ 0, 117, 44, 255 }     // Dark Green
+#define COLOR_SKYBLUE    (Color){ 102, 191, 255, 255 }  // Sky Blue
+#define COLOR_BLUE       (Color){ 0, 121, 241, 255 }    // Blue
+#define COLOR_DARKBLUE   (Color){ 0, 82, 172, 255 }     // Dark Blue
+#define COLOR_PURPLE     (Color){ 200, 122, 255, 255 }  // Purple
+#define COLOR_VIOLET     (Color){ 135, 60, 190, 255 }   // Violet
+#define COLOR_DARKPURPLE (Color){ 112, 31, 126, 255 }   // Dark Purple
+#define COLOR_BEIGE      (Color){ 211, 176, 131, 255 }  // Beige
+#define COLOR_BROWN      (Color){ 127, 106, 79, 255 }   // Brown
+#define COLOR_DARKBROWN  (Color){ 76, 63, 47, 255 }     // Dark Brown
+#define COLOR_WHITE      (Color){ 255, 255, 255, 255 }  // White
+#define COLOR_BLACK      (Color){ 0, 0, 0, 255 }        // Black
+#define COLOR_BLANK      (Color){ 0, 0, 0, 0 }          // Blank (Transparent)
+#define COLOR_MAGENTA    (Color){ 255, 0, 255, 255 }    // Magenta
+
 typedef bool (*HeuristicFuncPtr)(const Vector2Int, const Vector2Int, uint16_t& outCost);
 typedef void (*GetPositionScoreFunc)(Vector2Int8);
 
@@ -120,17 +220,17 @@ typedef void (*GetPositionScoreFunc)(Vector2Int8);
 typedef bool (*HeuristicFuncPtr)(const Vector2Int, const Vector2Int, uint16_t& outCost);
 
 Vector2Int8 AStar_GetMoveDirection(const Vector2Int startPos, const Vector2Int targetPos, uint16_t maxSearchArea,
-                                   HeuristicFuncPtr hFunc);
+                                   HeuristicFuncPtr hFunc, Arena* arena);
 
 bool AStar_IsPathAvailable(const Vector2Int startPos, const Vector2Int targetPos, uint16_t maxSearchArea,
-                           HeuristicFuncPtr hFunc);
+                           HeuristicFuncPtr hFunc, Arena* arena);
 
 uint16_t AStar_GetPath(const Vector2Int startPos, const Vector2Int targetPos, uint16_t maxSearchArea,
                        Vector2Int* outPathBuffer, size_t outPathBufferSize, size_t& outPathLength,
-                       HeuristicFuncPtr hFunc);
+                       HeuristicFuncPtr hFunc, Arena* arena);
 
-void  DeltaTime_Update();
-float DeltaTime_GetDeltaTime();
+void  DeltaTime_Update(DeltaTime* time);
+float DeltaTime_GetDeltaTime(DeltaTime* time);
 
 void Stopwatch_Start(Stopwatch* stopwatch, uint32_t milis);
 void Stopwatch_Stop(Stopwatch* stopwatch);

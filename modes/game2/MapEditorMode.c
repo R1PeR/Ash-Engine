@@ -12,67 +12,24 @@
 #include <stdio.h>
 #include <string.h>
 
-#define TILESET_ATLAS_COLS MAP_TILESET_COLS
-#define TILESET_ATLAS_ROWS MAP_TILESET_ROWS
-#define TILESET_COUNT      MAP_TILESET_COUNT
-#define FONT_ATLAS_COLS    16
-#define FONT_ATLAS_ROWS    16
-#define FONT_GLYPH_COUNT   (FONT_ATLAS_COLS * FONT_ATLAS_ROWS)
-#define DRAWABLE_MAX       4096
-#define TILE_DRAW_SCALE    2.0f
-#define PANE_TILE_PX       18.0f
-#define PANE_TILE_COLS     16
-#define TEX_PANE_W         300.0f
-#define INFO_PANE_W        215.0f
-#define INFO_PANE_H        147.0f
-#define ZOOM_MIN           0.1f
-#define ZOOM_MAX           10.0f
-#define ZOOM_STEP          0.15f
-#define MAP_SAVE_FILE      "map.txt"
-#define GRID_COLOR         ((Color){ 45, 45, 45, 255 })
-
-Mode              mapEditorMode       = MODE_FROM_CLASSNAME(MapEditorMode);
 EditorTestMapData g_editorTestMapData = {};
 
-static Drawable drawables[DRAWABLE_MAX];
-static size_t   drawableCount = 0;
-
-static TextureData tileTextures[TILESET_COUNT];
-static TextureData tileAtlasBase;
-
-static TextureData fontTextures[FONT_GLYPH_COUNT];
-static TextureData fontAtlasBase;
-
-static Entity2D cameraEntity;
-
-struct EditorData
-{
-    MapData  mapData;
-    uint8_t  activeLayer    = 0;
-    int32_t  selectedTile   = -1;
-    TileType tileType       = TILE_TYPE_SOLID;
-    bool     showTypes      = false;
-    bool     showGrid       = true;
-    bool     isErasing      = false;
-    bool     uiInputHandled = false;
-} data;
-
-void HandleCameraInput();
-void UpdateGrid();
-void UpdateWorldTiles();
-void HandleTilePlacement();
-void HandleKeyboardShortcuts();
-void UpdateTexturePane();
-void UpdateInfoPane();
+void HandleCameraInput(MapEditorMode* state);
+void UpdateGrid(MapEditorMode* state);
+void UpdateWorldTiles(MapEditorMode* state);
+void HandleTilePlacement(MapEditorMode* state);
+void HandleKeyboardShortcuts(MapEditorMode* state);
+void UpdateTexturePane(MapEditorMode* state);
+void UpdateInfoPane(MapEditorMode* state);
 void EraseTileAt(Vector3Int gridPos);
 void PlaceTileAt(Vector3Int gridPos);
-void SaveMap(const char* filename);
-void LoadMap(const char* filename);
-void TestInMainMode();
+void SaveMap(MapEditorMode* state, const char* filename);
+void LoadMap(MapEditorMode* state, const char* filename);
+void TestInMainMode(MapEditorMode* state);
 
-void EraseTileAt(Vector3Int gridPos)
+void EraseTileAt(MapEditorMode* state, Vector3Int gridPos)
 {
-    TileLayer* layer = &data.mapData.layers[data.activeLayer];
+    TileLayer* layer = &state->data.mapData.layers[state->data.activeLayer];
     for (uint16_t i = 0; i < layer->tileCount; i++)
     {
         if (layer->tiles[i].position.x == gridPos.x && layer->tiles[i].position.y == gridPos.y)
@@ -83,17 +40,17 @@ void EraseTileAt(Vector3Int gridPos)
     }
 }
 
-void PlaceTileAt(Vector3Int gridPos)
+void PlaceTileAt(MapEditorMode* state, Vector3Int gridPos)
 {
-    if (data.selectedTile < 0)
+    if (state->data.selectedTile < 0)
         return;
-    TileLayer* layer = &data.mapData.layers[data.activeLayer];
+    TileLayer* layer = &state->data.mapData.layers[state->data.activeLayer];
     for (uint16_t i = 0; i < layer->tileCount; i++)
     {
         if (layer->tiles[i].position.x == gridPos.x && layer->tiles[i].position.y == gridPos.y)
         {
-            layer->tiles[i].textureId = (uint16_t)data.selectedTile;
-            layer->tiles[i].type      = data.tileType;
+            layer->tiles[i].textureId = (uint16_t)state->data.selectedTile;
+            layer->tiles[i].type      = state->data.tileType;
             return;
         }
     }
@@ -102,19 +59,19 @@ void PlaceTileAt(Vector3Int gridPos)
         Tile* tile       = &layer->tiles[layer->tileCount++];
         tile->position.x = gridPos.x;
         tile->position.y = gridPos.y;
-        tile->textureId  = (uint16_t)data.selectedTile;
-        tile->type       = data.tileType;
+        tile->textureId  = (uint16_t)state->data.selectedTile;
+        tile->type       = state->data.tileType;
     }
     else
     {
-        LOG_ERR("MapEditor: layer %d is full", data.activeLayer);
+        LOG_ERR("MapEditor: layer %d is full", state->data.activeLayer);
     }
 }
 
 
-void HandleCameraInput()
+void HandleCameraInput(MapEditorMode* state)
 {
-    if (data.uiInputHandled)
+    if (state->data.uiInputHandled)
         return;
 
     float wheel = Platform_GetMouseWheelMove();
@@ -122,35 +79,35 @@ void HandleCameraInput()
     if (wheel != 0.0f)
     {
         Vector2Float mw = Utils_ScreenToWorld2D((Vector2Float){ (float)Input_GetMouseX(), (float)Input_GetMouseY() },
-                                                *Window_GetCamera());
-        float        oldZoom = Window_GetCamera()->zoom;
-        Window_GetCamera()->zoom += wheel * ZOOM_STEP;
-        if (Window_GetCamera()->zoom < ZOOM_MIN)
-            Window_GetCamera()->zoom = ZOOM_MIN;
-        if (Window_GetCamera()->zoom > ZOOM_MAX)
-            Window_GetCamera()->zoom = ZOOM_MAX;
-        float ratio                  = Window_GetCamera()->zoom / oldZoom;
-        Window_GetCamera()->target.x = mw.x - (mw.x - Window_GetCamera()->target.x) / ratio;
-        Window_GetCamera()->target.y = mw.y - (mw.y - Window_GetCamera()->target.y) / ratio;
+                                                state->camera);
+        float        oldZoom = state->camera.zoom;
+        state->camera.zoom += wheel * ZOOM_STEP;
+        if (state->camera.zoom < ZOOM_MIN)
+            state->camera.zoom = ZOOM_MIN;
+        if (state->camera.zoom > ZOOM_MAX)
+            state->camera.zoom = ZOOM_MAX;
+        float ratio                      = state->camera.zoom / oldZoom;
+        state->camera.position.x = mw.x - (mw.x - state->camera.position.x) / ratio;
+        state->camera.position.y = mw.y - (mw.y - state->camera.position.y) / ratio;
     }
 
-    if (Input_IsMouseButtonDown(MOUSE_BUTTON_RIGHT))
+    if (Input_IsMouseButtonDown(INPUT_MOUSE_BUTTON_RIGHT))
     {
-        float dx = (float)Input_GetMouseDeltaX() / Window_GetCamera()->zoom;
-        float dy = (float)Input_GetMouseDeltaY() / Window_GetCamera()->zoom;
-        Window_GetCamera()->target.x -= dx;
-        Window_GetCamera()->target.y -= dy;
+        float dx = (float)Input_GetMouseDeltaX() / state->camera.zoom;
+        float dy = (float)Input_GetMouseDeltaY() / state->camera.zoom;
+        state->camera.position.x -= dx;
+        state->camera.position.y -= dy;
     }
 }
 
-void UpdateGrid()
+void UpdateGrid(MapEditorMode* state)
 {
-    if (!data.showGrid)
+    if (!state->data.showGrid)
         return;
-    Camera2D*    cam      = Window_GetCamera();
+    Camera2D*    cam      = &state->camera;
     Vector2Float startPos = Utils_ScreenToWorld2D((Vector2Float){ 0.0f, 0.0f }, *cam);
     Vector2Float endPos =
-        Utils_ScreenToWorld2D((Vector2Float){ (float)Window_GetWidth(), (float)Window_GetHeight() }, *cam);
+        Utils_ScreenToWorld2D((Vector2Float){ (float)state->window->width, (float)state->window->height }, *cam);
     int   startX    = ((int)(startPos.x / TILE_SIZE) - 1) * TILE_SIZE;
     int   endX      = ((int)(endPos.x / TILE_SIZE) + 1) * TILE_SIZE;
     int   startY    = ((int)(startPos.y / TILE_SIZE) - 1) * TILE_SIZE;
@@ -160,56 +117,55 @@ void UpdateGrid()
     {
         Shape2D line;
         Shape2D_Initialize(&line);
-        line.type                      = SHAPE2D_LINE;
-        line.position.x                = x;
-        line.position.y                = startY;
-        line.line.endPosition.x        = x;
-        line.line.endPosition.y        = endY;
-        line.line.thickness            = thickness;
-        line.color                     = GRID_COLOR;
-        drawables[drawableCount].type  = DRAWABLE_SHAPE;
-        drawables[drawableCount].shape = line;
-        drawableCount++;
+        line.type                                                  = SHAPE2D_LINE;
+        line.position.x                                            = x;
+        line.position.y                                            = startY;
+        line.line.endPosition.x                                    = x;
+        line.line.endPosition.y                                    = endY;
+        line.line.thickness                                        = thickness;
+        line.color                                                 = GRID_COLOR;
+        state->renderStackItems[state->renderStackItemCount].type  = RENDERCOMMAND_DRAW_SHAPE;
+        state->renderStackItems[state->renderStackItemCount].shape = line;
+        state->renderStackItemCount++;
     }
     for (int y = startY; y <= endY; y += TILE_SIZE)
     {
         Shape2D line;
         Shape2D_Initialize(&line);
-        line.type                      = SHAPE2D_LINE;
-        line.position.x                = startX;
-        line.position.y                = y;
-        line.line.endPosition.x        = endX;
-        line.line.endPosition.y        = y;
-        line.line.thickness            = thickness;
-        line.color                     = GRID_COLOR;
-        drawables[drawableCount].type  = DRAWABLE_SHAPE;
-        drawables[drawableCount].shape = line;
-        drawableCount++;
+        line.type                                                  = SHAPE2D_LINE;
+        line.position.x                                            = startX;
+        line.position.y                                            = y;
+        line.line.endPosition.x                                    = endX;
+        line.line.endPosition.y                                    = y;
+        line.line.thickness                                        = thickness;
+        line.color                                                 = GRID_COLOR;
+        state->renderStackItems[state->renderStackItemCount].type  = RENDERCOMMAND_DRAW_SHAPE;
+        state->renderStackItems[state->renderStackItemCount].shape = line;
+        state->renderStackItemCount++;
     }
 }
 
-void UpdateWorldTiles()
+void UpdateWorldTiles(MapEditorMode* state)
 {
     for (uint8_t l = 0; l < MAP_MAX_LAYERS; l++)
     {
-        TileLayer* layer = &data.mapData.layers[l];
+        TileLayer* layer = &state->data.mapData.layers[l];
         for (uint16_t i = 0; i < layer->tileCount; i++)
         {
-            Tile*   tile                  = &layer->tiles[i];
-            Sprite* sprite                = &drawables[drawableCount].sprite;
-            drawables[drawableCount].type = DRAWABLE_SPRITE;
-            drawableCount++;
+            Tile*   tile   = &layer->tiles[i];
+            Sprite* sprite = &state->renderStackItems[state->renderStackItemCount].sprite;
+            state->renderStackItems[state->renderStackItemCount].type = RENDERCOMMAND_DRAW_SPRITE;
+            state->renderStackItemCount++;
             Sprite_Initialize(sprite);
             sprite->scale          = TILE_DRAW_SCALE;
             sprite->position.x     = (float)(tile->position.x * TILE_SIZE);
             sprite->position.y     = (float)(tile->position.y * TILE_SIZE);
-            sprite->currentTexture = &tileTextures[tile->textureId];
-            sprite->zOrder         = l;
+            sprite->currentTexture = &state->tileTextures[tile->textureId];
 
-            if (l != data.activeLayer)
+            if (l != state->data.activeLayer)
                 sprite->tint.a = 80;
 
-            if (data.showTypes && l == data.activeLayer)
+            if (state->data.showTypes && l == state->data.activeLayer)
             {
                 switch (tile->type)
                 {
@@ -233,156 +189,158 @@ void UpdateWorldTiles()
     }
 }
 
-void HandleTilePlacement()
+void HandleTilePlacement(MapEditorMode* state)
 {
-    if (data.uiInputHandled)
+    if (state->data.uiInputHandled)
         return;
 
-    Camera2D     camera = *Window_GetCamera();
-    Vector2Float mouseWorldPos =
-        Utils_ScreenToWorld2D((Vector2Float){ (float)Input_GetMouseX(), (float)Input_GetMouseY() }, camera);
+    Vector2Float mouseWorldPos = Utils_ScreenToWorld2D(
+        (Vector2Float){ (float)Input_GetMouseX(), (float)Input_GetMouseY() }, state->camera);
     Vector3Int gridPos = Utils_WorldToGrid(mouseWorldPos, TILE_SIZE);
 
     /* Ghost preview */
-    if (data.selectedTile >= 0 && !data.isErasing)
+    if (state->data.selectedTile >= 0 && !state->data.isErasing)
     {
-        Sprite* ghost                 = &drawables[drawableCount].sprite;
-        drawables[drawableCount].type = DRAWABLE_SPRITE;
-        drawableCount++;
+        Sprite* ghost = &state->renderStackItems[state->renderStackItemCount].sprite;
+        state->renderStackItems[state->renderStackItemCount].type = RENDERCOMMAND_DRAW_SPRITE;
+        state->renderStackItemCount++;
         Sprite_Initialize(ghost);
         ghost->scale          = TILE_DRAW_SCALE;
         ghost->position.x     = (float)(gridPos.x * TILE_SIZE);
         ghost->position.y     = (float)(gridPos.y * TILE_SIZE);
-        ghost->currentTexture = &tileTextures[data.selectedTile];
+        ghost->currentTexture = &state->tileTextures[state->data.selectedTile];
         ghost->tint           = (Color){ 255, 255, 255, 130 };
     }
 
-    if (Input_IsMouseButtonDown(MOUSE_BUTTON_LEFT))
+    if (Input_IsMouseButtonDown(INPUT_MOUSE_BUTTON_LEFT))
     {
-        if (data.isErasing)
-            EraseTileAt(gridPos);
-        else if (data.selectedTile >= 0)
-            PlaceTileAt(gridPos);
+        if (state->data.isErasing)
+            EraseTileAt(state, gridPos);
+        else if (state->data.selectedTile >= 0)
+            PlaceTileAt(state, gridPos);
     }
 }
 
-void UpdateTexturePane()
+void UpdateTexturePane(MapEditorMode* state)
 {
     static const char* typeLabels[] = { "EMPT", "SOLI", "JUMP", "PLYR", "ENMY" };
     char               label[MAP_MAX_LAYERS][8];
 
-    UI_Begin(UI_GetBounds(AnchorTopRight, { 0.0, 0.0, 0.5, 1.0 }));
+    UI_Begin(&state->uiState, UI_GetBounds(&state->uiState, AnchorTopRight, { 0.0, 0.0, 0.5, 1.0 }));
     {
-        UI_FrameSize(0.2f);
-        UI_Layout(LayoutHorizontal);
-        UI_Center(CenterBoth);
-        UI_Padding(UI_GetSize({ 0.01, 0.01, 0.01, 0.01 }));
+        UI_FrameSize(&state->uiState, 0.2f);
+        UI_Layout(&state->uiState, LayoutHorizontal);
+        UI_Center(&state->uiState, CenterBoth);
+        UI_Padding(&state->uiState, UI_GetSize(&state->uiState, { 0.01, 0.01, 0.01, 0.01 }));
         for (int l = 0; l < MAP_MAX_LAYERS; l++)
         {
             snprintf(label[l], sizeof(label), "L%d", l);
-            if (UI_Toggle(label[l], l == data.activeLayer, 1.0, fontTextures))
+            if (UI_Toggle(&state->uiState, label[l], l == state->data.activeLayer, 1.0, state->fontTextures))
             {
-                data.activeLayer = (uint8_t)l;
+                state->data.activeLayer = (uint8_t)l;
             }
         }
 
-        UI_FrameSize(0.05f);
-        UI_Layout(LayoutVertical);
-        UI_Separator();
+        UI_FrameSize(&state->uiState, 0.05f);
+        UI_Layout(&state->uiState, LayoutVertical);
+        UI_Separator(&state->uiState);
 
-        UI_FrameSize(0.2f);
-        UI_Layout(LayoutHorizontal);
-        UI_Center(CenterBoth);
-        UI_Padding(UI_GetSize({ 0.01, 0.01, 0.01, 0.01 }));
+        UI_FrameSize(&state->uiState, 0.2f);
+        UI_Layout(&state->uiState, LayoutHorizontal);
+        UI_Center(&state->uiState, CenterBoth);
+        UI_Padding(&state->uiState, UI_GetSize(&state->uiState, { 0.01, 0.01, 0.01, 0.01 }));
         for (int t = 0; t < 5; t++)
         {
-            if (UI_Toggle(typeLabels[t], data.tileType == (TileType)t, 1.0, fontTextures))
+            if (UI_Toggle(&state->uiState, typeLabels[t], state->data.tileType == (TileType)t, 1.0,
+                          state->fontTextures))
             {
-                data.tileType = (TileType)t;
+                state->data.tileType = (TileType)t;
             }
         }
 
-        UI_Frame();
-        data.selectedTile = UI_TileGrid(tileTextures, TILESET_COUNT, PANE_TILE_COLS, data.selectedTile);
+        UI_Frame(&state->uiState);
+        state->data.selectedTile =
+            UI_TileGrid(&state->uiState, state->tileTextures, TILESET_COUNT, PANE_TILE_COLS, state->data.selectedTile);
     }
-    UI_End();
+    UI_End(&state->uiState);
 
-    data.uiInputHandled |= UI_GetMouseCaptured();
+    state->data.uiInputHandled |= UI_GetMouseCaptured(&state->uiState);
 }
 
-void UpdateInfoPane()
+void UpdateInfoPane(MapEditorMode* state)
 {
-    Camera2D*          camera      = Window_GetCamera();
+    Camera2D*          camera      = &state->camera;
     static const char* typeNames[] = { "EMPTY", "SOLID", "JUMP", "PSPAWN", "ESPAWN" };
 
     char layer[32];
-    snprintf(layer, sizeof(layer), "LAYER: %d  (PGUP/PGDN)", data.activeLayer);
+    snprintf(layer, sizeof(layer), "LAYER: %d  (PGUP/PGDN)", state->data.activeLayer);
     char type[32];
-    snprintf(type, sizeof(type), "TYPE:  %-6s  (1-5)", typeNames[data.tileType]);
+    snprintf(type, sizeof(type), "TYPE:  %-6s  (1-5)", typeNames[state->data.tileType]);
     char tile[32];
-    snprintf(tile, sizeof(tile), "TILE:  %-1d", data.selectedTile);
+    snprintf(tile, sizeof(tile), "TILE:  %-1d", state->data.selectedTile);
     char zoom[32];
     snprintf(zoom, sizeof(zoom), "ZOOM:  %2.2fx  (WHEEL)", camera->zoom);
 
-    UI_Begin(UI_GetBounds(AnchorTopLeft, { 0.0, 0.0, 0.3, 0.3 }));
+    UI_Begin(&state->uiState, UI_GetBounds(&state->uiState, AnchorTopLeft, { 0.0, 0.0, 0.3, 0.3 }));
     {
-        UI_Frame();
-        UI_Layout(LayoutVertical);
-        UI_Center(CenterVertical);
-        UI_Padding({ 5, 5, 5, 5 });
-        UI_Text(layer, 1.0, fontTextures);
-        UI_Text(type, 1.0, fontTextures);
-        UI_Text(tile, 1.0, fontTextures);
-        UI_Text(zoom, 1.0, fontTextures);
-        UI_Text(data.isErasing ? "MODE:  ERASE  (E)" : "MODE:  DRAW   (E)", 1.0, fontTextures);
-        UI_Text(data.showTypes ? "TYPES: ON  (T)" : "TYPES: OFF (T)", 1.0, fontTextures);
-        UI_Text(data.showGrid ? "GRID:  ON  (G)" : "GRID:  OFF (G)", 1.0, fontTextures);
-        UI_Text("F2:SAVE  F3:LOAD  F9:CLR", 1.0, fontTextures);
-        UI_Text("F5:TEST  (PAN:RMB)", 1.0, fontTextures);
+        UI_Frame(&state->uiState);
+        UI_Layout(&state->uiState, LayoutVertical);
+        UI_Center(&state->uiState, CenterVertical);
+        UI_Padding(&state->uiState, { 5, 5, 5, 5 });
+        UI_Text(&state->uiState, layer, 1.0, state->fontTextures);
+        UI_Text(&state->uiState, type, 1.0, state->fontTextures);
+        UI_Text(&state->uiState, tile, 1.0, state->fontTextures);
+        UI_Text(&state->uiState, zoom, 1.0, state->fontTextures);
+        UI_Text(&state->uiState, state->data.isErasing ? "MODE:  ERASE  (E)" : "MODE:  DRAW   (E)", 1.0,
+                state->fontTextures);
+        UI_Text(&state->uiState, state->data.showTypes ? "TYPES: ON  (T)" : "TYPES: OFF (T)", 1.0, state->fontTextures);
+        UI_Text(&state->uiState, state->data.showGrid ? "GRID:  ON  (G)" : "GRID:  OFF (G)", 1.0, state->fontTextures);
+        UI_Text(&state->uiState, "F2:SAVE  F3:LOAD  F9:CLR", 1.0, state->fontTextures);
+        UI_Text(&state->uiState, "F5:TEST  (PAN:RMB)", 1.0, state->fontTextures);
     }
-    UI_End();
-    data.uiInputHandled |= UI_GetMouseCaptured();
+    UI_End(&state->uiState);
+    state->data.uiInputHandled |= UI_GetMouseCaptured(&state->uiState);
 }
 
-void HandleKeyboardShortcuts()
+void HandleKeyboardShortcuts(MapEditorMode* state)
 {
-    if (Input_IsKeyPressed(KEY_T))
-        data.showTypes = !data.showTypes;
-    if (Input_IsKeyPressed(KEY_G))
-        data.showGrid = !data.showGrid;
-    if (Input_IsKeyPressed(KEY_E))
-        data.isErasing = !data.isErasing;
+    if (Input_IsKeyPressed(INPUT_KEYCODE_T))
+        state->data.showTypes = !state->data.showTypes;
+    if (Input_IsKeyPressed(INPUT_KEYCODE_G))
+        state->data.showGrid = !state->data.showGrid;
+    if (Input_IsKeyPressed(INPUT_KEYCODE_E))
+        state->data.isErasing = !state->data.isErasing;
 
-    if (Input_IsKeyPressed(KEY_ONE))
-        data.tileType = TILE_TYPE_EMPTY;
-    if (Input_IsKeyPressed(KEY_TWO))
-        data.tileType = TILE_TYPE_SOLID;
-    if (Input_IsKeyPressed(KEY_THREE))
-        data.tileType = TILE_TYPE_JUMP_PLATFORM;
-    if (Input_IsKeyPressed(KEY_FOUR))
-        data.tileType = TILE_TYPE_PLAYER_SPAWN;
-    if (Input_IsKeyPressed(KEY_FIVE))
-        data.tileType = TILE_TYPE_ENEMY_SPAWN;
+    if (Input_IsKeyPressed(INPUT_KEYCODE_ONE))
+        state->data.tileType = TILE_TYPE_EMPTY;
+    if (Input_IsKeyPressed(INPUT_KEYCODE_TWO))
+        state->data.tileType = TILE_TYPE_SOLID;
+    if (Input_IsKeyPressed(INPUT_KEYCODE_THREE))
+        state->data.tileType = TILE_TYPE_JUMP_PLATFORM;
+    if (Input_IsKeyPressed(INPUT_KEYCODE_FOUR))
+        state->data.tileType = TILE_TYPE_PLAYER_SPAWN;
+    if (Input_IsKeyPressed(INPUT_KEYCODE_FIVE))
+        state->data.tileType = TILE_TYPE_ENEMY_SPAWN;
 
-    if (Input_IsKeyPressed(KEY_PAGE_UP) && data.activeLayer + 1 < MAP_MAX_LAYERS)
-        data.activeLayer++;
-    if (Input_IsKeyPressed(KEY_PAGE_DOWN) && data.activeLayer > 0)
-        data.activeLayer--;
+    if (Input_IsKeyPressed(INPUT_KEYCODE_PAGE_UP) && state->data.activeLayer + 1 < MAP_MAX_LAYERS)
+        state->data.activeLayer++;
+    if (Input_IsKeyPressed(INPUT_KEYCODE_PAGE_DOWN) && state->data.activeLayer > 0)
+        state->data.activeLayer--;
 
-    if (Input_IsKeyPressed(KEY_F2))
-        SaveMap(MAP_SAVE_FILE);
-    if (Input_IsKeyPressed(KEY_F3))
-        LoadMap(MAP_SAVE_FILE);
-    if (Input_IsKeyPressed(KEY_F5))
-        TestInMainMode();
-    if (Input_IsKeyPressed(KEY_F9))
+    if (Input_IsKeyPressed(INPUT_KEYCODE_F2))
+        SaveMap(state, MAP_SAVE_FILE);
+    if (Input_IsKeyPressed(INPUT_KEYCODE_F3))
+        LoadMap(state, MAP_SAVE_FILE);
+    if (Input_IsKeyPressed(INPUT_KEYCODE_F5))
+        TestInMainMode(state);
+    if (Input_IsKeyPressed(INPUT_KEYCODE_F9))
     {
         for (int l = 0; l < MAP_MAX_LAYERS; l++)
-            data.mapData.layers[l].tileCount = 0;
+            state->data.mapData.layers[l].tileCount = 0;
     }
 }
 
-void SaveMap(const char* filename)
+void SaveMap(MapEditorMode* state, const char* filename)
 {
     FILE* f = fopen(filename, "w");
     if (!f)
@@ -395,7 +353,7 @@ void SaveMap(const char* filename)
     fprintf(f, "LAYERS %d\n", MAP_MAX_LAYERS);
     for (int l = 0; l < MAP_MAX_LAYERS; l++)
     {
-        TileLayer* layer = &data.mapData.layers[l];
+        TileLayer* layer = &state->data.mapData.layers[l];
         fprintf(f, "LAYER %d\n", l);
         fprintf(f, "COUNT %d\n", (int)layer->tileCount);
         for (int i = 0; i < (int)layer->tileCount; i++)
@@ -408,7 +366,7 @@ void SaveMap(const char* filename)
     LOG_INF("MapEditor: saved to '%s'", filename);
 }
 
-void LoadMap(const char* filename)
+void LoadMap(MapEditorMode* state, const char* filename)
 {
     FILE* f = fopen(filename, "r");
     if (!f)
@@ -417,7 +375,7 @@ void LoadMap(const char* filename)
         return;
     }
     for (int l = 0; l < MAP_MAX_LAYERS; l++)
-        data.mapData.layers[l].tileCount = 0;
+        state->data.mapData.layers[l].tileCount = 0;
 
     char line[128];
     int  currentLayer = -1;
@@ -434,7 +392,7 @@ void LoadMap(const char* filename)
             int x, y, texId, type;
             if (sscanf(line, "%d %d %d %d", &x, &y, &texId, &type) == 4)
             {
-                TileLayer* layer = &data.mapData.layers[currentLayer];
+                TileLayer* layer = &state->data.mapData.layers[currentLayer];
                 if (layer->tileCount < MAP_MAX_TILES)
                 {
                     Tile* tile       = &layer->tiles[layer->tileCount++];
@@ -450,11 +408,11 @@ void LoadMap(const char* filename)
     LOG_INF("MapEditor: loaded from '%s'", filename);
 }
 
-void TestInMainMode()
+void TestInMainMode(MapEditorMode* state)
 {
     g_editorTestMapData.isValid        = true;
     g_editorTestMapData.hasPlayerSpawn = false;
-    g_editorTestMapData.mapData        = data.mapData;
+    g_editorTestMapData.mapData        = state->data.mapData;
 
     for (int l = 0; l < MAP_MAX_LAYERS && !g_editorTestMapData.hasPlayerSpawn; l++)
     {
@@ -469,165 +427,178 @@ void TestInMainMode()
             }
         }
     }
-    Context_SetMode(&mainMode);
+    // Context_SetMode(&mainMode);
 }
 
-void MapEditorMode_OnStart()
+void DrawTest(MapEditorMode* state)
 {
-    tileAtlasBase = Texture_LoadTexture("resources/sprites/tileset.png");
-    LOG_INF("MapEditor: tile atlas %dx%d", tileAtlasBase.size.x, tileAtlasBase.size.y);
-    if (!Texture_CreateTextureAtlas(tileAtlasBase, TILESET_ATLAS_COLS, TILESET_ATLAS_ROWS, tileTextures))
+    Vector4Float bounds = UI_GetBounds(&state->uiState, AnchorTopLeft, { 0.1f, 0.1f, 0.1f, 0.1f });
+    UI_Begin(&state->uiState, bounds);
+    {
+        UI_Frame(&state->uiState);
+        UI_Layout(&state->uiState, LayoutVertical);
+        UI_Center(&state->uiState, CenterBoth);
+        UI_Text(&state->uiState, "TopLeft", 1.0f, state->fontTextures);
+    }
+    UI_End(&state->uiState);
+
+    bounds = UI_GetBounds(&state->uiState, AnchorTopCenter, { 0.05f, 0.1f, 0.1f, 0.1f });
+    UI_Begin(&state->uiState, bounds);
+    {
+        UI_Frame(&state->uiState);
+        UI_Layout(&state->uiState, LayoutVertical);
+        UI_Center(&state->uiState, CenterBoth);
+        UI_Text(&state->uiState, "TopCenter", 1.0f, state->fontTextures);
+    }
+    UI_End(&state->uiState);
+
+    bounds = UI_GetBounds(&state->uiState, AnchorTopRight, { 0.1f, 0.1f, 0.1f, 0.1f });
+    UI_Begin(&state->uiState, bounds);
+    {
+        UI_Frame(&state->uiState);
+        UI_Layout(&state->uiState, LayoutVertical);
+        UI_Center(&state->uiState, CenterBoth);
+        UI_Text(&state->uiState, "TopRight", 1.0f, state->fontTextures);
+    }
+    UI_End(&state->uiState);
+
+    bounds = UI_GetBounds(&state->uiState, AnchorMiddleLeft, { 0.1f, 0.05f, 0.1f, 0.1f });
+    UI_Begin(&state->uiState, bounds);
+    {
+        UI_Frame(&state->uiState);
+        UI_Layout(&state->uiState, LayoutVertical);
+        UI_Center(&state->uiState, CenterBoth);
+        UI_Text(&state->uiState, "MiddleLeft", 1.0f, state->fontTextures);
+    }
+    UI_End(&state->uiState);
+
+    bounds = UI_GetBounds(&state->uiState, AnchorMiddleCenter, { 0.05f, 0.05f, 0.1f, 0.1f });
+    UI_Begin(&state->uiState, bounds);
+    {
+        UI_Frame(&state->uiState);
+        UI_Layout(&state->uiState, LayoutVertical);
+        UI_Center(&state->uiState, CenterBoth);
+        UI_Text(&state->uiState, "MiddleCenter", 1.0f, state->fontTextures);
+    }
+    UI_End(&state->uiState);
+
+    bounds = UI_GetBounds(&state->uiState, AnchorMiddleRight, { 0.1f, 0.05f, 0.1f, 0.1f });
+    UI_Begin(&state->uiState, bounds);
+    {
+        UI_Frame(&state->uiState);
+        UI_Layout(&state->uiState, LayoutVertical);
+        UI_Center(&state->uiState, CenterBoth);
+        UI_Text(&state->uiState, "MiddleRight", 1.0f, state->fontTextures);
+    }
+    UI_End(&state->uiState);
+
+    bounds = UI_GetBounds(&state->uiState, AnchorBottomLeft, { 0.1f, 0.1f, 0.1f, 0.1f });
+    UI_Begin(&state->uiState, bounds);
+    {
+        UI_Frame(&state->uiState);
+        UI_Layout(&state->uiState, LayoutVertical);
+        UI_Center(&state->uiState, CenterBoth);
+        UI_Text(&state->uiState, "BottomLeft", 1.0f, state->fontTextures);
+    }
+    UI_End(&state->uiState);
+
+    bounds = UI_GetBounds(&state->uiState, AnchorBottomCenter, { 0.05f, 0.1f, 0.1f, 0.1f });
+    UI_Begin(&state->uiState, bounds);
+    {
+        UI_Frame(&state->uiState);
+        UI_Layout(&state->uiState, LayoutVertical);
+        UI_Center(&state->uiState, CenterBoth);
+        UI_Text(&state->uiState, "BottomCenter", 1.0f, state->fontTextures);
+    }
+    UI_End(&state->uiState);
+
+    bounds = UI_GetBounds(&state->uiState, AnchorBottomRight, { 0.1f, 0.1f, 0.1f, 0.1f });
+    UI_Begin(&state->uiState, bounds);
+    {
+        UI_Frame(&state->uiState);
+        UI_Layout(&state->uiState, LayoutVertical);
+        UI_Center(&state->uiState, CenterBoth);
+        UI_Text(&state->uiState, "BottomRight", 1.0f, state->fontTextures);
+    }
+    UI_End(&state->uiState);
+}
+
+void MapEditorMode_OnStart(Context* context, void* data)
+{
+    (void)context;
+    MapEditorMode* state = (MapEditorMode*)data;
+    state->tileAtlasBase = Texture_LoadTexture("resources/sprites/tileset.png", state->arena);
+    LOG_INF("MapEditor: tile atlas %dx%d", state->tileAtlasBase.size.x, state->tileAtlasBase.size.y);
+    if (!Texture_CreateTextureAtlas(state->tileAtlasBase, TILESET_ATLAS_COLS, TILESET_ATLAS_ROWS, state->tileTextures))
         LOG_ERR("MapEditor: failed to create tile atlas");
 
-    fontAtlasBase = Texture_LoadTexture("resources/sprites/Anikki_square_8x8.png");
-    LOG_INF("MapEditor: font atlas %dx%d", fontAtlasBase.size.x, fontAtlasBase.size.y);
-    if (!Texture_CreateTextureAtlas(fontAtlasBase, FONT_ATLAS_COLS, FONT_ATLAS_ROWS, fontTextures))
+    state->fontAtlasBase = Texture_LoadTexture("resources/sprites/Anikki_square_8x8.png", NULL);
+    LOG_INF("MapEditor: font atlas %dx%d", state->fontAtlasBase.size.x, state->fontAtlasBase.size.y);
+    if (!Texture_CreateTextureAtlas(state->fontAtlasBase, FONT_ATLAS_COLS, FONT_ATLAS_ROWS, state->fontTextures))
         LOG_ERR("MapEditor: failed to create font atlas");
 
-    Entity2D_Initialize(&cameraEntity);
+    Entity2D_Initialize(&state->cameraEntity);
 
-    Camera2D* camera = Window_GetCamera();
-    camera->zoom     = 1.0f;
-    camera->target   = (Vector2){ 0.0f, 0.0f };
+    state->camera.zoom     = 1.0f;
+    state->camera.position = (Vector2Float){ 0.0f, 0.0f };
+    state->camera.rotation = 0.0f;
+    state->camera.offset   = (Vector2Float){ state->window->width/2.0f, state->window->height/2.0f };
 
-    cameraEntity.position.x = camera->target.x;
-    cameraEntity.position.y = camera->target.y;
-    cameraEntity.scale      = 1.0f / camera->zoom;
+    state->cameraEntity.position.x = state->camera.position.x;
+    state->cameraEntity.position.y = state->camera.position.y;
+    state->cameraEntity.scale      = 1.0f / state->camera.zoom;
 
-    UI_Initialize(drawables, (size_t*)&drawableCount, DRAWABLE_MAX);
-    UI_SetParentEntity(&cameraEntity);
+    UI_Initialize(&state->uiState, state->renderStackItems, (size_t*)&state->renderStackItemCount, RENDERSTACKITEM_MAX,
+                  state->window, &state->camera);
+    UI_SetParentEntity(&state->uiState, &state->cameraEntity);
 }
 
-void MapEditorMode_OnPause()
+void MapEditorMode_OnPause(Context* context, void* data)
 {
+    (void)context;
+    (void)data;
 }
 
-void DrawTest()
+void MapEditorMode_Update(Context* context, void* data)
 {
-    Vector4Float bounds = UI_GetBounds(AnchorTopLeft, { 0.1f, 0.1f, 0.1f, 0.1f });
-    UI_Begin(bounds);
-    {
-        UI_Frame();
-        UI_Layout(LayoutVertical);
-        UI_Center(CenterBoth);
-        UI_Text("TopLeft", 1.0f, fontTextures);
-    }
-    UI_End();
+    (void)context;
+    MapEditorMode* state        = (MapEditorMode*)data;
+    state->renderStackItemCount = 0;
+    state->data.uiInputHandled  = false;
+    DeltaTime_Update(&state->deltaTime);
 
-    bounds = UI_GetBounds(AnchorTopCenter, { 0.05f, 0.1f, 0.1f, 0.1f });
-    UI_Begin(bounds);
-    {
-        UI_Frame();
-        UI_Layout(LayoutVertical);
-        UI_Center(CenterBoth);
-        UI_Text("TopCenter", 1.0f, fontTextures);
-    }
-    UI_End();
-
-    bounds = UI_GetBounds(AnchorTopRight, { 0.1f, 0.1f, 0.1f, 0.1f });
-    UI_Begin(bounds);
-    {
-        UI_Frame();
-        UI_Layout(LayoutVertical);
-        UI_Center(CenterBoth);
-        UI_Text("TopRight", 1.0f, fontTextures);
-    }
-    UI_End();
-
-    bounds = UI_GetBounds(AnchorMiddleLeft, { 0.1f, 0.05f, 0.1f, 0.1f });
-    UI_Begin(bounds);
-    {
-        UI_Frame();
-        UI_Layout(LayoutVertical);
-        UI_Center(CenterBoth);
-        UI_Text("MiddleLeft", 1.0f, fontTextures);
-    }
-    UI_End();
-
-    bounds = UI_GetBounds(AnchorMiddleCenter, { 0.05f, 0.05f, 0.1f, 0.1f });
-    UI_Begin(bounds);
-    {
-        UI_Frame();
-        UI_Layout(LayoutVertical);
-        UI_Center(CenterBoth);
-        UI_Text("MiddleCenter", 1.0f, fontTextures);
-    }
-    UI_End();
-
-    bounds = UI_GetBounds(AnchorMiddleRight, { 0.1f, 0.05f, 0.1f, 0.1f });
-    UI_Begin(bounds);
-    {
-        UI_Frame();
-        UI_Layout(LayoutVertical);
-        UI_Center(CenterBoth);
-        UI_Text("MiddleRight", 1.0f, fontTextures);
-    }
-    UI_End();
-
-    bounds = UI_GetBounds(AnchorBottomLeft, { 0.1f, 0.1f, 0.1f, 0.1f });
-    UI_Begin(bounds);
-    {
-        UI_Frame();
-        UI_Layout(LayoutVertical);
-        UI_Center(CenterBoth);
-        UI_Text("BottomLeft", 1.0f, fontTextures);
-    }
-    UI_End();
-
-    bounds = UI_GetBounds(AnchorBottomCenter, { 0.05f, 0.1f, 0.1f, 0.1f });
-    UI_Begin(bounds);
-    {
-        UI_Frame();
-        UI_Layout(LayoutVertical);
-        UI_Center(CenterBoth);
-        UI_Text("BottomCenter", 1.0f, fontTextures);
-    }
-    UI_End();
-
-    bounds = UI_GetBounds(AnchorBottomRight, { 0.1f, 0.1f, 0.1f, 0.1f });
-    UI_Begin(bounds);
-    {
-        UI_Frame();
-        UI_Layout(LayoutVertical);
-        UI_Center(CenterBoth);
-        UI_Text("BottomRight", 1.0f, fontTextures);
-    }
-    UI_End();
-}
-
-void MapEditorMode_Update()
-{
-    drawableCount       = 0;
-    data.uiInputHandled = false;
-    DeltaTime_Update();
-
-    UpdateGrid();
-    UpdateWorldTiles();
-    UpdateTexturePane();
-    UpdateInfoPane();
+    UpdateGrid(state);
+    UpdateWorldTiles(state);
+    UpdateTexturePane(state);
+    UpdateInfoPane(state);
     // DrawTest();
 
-    HandleTilePlacement();
-    HandleKeyboardShortcuts();
-    HandleCameraInput();
+    HandleTilePlacement(state);
+    HandleKeyboardShortcuts(state);
+    HandleCameraInput(state);
 
-    cameraEntity.position.x = Window_GetCamera()->target.x;
-    cameraEntity.position.y = Window_GetCamera()->target.y;
-    cameraEntity.scale      = 1.0f / Window_GetCamera()->zoom;
+    state->cameraEntity.position.x = state->camera.position.x;
+    state->cameraEntity.position.y = state->camera.position.y;
+    state->cameraEntity.scale      = 1.0f / state->camera.zoom;
 }
 
-void MapEditorMode_Draw()
+void MapEditorMode_Draw(Context* context, void* data)
 {
-    for (size_t i = 0; i < drawableCount; i++)
-    {
-        Drawable_Draw(&drawables[i]);
-    }
+    (void)context;
+    MapEditorMode* state         = (MapEditorMode*)data;
+    state->renderStack.stack     = state->renderStackItems;
+    state->renderStack.stackSize = state->renderStackItemCount;
+    RenderStack_Draw(&state->renderStack);
 }
 
-void MapEditorMode_OnStop()
+void MapEditorMode_OnStop(Context* context, void* data)
 {
+    (void)context;
+    (void)data;
 }
 
-void MapEditorMode_OnResume()
+void MapEditorMode_OnResume(Context* context, void* data)
 {
+    (void)context;
+    (void)data;
 }

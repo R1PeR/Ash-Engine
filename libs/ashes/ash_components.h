@@ -1,6 +1,7 @@
 #ifndef ASH_COMPONENTS_H
 #define ASH_COMPONENTS_H
 
+#include "ash_memory.h"
 #include "ash_misc.h"
 
 #include <stdint.h>
@@ -15,6 +16,8 @@
 #define COLLIDER2D_MAX_COLLISIONS              16
 #define TEXTURE_INFO_FILE_MAX_NAME             64
 #define TEXTURE_INFO_LINE_MAX                  128
+#define MAX_CAMERA_STACK                       16
+#define MAX_CLIP_STACK                         16
 
 /* Structs, Enums, and Unions */
 
@@ -62,7 +65,6 @@ typedef struct Entity2D
     Vector2Float position;
     float        scale;
     float        rotation;
-    uint8_t      id;
 } Entity2D;
 
 typedef struct TextureData TextureData;
@@ -73,28 +75,58 @@ typedef struct Sprite
     float        scale;
     float        rotation;
     TextureData* currentTexture;
-    uint8_t      zOrder;
     bool         isVisible;
     Color        tint;
     bool         drawPortion;
     Rectangle    portionRect;
 } Sprite;
 
-typedef enum DrawableType
+typedef struct Clip
 {
-    DRAWABLE_SPRITE,
-    DRAWABLE_SHAPE,
-} DrawableType;
+    Rectangle rect;
+} Clip;
 
-typedef struct Drawable
+typedef struct Camera
 {
-    DrawableType type;
+    Camera2D * camera2D;
+} Camera;
+
+typedef struct ClearScreen
+{
+    Color color;
+} ClearScreen;
+
+typedef enum RenderCommandType
+{
+    RENDERCOMMAND_BEGIN_CAMERA2D,
+    RENDERCOMMAND_END_CAMERA2D,
+    RENDERCOMMAND_BEGIN2D,
+    RENDERCOMMAND_END2D,
+    RENDERCOMMAND_DRAW_SPRITE,
+    RENDERCOMMAND_DRAW_SHAPE,
+    RENDERCOMMAND_BEGIN_RECTANGLE_CLIP,
+    RENDERCOMMAND_END_RECTANGLE_CLIP,
+    RENDERCOMMAND_CLEAR_SCREEN,
+} RenderCommandType;
+
+typedef struct RenderStackItem
+{
+    RenderCommandType type;
     union
     {
-        Sprite  sprite;
-        Shape2D shape;
+        Sprite      sprite;
+        Shape2D     shape;
+        Clip        clip;
+        Camera      camera;
+        ClearScreen clearScreen;
     };
-} Drawable;
+} RenderStackItem;
+
+typedef struct RenderStack
+{
+    RenderStackItem* stack;
+    uint32_t         stackSize;
+} RenderStack;
 
 typedef struct AnimationData
 {
@@ -106,7 +138,6 @@ typedef struct AnimatedSprite
 {
     Sprite         sprite;
     AnimationData* currentAnimation;
-    uint8_t        id;
     uint16_t       frameTime;
     bool           isPlaying;
     bool           repeat;
@@ -168,7 +199,6 @@ typedef struct Collider2D
     Vector2Float size;
     bool         isEnabled;
     bool         isTrigger;
-    uint8_t      id;
 } Collider2D;
 
 typedef struct TextureData
@@ -218,22 +248,22 @@ void      Audio_Stop(AudioData* audio);
 void                  Collider2D_Initialize(Collider2D* col);
 void                  Collider2D_DrawDebug(Collider2D* col);
 bool                  Collider2D_CheckCollider(Collider2D* a, Collider2D* b);
-bool                  Collider2D_CheckPoint(Collider2D* a, Vector2 b);
+bool                  Collider2D_CheckPoint(Collider2D* a, Vector2Float b);
 bool                  Collider2D_CheckRect(Collider2D* a, Rectangle b);
 Collision2D_Collision Collider2D_CheckCollisionSide(Collider2D* a, Collider2D* b);
 
 void Entity2D_Initialize(Entity2D* ent);
 
 void Shape2D_Initialize(Shape2D* shape);
-void Shape2D_Draw(Shape2D* shape);
+void Shape2D_Draw(Shape2D* shape, Camera2D camera);
 
 void Sprite_Initialize(Sprite* spr);
 void Sprite_Update(Sprite* spr);
-void Sprite_Draw(Sprite* spr);
+void Sprite_Draw(Sprite* spr, Camera2D camera);
 
-void Drawable_Draw(Drawable* drawable);
+void RenderStack_Draw(RenderStack* drawable);
 
-TextureData Texture_LoadTexture(const char* fileName);
+TextureData Texture_LoadTexture(const char* fileName, Arena* arena);
 bool        Texture_CreateTextureAtlas(TextureData texture, uint32_t columns, uint32_t rows, TextureData* output);
 void        Texture_UnloadTexture(TextureData* texture);
 

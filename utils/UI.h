@@ -1,6 +1,7 @@
 #ifndef LIBS_UTILS_UI_H
 #define LIBS_UTILS_UI_H
 #include "ashes/ash_components.h"
+#include "ashes/ash_io.h"
 #include "ashes/ash_misc.h"
 
 #include <stdint.h>
@@ -34,6 +35,19 @@ enum UI_AnchorType
     AnchorBottomRight
 };
 
+enum UI_GraphType1d
+{
+    Graph1dHorizontal,
+    Graph1dVertical,
+};
+
+enum UI_GraphType2d
+{
+    Graph2dBar,
+    Graph2dLine,
+    Graph2dPoint
+};
+
 typedef Vector4Float UI_PaddingData;
 
 struct UI_Theme
@@ -58,6 +72,9 @@ struct UI_Theme
     Color toggleHover;
     Color toggleActiveHover;
     Color separatorColor;
+    Color graphLineColor;
+    Color graphBarColor;
+    Color graphPointColor;
     float bevel;
 };
 
@@ -118,6 +135,20 @@ struct UI_ListData
     bool         showScroll;
 };
 
+struct UI_Graph1DData
+{
+    float*         values;
+    int            valueCount;
+    UI_GraphType1d type;
+};
+
+struct UI_Graph2DData
+{
+    Vector2Float*  values;
+    int            valueCount;
+    UI_GraphType2d type;
+};
+
 enum UI_StackType
 {
     StackType_Layout,
@@ -131,7 +162,9 @@ enum UI_StackType
     StackType_List,
     StackType_Toggle,
     StackType_Separator,
-    StackType_TileGrid
+    StackType_TileGrid,
+    StackType_Graph1D,
+    StackType_Graph2D
 };
 
 struct UI_Stack
@@ -149,6 +182,8 @@ struct UI_Stack
         UI_SliderData   slider;
         UI_ListData     list;
         UI_TileGridData tileGrid;
+        UI_Graph1DData  graph1d;
+        UI_Graph2DData  graph2d;
     };
 };
 
@@ -167,44 +202,53 @@ struct UI_State
     int   tileGridSelected[UI_MAX_WIDGETS];
     float scrollOffset[UI_MAX_WIDGETS];
 
-    Drawable* drawableArray;
-    size_t*   drawableArraySize;
-    size_t    drawableArrayMaxSize;
+    RenderStackItem* drawableArray;
+    size_t*          drawableArraySize;
+    size_t           drawableArrayMaxSize;
 
     Vector4Float bounds;
 
-    bool mouseCaptured;
+    bool      mouseCaptured;
+    Window*   window;
+    Entity2D* parentEntity;
+    Camera2D* camera;
+    UI_Theme  theme;
 };
 
-void UI_Initialize(Drawable* drawableArray, size_t* drawableArraySize, size_t drawableArrayMaxSize);
-void UI_SetParentEntity(Entity2D* entity);
-void UI_SetTheme(struct UI_Theme theme);
+void UI_Initialize(UI_State* uiState, RenderStackItem* drawableArray, size_t* drawableArraySize,
+                   size_t drawableArrayMaxSize, Window* window, Camera2D* camera);
+void UI_SetParentEntity(UI_State* uiState, Entity2D* entity);
+void UI_SetTheme(UI_State* uiState, struct UI_Theme theme);
 
-void UI_Begin(Vector4Float bounds);
+void UI_Begin(UI_State* uiState, Vector4Float bounds);
 
-void UI_Layout(UI_LayoutType layout);
-void UI_Center(UI_CenterType mode);
-void UI_Padding(Vector4Float padding);
+void UI_Layout(UI_State* uiState, UI_LayoutType layout);
+void UI_Center(UI_State* uiState, UI_CenterType mode);
+void UI_Padding(UI_State* uiState, Vector4Float padding);
 
-void UI_Frame();
-void UI_ScrollFrame(float contentHeight);
-void UI_Text(const char* text, float scale, TextureData* font);
-void UI_Sprite(Sprite* sprite);
+void UI_Frame(UI_State* uiState);
+void UI_ScrollFrame(UI_State* uiState, float contentHeight);
+void UI_Text(UI_State* uiState, const char* text, float scale, TextureData* font);
+void UI_Sprite(UI_State* uiState, Sprite* sprite);
 
-bool  UI_Button(const char* text, float scale, TextureData* font);
-float UI_Slider(float value, float min, float max);
-int   UI_List(const char** items, int itemCount, float textScale, float itemHeight, TextureData* font, bool showScroll);
+bool  UI_Button(UI_State* uiState, const char* text, float scale, TextureData* font);
+float UI_Slider(UI_State* uiState, float value, float min, float max);
+int UI_List(UI_State* uiState, const char** items, int itemCount, float textScale, float itemHeight, TextureData* font,
+            bool showScroll);
 
-void UI_FrameSize(float sizeRatio);
-bool UI_Toggle(const char* text, bool active, float scale, TextureData* font);
-void UI_Separator();
-int  UI_TileGrid(TextureData* textures, int textureCount, int cols, int selectedTile);
-bool UI_IsMouseOverBounds(Vector4Float bounds);
+void UI_FrameSize(UI_State* uiState, float sizeRatio);
+bool UI_Toggle(UI_State* uiState, const char* text, bool active, float scale, TextureData* font);
+void UI_Separator(UI_State* uiState);
+int  UI_TileGrid(UI_State* uiState, TextureData* textures, int textureCount, int cols, int selectedTile);
+void UI_Graph1D(UI_State* uiState, float* values, int valueCount, UI_GraphType1d graphType);
+void UI_Graph2D(UI_State* uiState, Vector2Float* values, int valueCount, UI_GraphType2d graphType);
 
-void UI_End();
+bool UI_IsMouseOverBounds(UI_State* uiState, Vector4Float bounds);
 
-Vector4Float UI_GetBounds(UI_AnchorType anchor, Vector4Float position);
-Vector4Float UI_GetSize(Vector4Float position);
-bool         UI_GetMouseCaptured();
+void UI_End(UI_State* uiState);
+
+Vector4Float UI_GetBounds(UI_State* uiState, UI_AnchorType anchor, Vector4Float position);
+Vector4Float UI_GetSize(UI_State* uiState, Vector4Float position);
+bool         UI_GetMouseCaptured(UI_State* uiState);
 
 #endif

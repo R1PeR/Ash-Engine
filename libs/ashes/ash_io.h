@@ -2,6 +2,7 @@
 #define ASH_IO_H
 
 /* Includes */
+#include "ashes/ash_memory.h"
 #include "ashes/ash_misc.h"
 
 #include <stdint.h>
@@ -134,6 +135,12 @@ enum
     INPUT_MOUSE_BUTTON_FORWARD = 5,  // Mouse button forward (advanced mouse device)
     INPUT_MOUSE_BUTTON_BACK    = 6,  // Mouse button back (advanced mouse device)
 };
+/* Structs */
+struct Window
+{
+    uint16_t width;
+    uint16_t height;
+};
 
 /* Function Prototypes */
 bool Input_IsKeyPressed(uint16_t key);
@@ -145,15 +152,12 @@ bool    Input_IsMouseButtonPressed(uint16_t button);
 bool    Input_IsMouseButtonDown(uint16_t button);
 bool    Input_IsMouseButtonReleased(uint16_t button);
 bool    Input_IsMouseButtonUp(uint16_t button);
-int16_t Input_GetMouseX(void);
-int16_t Input_GetMouseY(void);
-int16_t Input_GetMouseDeltaX(void);
-int16_t Input_GetMouseDeltaY(void);
+int32_t Input_GetMouseX(void);
+int32_t Input_GetMouseY(void);
+int32_t Input_GetMouseDeltaX(void);
+int32_t Input_GetMouseDeltaY(void);
 
-void      Window_Init(uint16_t width, uint16_t height, const char* title);
-void      Window_Deinit();
-Camera2D* Window_GetCamera();
-uint32_t  Window_GetWidth();
-uint32_t  Window_GetHeight();
+void Window_Init(Window* window, uint16_t width, uint16_t height, const char* title);
+void Window_Deinit();
 
 #endif  // ASH_IO_H

@@ -4,66 +4,85 @@
 #include "ash_io.h"
 #include "ash_platform.h"
 
+#include <cstddef>
 #include <stdint.h>
 
-Mode*      screen[MAX_MODES];
-Updatable* updatables[MAX_UPDATABLES];
-uint8_t    screenCount     = 0;
-uint8_t    updatablesCount = 0;
-bool       currentFinished = false;
-bool       resumed         = false;
-bool       exitAll         = false;
-
-void Context_SetMode(Mode* mode)
+void Context_Init(Context* context, uint8_t maxModes, uint8_t maxUpdatables, Arena* arena)
 {
-    if (screenCount + 1 < MAX_MODES)
+    if (context == NULL)
     {
-        if (screenCount != 0)
+        LOG_ERR("Context_Init: context is NULL");
+        return;
+    }
+
+    if (arena == NULL)
+    {
+        LOG_ERR("Context_Init: arena is NULL");
+        return;
+    }
+
+    context->screen          = Arena_PushArray(Mode, arena, maxModes);
+    context->updatables      = Arena_PushArray(Updatable*, arena, maxUpdatables);
+    context->screenCount     = 0;
+    context->updatablesCount = 0;
+    context->currentFinished = false;
+    context->resumed         = false;
+    context->exitAll         = false;
+    context->maxModes        = maxModes;
+    context->maxUpdatables   = maxUpdatables;
+
+    Context_ClearUpdatables(context);
+}
+
+void Context_SetMode(Context* context, Mode mode, void* data)
+{
+    if (context == NULL)
+    {
+        LOG_ERR("Context_SetMode: context is NULL");
+        return;
+    }
+
+    if (context->screenCount + 1 < context->maxModes)
+    {
+        if (context->screenCount != 0)
         {
-            screen[screenCount - 1]->OnPause();
-            Platform_EndMode2D();
-            Platform_ImGuiEnd();
+            context->screen[context->screenCount - 1].OnPause(context, data);
             Platform_EndDrawing();
         }
-        screen[screenCount] = mode;
-        screenCount += 1;
-        currentFinished = false;
-        screen[screenCount - 1]->OnStart();
-        while (!currentFinished && !exitAll)
+        context->screen[context->screenCount] = mode;
+        context->screenCount += 1;
+        context->currentFinished = false;
+        context->screen[context->screenCount - 1].OnStart(context, data);
+        while (!context->currentFinished && !context->exitAll)
         {
-            for (int i = 0; i < updatablesCount; i++)
+            for (int i = 0; i < context->updatablesCount; i++)
             {
-                updatables[i]->Update();
+                context->updatables[i]->Update();
             }
 
             // for IUpdatables
-            if (resumed)
+            if (context->resumed)
             {
-                screen[screenCount - 1]->OnResume();
-                resumed = false;
+                context->screen[context->screenCount - 1].OnResume(context, data);
+                context->resumed = false;
             }
-            screen[screenCount - 1]->Update();
+            context->screen[context->screenCount - 1].Update(context, data);
             // drawing
             Platform_BeginDrawing();
-            Platform_ImGuiBegin();
-            Platform_ClearBackground(BLACK);
-            Platform_BeginMode2D(*Window_GetCamera());
-            screen[screenCount - 1]->Draw();
-            Platform_EndMode2D();
-            Platform_ImGuiEnd();
+            context->screen[context->screenCount - 1].Draw(context, data);
             Platform_EndDrawing();
             if (Platform_WindowShouldClose())
             {
-                exitAll = true;
+                context->exitAll = true;
             }
         }
 
-        screen[screenCount - 1]->OnStop();
-        screenCount -= 1;
-        if (screenCount != 0)
+        context->screen[context->screenCount - 1].OnStop(context, data);
+        context->screenCount -= 1;
+        if (context->screenCount != 0)
         {
-            currentFinished = false;
-            resumed         = true;
+            context->currentFinished = false;
+            context->resumed         = true;
         }
     }
     else
@@ -72,27 +91,27 @@ void Context_SetMode(Mode* mode)
     }
 }
 
-bool Context_AddUpdatable(Updatable* updatable)
+bool Context_AddUpdatable(Context* context, Updatable* updatable)
 {
-    if (updatablesCount + 1 < MAX_UPDATABLES)
+    if (context->updatablesCount + 1 < context->maxUpdatables)
     {
-        updatables[updatablesCount] = updatable;
-        updatablesCount++;
+        context->updatables[context->updatablesCount] = updatable;
+        context->updatablesCount++;
         return true;
     }
     return false;
 }
 
-void Context_ClearUpdatables()
+void Context_ClearUpdatables(Context* context)
 {
-    for (int i = 0; i < updatablesCount; i++)
+    for (int i = 0; i < context->updatablesCount; i++)
     {
-        updatables[updatablesCount] = 0;
+        context->updatables[context->updatablesCount] = 0;
     }
-    updatablesCount = 0;
+    context->updatablesCount = 0;
 }
 
-void Context_FinishMode()
+void Context_FinishMode(Context* context)
 {
-    currentFinished = true;
+    context->currentFinished = true;
 }

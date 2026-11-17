@@ -1,6 +1,7 @@
 #include "ash_misc.h"
 
 #include "ash_debug.h"
+#include "ash_memory.h"
 #include "ash_platform.h"
 
 #include <math.h>
@@ -120,10 +121,11 @@ AStar_Node* AStar_CalucalatePath(AStar_Node* nodeArray, size_t nodeArraySize, co
 }
 
 Vector2Int8 AStar_GetMoveDirection(const Vector2Int startPos, const Vector2Int targetPos, uint16_t maxSearchArea,
-                                   HeuristicFuncPtr hFunc)
+                                   HeuristicFuncPtr hFunc, Arena* arena)
 {
+    Arena tempArena = Arena_ScratchCreate(arena);
     LOG_INF("A* Pathfinding from (%d, %d) to (%d, %d)", startPos.x, startPos.y, targetPos.x, targetPos.y);
-    AStar_Node  nodeList[maxSearchArea];
+    AStar_Node* nodeList = Arena_PushArray(AStar_Node, &tempArena, maxSearchArea);
     AStar_Node* lastNode = NULL;
 
     lastNode = AStar_CalucalatePath(nodeList, maxSearchArea, startPos, targetPos, hFunc);
@@ -150,26 +152,30 @@ Vector2Int8 AStar_GetMoveDirection(const Vector2Int startPos, const Vector2Int t
     Vector2Int8 direction;
     direction.x = int8_t(lastNode->position.x - startPos.x);
     direction.y = int8_t(lastNode->position.y - startPos.y);
+    Arena_ScratchFree(&tempArena);
     return direction;
 }
 
 bool AStar_IsPathAvailable(const Vector2Int startPos, const Vector2Int targetPos, uint16_t maxSearchArea,
-                           HeuristicFuncPtr hFunc)
+                           HeuristicFuncPtr hFunc, Arena* arena)
 {
     LOG_INF("A* Pathfinding from (%d, %d) to (%d, %d)", startPos.x, startPos.y, targetPos.x, targetPos.y);
-    AStar_Node  nodeList[maxSearchArea];
-    AStar_Node* currentNode = NULL;
+    Arena       tempArena = Arena_ScratchCreate(arena);
+    AStar_Node* nodeList  = Arena_PushArray(AStar_Node, &tempArena, maxSearchArea);
 
-    return AStar_CalucalatePath(nodeList, maxSearchArea, startPos, targetPos, hFunc) != NULL;
+    AStar_Node* node = AStar_CalucalatePath(nodeList, maxSearchArea, startPos, targetPos, hFunc);
+    Arena_ScratchFree(&tempArena);
+    return node != NULL;
 }
 
 uint16_t AStar_GetPath(const Vector2Int startPos, const Vector2Int targetPos, uint16_t maxSearchArea,
-                       Vector2Int* outPathBuffer, size_t outPathBufferSize, HeuristicFuncPtr hFunc)
+                       Vector2Int* outPathBuffer, size_t outPathBufferSize, HeuristicFuncPtr hFunc, Arena* arena)
 {
 
     LOG_INF("A* Pathfinding from (%d, %d) to (%d, %d)", startPos.x, startPos.y, targetPos.x, targetPos.y);
-    AStar_Node  nodeList[maxSearchArea];
-    AStar_Node* lastNode = NULL;
+    Arena       tempArena = Arena_ScratchCreate(arena);
+    AStar_Node* nodeList  = Arena_PushArray(AStar_Node, &tempArena, maxSearchArea);
+    AStar_Node* lastNode  = NULL;
 
     lastNode = AStar_CalucalatePath(nodeList, maxSearchArea, startPos, targetPos, hFunc);
     if (lastNode == NULL)
@@ -197,35 +203,21 @@ uint16_t AStar_GetPath(const Vector2Int startPos, const Vector2Int targetPos, ui
     return 0;
 }
 
-long  lastClock  = 0;
-long  deltaClock = 0;
-float deltaTime  = 0.0f;
-
-void DeltaTime_Update()
+void DeltaTime_Update(DeltaTime* time)
 {
     long currentClock = clock();
-    deltaClock        = currentClock - lastClock;
-    if (lastClock == 0)
+    time->deltaClock  = currentClock - time->lastClock;
+    if (time->lastClock == 0)
     {
-        deltaClock = 0;
+        time->deltaClock = 0;
     }
-    lastClock = currentClock;
-    deltaTime = (float)deltaClock / (float)CLOCKS_PER_SEC;
+    time->lastClock = currentClock;
+    time->deltaTime = (float)time->deltaClock / (float)CLOCKS_PER_SEC;
 }
 
-float DeltaTime_GetDeltaTime()
+float DeltaTime_GetDeltaTime(DeltaTime* time)
 {
-    return deltaTime;
-}
-
-void Logger_Init()
-{
-    Platform_SetTraceLogLevel(LOG_ALL);
-}
-
-void Logger_Deinit()
-{
-    Platform_SetTraceLogLevel(LOG_NONE);
+    return time->deltaTime;
 }
 
 void Stopwatch_Start(Stopwatch* stopwatch, uint32_t milis)
@@ -302,16 +294,13 @@ float Utils_AbsFloat(float value)
 
 Vector2Float Utils_WorldToScreen2D(Vector2Float position, Camera2D camera)
 {
-    Vector2      screenPosition      = Platform_GetWorldToScreen2D({ position.x, position.y }, camera);
-    Vector2Float screenPositionFloat = { screenPosition.x, screenPosition.y };
-    return screenPositionFloat;
+    Vector2Float screenPosition = Platform_GetWorldToScreen2D({ position.x, position.y }, camera);
+    return screenPosition;
 }
 
 Vector2Float Utils_ScreenToWorld2D(Vector2Float position, Camera2D camera)
 {
-    Vector2      worldPosition      = Platform_GetScreenToWorld2D({ position.x, position.y }, camera);
-    Vector2Float worldPositionFloat = { worldPosition.x, worldPosition.y };
-    return worldPositionFloat;
+    return Platform_GetScreenToWorld2D({ position.x, position.y }, camera);
 }
 
 Vector2Float Utils_ScaleWithCamera(Vector2Float value, Camera2D camera)
@@ -427,11 +416,11 @@ bool Utils_RectangleOverlap(Rectangle a, Rectangle b)
 
 int32_t Utils_GetRandomInRangeInteger(int32_t min, int32_t max)
 {
-    return (rand() % (max - min + 1)) + min;
+    return (Platform_GetRandom() % (max - min + 1)) + min;
 }
 float Utils_GetRandomInRangeFloat(float min, float max)
 {
-    float scale = rand() / (float)RAND_MAX;
+    float scale = Platform_GetRandom() / (float)Platform_GetRandomMax();
     return min + scale * (max - min);
 }
 

@@ -54,6 +54,7 @@ void AnimatedSprite_Update(AnimatedSprite* animatedSprite)
 
 void AsciiWindow_Initalize(AsciiWindow* window, Texture2D texture)
 {
+    (void)texture;
     AsciiWindow_Clear(window);
     for (uint32_t i = 0; i < window->height * window->width; i++)
     {
@@ -200,13 +201,13 @@ void Audio_Deinit()
     Platform_CloseAudioDevice();
 }
 
-AudioData Audio_LoadAudio(const char* fileName)
+AudioData Audio_LoadAudio(const char* fileName, Arena* arena)
 {
     if (fileName == NULL)
     {
-        return (AudioData){ 0 };
+        return (AudioData){};
     }
-    Sound     sound = Platform_LoadSound(fileName);
+    Sound     sound = Platform_LoadSound(fileName, arena);
     AudioData audio;
     audio.sound = sound;
     return audio;
@@ -235,7 +236,6 @@ void Collider2D_Initialize(Collider2D* col)
     col->size.x     = 0;
     col->size.y     = 0;
     col->isEnabled  = true;
-    col->id         = 0;
 }
 
 void Collider2D_DrawDebug(Collider2D* col)
@@ -247,13 +247,14 @@ void Collider2D_DrawDebug(Collider2D* col)
     }
     if (col->parent == NULL)
     {
-        Platform_DrawRectangleLines(col->position.x, col->position.y, col->size.x, col->size.y, YELLOW);
+        Platform_DrawRectangleLines({ col->position.x, col->position.y, col->size.x, col->size.y }, 1.0f, COLOR_YELLOW);
     }
     else
     {
-        Platform_DrawRectangleLines(col->parent->position.x + (col->position.x * col->parent->scale),
-                                    col->parent->position.y + (col->position.y * col->parent->scale),
-                                    col->size.x * col->parent->scale, col->size.y * col->parent->scale, YELLOW);
+        Platform_DrawRectangleLines({ col->parent->position.x + (col->position.x * col->parent->scale),
+                                      col->parent->position.y + (col->position.y * col->parent->scale),
+                                      col->size.x * col->parent->scale, col->size.y * col->parent->scale },
+                                    1.0f, COLOR_YELLOW);
     }
 }
 
@@ -293,7 +294,7 @@ bool Collider2D_CheckCollider(Collider2D* a, Collider2D* b)
     return false;
 }
 
-bool Collider2D_CheckPoint(Collider2D* a, Vector2 b)
+bool Collider2D_CheckPoint(Collider2D* a, Vector2Float b)
 {
     Vector2Float aPos  = { 0, 0 };
     Vector2Float aSize = a->size;
@@ -382,7 +383,6 @@ Collision2D_Collision Collider2D_CheckCollisionSide(Collider2D* a, Collider2D* b
 
 void Entity2D_Initialize(Entity2D* ent)
 {
-    ent->id         = 0;
     ent->position.x = 0;
     ent->position.y = 0;
     ent->rotation   = 0;
@@ -394,7 +394,7 @@ void Shape2D_Initialize(Shape2D* shape)
     shape->parent                     = NULL;
     shape->position                   = { 0.0f, 0.0f };
     shape->scale                      = 1.0f;
-    shape->color                      = WHITE;
+    shape->color                      = COLOR_WHITE;
     shape->type                       = SHAPE2D_RECTANGLE;
     shape->rectangle.width            = 0.0f;
     shape->rectangle.height           = 0.0f;
@@ -403,8 +403,8 @@ void Shape2D_Initialize(Shape2D* shape)
 
 void Shape2D_Draw(Shape2D* shape)
 {
-    Vector2 worldPosition = { shape->position.x, shape->position.y };
-    float   worldScale    = shape->scale;
+    Vector2Float worldPosition = { shape->position.x, shape->position.y };
+    float        worldScale    = shape->scale;
 
     if (shape->parent != NULL)
     {
@@ -412,26 +412,24 @@ void Shape2D_Draw(Shape2D* shape)
         worldPosition.y = shape->parent->position.y + shape->position.y * shape->parent->scale;
         worldScale *= shape->parent->scale;
     }
-
     switch (shape->type)
     {
         case SHAPE2D_RECTANGLE:
-            Platform_DrawRectangleRec((Rectangle){ worldPosition.x, worldPosition.y,
-                                                   shape->rectangle.width * worldScale,
-                                                   shape->rectangle.height * worldScale },
-                                      shape->color);
+            Platform_DrawRectangle((Rectangle){ worldPosition.x, worldPosition.y, shape->rectangle.width * worldScale,
+                                                shape->rectangle.height * worldScale },
+                                   shape->color);
             break;
 
         case SHAPE2D_RECTANGLE_LINES:
-            Platform_DrawRectangleLinesEx((Rectangle){ worldPosition.x, worldPosition.y,
-                                                       shape->rectangle.width * worldScale,
-                                                       shape->rectangle.height * worldScale },
-                                          shape->rectangle.outlineThickness * worldScale, shape->color);
+            Platform_DrawRectangleLines((Rectangle){ worldPosition.x, worldPosition.y,
+                                                     shape->rectangle.width * worldScale,
+                                                     shape->rectangle.height * worldScale },
+                                        shape->rectangle.outlineThickness * worldScale, shape->color);
             break;
 
         case SHAPE2D_LINE:
         {
-            Vector2 worldEnd;
+            Vector2Float worldEnd;
             if (shape->parent != NULL)
             {
                 worldEnd.x = shape->parent->position.x + shape->line.endPosition.x * shape->parent->scale;
@@ -442,12 +440,12 @@ void Shape2D_Draw(Shape2D* shape)
                 worldEnd.x = shape->line.endPosition.x;
                 worldEnd.y = shape->line.endPosition.y;
             }
-            Platform_DrawLineEx(worldPosition, worldEnd, shape->line.thickness * worldScale, shape->color);
+            Platform_DrawLine(worldPosition, worldEnd, shape->line.thickness * worldScale, shape->color);
             break;
         }
 
         case SHAPE2D_CIRCLE:
-            Platform_DrawCircleV(worldPosition, shape->circle.radius * worldScale, shape->color);
+            Platform_DrawCircle(worldPosition, shape->circle.radius * worldScale, shape->color);
             break;
 
         case SHAPE2D_CIRCLE_LINES:
@@ -470,8 +468,7 @@ void Sprite_Initialize(Sprite* spr)
     spr->isVisible      = true;
     spr->rotation       = 0;
     spr->scale          = 1.0f;
-    spr->zOrder         = 0;
-    spr->tint           = WHITE;
+    spr->tint           = COLOR_WHITE;
     spr->parent         = NULL;
     spr->drawPortion    = false;
     spr->portionRect    = (Rectangle){ 0, 0, 0, 0 };
@@ -483,9 +480,9 @@ void Sprite_Draw(Sprite* spr)
     {
         return;
     }
-    Vector2 position = { 0.0f, 0.0f };
-    float   scale    = 1.0f;
-    float   rotation = 0.0f;
+    Vector2Float position = { 0.0f, 0.0f };
+    float        scale    = 1.0f;
+    float        rotation = 0.0f;
     if (spr->parent != NULL)
     {
         position.x = spr->parent->position.x;
@@ -524,17 +521,17 @@ void Sprite_Draw(Sprite* spr)
         destRect.width -= (1.0 - spr->portionRect.width) * spr->currentTexture->size.x * scale;
         destRect.height -= (1.0 - spr->portionRect.height) * spr->currentTexture->size.y * scale;
     }
-    Platform_DrawTexturePro(spr->currentTexture->texture, sourceRect, destRect, { 0, 0 }, rotation, spr->tint);
+    Platform_DrawTexture(spr->currentTexture->texture, sourceRect, destRect, { 0, 0 }, rotation, spr->tint);
 }
 
-TextureData Texture_LoadTexture(const char* fileName)
+TextureData Texture_LoadTexture(const char* fileName, Arena* arena)
 {
     if (fileName == NULL)
     {
         LOG_ERR("Texture: LoadTexture() failed, fileName is nullptr");
-        return (TextureData){ 0 };
+        return (TextureData){};
     }
-    Texture2D   texture = Platform_LoadTexture(fileName);
+    Texture2D   texture = Platform_LoadTexture(fileName, arena);
     TextureData textureData;
     textureData.texture = texture;
     textureData.uv      = { 0.0f, 0.0f, (float)textureData.texture.width, (float)textureData.texture.height };
@@ -555,20 +552,14 @@ bool Texture_CreateTextureAtlas(TextureData texture, uint32_t columns, uint32_t 
     {
         for (uint32_t i = 0; i < columns; i++)
         {
-            Rectangle portionRect;
-            portionRect.x      = cellWidth * i;
-            portionRect.y      = cellHeight * j;
-            portionRect.width  = cellWidth;
-            portionRect.height = cellHeight;
             TextureData textureData;
             textureData.texture = texture.texture;
-            textureData.uv.x    = portionRect.x;
-            textureData.uv.y    = portionRect.y;
-            textureData.uv.w    = portionRect.width;
-            textureData.uv.h    = portionRect.height;
-
-            textureData.size.x = portionRect.width;
-            textureData.size.y = portionRect.height;
+            textureData.uv.x    = cellWidth * i;
+            textureData.uv.y    = cellHeight * j;
+            textureData.uv.w    = cellWidth;
+            textureData.uv.h    = cellHeight;
+            textureData.size.x  = cellWidth;
+            textureData.size.y  = cellHeight;
 
             output[columns * j + i] = textureData;
         }
@@ -581,10 +572,126 @@ void Texture_UnloadTexture(TextureData* textureData)
     Platform_UnloadTexture(textureData->texture);
 }
 
-void Drawable_Draw(Drawable* drawable)
+void RenderStack_Draw(RenderStack* state)
 {
-    if (drawable->type == DRAWABLE_SPRITE)
-        Sprite_Draw(&drawable->sprite);
-    else
-        Shape2D_Draw(&drawable->shape);
+    if (state == NULL)
+    {
+        LOG_ERR("state: Draw() failed, drawable is nullptr");
+        return;
+    }
+    Camera  cameraStack[MAX_CAMERA_STACK];
+    Clip    clipStack[MAX_CLIP_STACK];
+    uint8_t cameraStackSize    = MAX_CAMERA_STACK;
+    uint8_t clipStackSize      = MAX_CLIP_STACK;
+    uint8_t cameraCurrentDepth = 0;
+    uint8_t clipCurrentDepth   = 0;
+    uint8_t modeDepth          = 0;
+    for (uint32_t i = 0; i < state->stackSize; i++)
+    {
+        RenderStackItem* item = &state->stack[i];
+        switch (item->type)
+        {
+            case RENDERCOMMAND_DRAW_SPRITE:
+            {
+                if (modeDepth == 0)
+                {
+                    LOG_ERR("RenderState: Draw() failed, draw sprite called outside of any mode");
+                    return;
+                }
+                Sprite_Draw(&item->sprite);
+            }
+            break;
+            case RENDERCOMMAND_DRAW_SHAPE:
+            {
+                if (modeDepth == 0)
+                {
+                    LOG_ERR("RenderState: Draw() failed, draw shape called outside of any mode");
+                    return;
+                }
+                Shape2D_Draw(&item->shape);
+            }
+            break;
+            case RENDERCOMMAND_BEGIN_RECTANGLE_CLIP:
+            {
+                if (modeDepth == 0)
+                {
+                    LOG_ERR("RenderState: Draw() failed, clip begin called outside of any mode");
+                    return;
+                }
+                if (clipCurrentDepth >= clipStackSize)
+                {
+                    LOG_ERR("RenderState: Draw() failed, clip stack overflow");
+                    return;
+                }
+                if (cameraCurrentDepth == 0)
+                {
+                    LOG_ERR("RenderState: Draw() failed, clip begin called before camera begin");
+                    return;
+                }
+                Platform_SetClipRectangle(clipStack[clipCurrentDepth - 1].rect,
+                                          *cameraStack[cameraCurrentDepth - 1].camera2D);
+                clipCurrentDepth++;
+            }
+            break;
+            case RENDERCOMMAND_END_RECTANGLE_CLIP:
+            {
+                if (clipCurrentDepth == 0)
+                {
+                    LOG_ERR("RenderState: Draw() failed, clip end called before clip begin");
+                    return;
+                }
+                Platform_ClearClipRectangle();
+                clipCurrentDepth--;
+            }
+            break;
+            case RENDERCOMMAND_BEGIN2D:
+            {
+                if (cameraCurrentDepth == 0)
+                {
+                    LOG_ERR("RenderState: Draw() failed, begin 2D called before any camera");
+                    return;
+                }
+                Platform_BeginMode2D(*cameraStack[cameraCurrentDepth - 1].camera2D);
+                modeDepth++;
+            }
+            break;
+            case RENDERCOMMAND_END2D:
+                if (modeDepth == 0)
+                {
+                    LOG_ERR("RenderState: Draw() failed, end 2D called before begin 2D");
+                    return;
+                }
+                Platform_EndMode2D();
+                modeDepth--;
+                break;
+            case RENDERCOMMAND_BEGIN_CAMERA2D:
+            {
+                if (cameraCurrentDepth >= cameraStackSize)
+                {
+                    LOG_ERR("RenderState: Draw() failed, camera stack overflow");
+                    return;
+                }
+                cameraStack[cameraCurrentDepth].camera2D = item->camera.camera2D;
+                cameraCurrentDepth++;
+            }
+            break;
+            case RENDERCOMMAND_END_CAMERA2D:
+            {
+                if (cameraCurrentDepth == 0)
+                {
+                    LOG_ERR("RenderState: Draw() failed, camera end called before camera begin");
+                    return;
+                }
+                cameraCurrentDepth--;
+                break;
+            }
+            break;
+            case RENDERCOMMAND_CLEAR_SCREEN:
+                Platform_ClearBackground(item->clearScreen.color);
+                break;
+            default:
+                LOG_ERR("RenderState: Draw() failed, unknown type");
+                break;
+        }
+    }
 }

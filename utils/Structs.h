@@ -90,8 +90,8 @@ struct Object
         struct
         {
             // for PROJECTILE
-            float   projectileSpeed;
-            Vector2 projectileDestination;
+            float        projectileSpeed;
+            Vector2Float projectileDestination;
         } projectile;
         struct
         {

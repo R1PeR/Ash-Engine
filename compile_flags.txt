@@ -1,5 +1,5 @@
 -DDEBUG
--DLOG_LEVEL=5
+-DLOG_LEVEL=LOG_LEVEL_ALL
 -xc++
 -Ilibs/raylib/include
 -Ilibs/imgui

@@ -8,275 +8,301 @@
 #include <assert.h>
 #include <string.h>
 
-UI_State uiState = {};
-
-static Entity2D* uiParent;
-
-static struct UI_Theme uiTheme = {
-    { 30, 30, 45, 200 }, /* frameBg             */
-    { 80, 80, 120, 255 }, /* frameOutline        */
-    { 95, 95, 140, 255 }, /* frameHighlight      */
-    { 15, 15, 25, 255 },  /* frameShadow         */
-    { 60, 60, 80, 255 },  /* buttonBg            */
-    { 80, 80, 110, 255 }, /* buttonHover         */
-    { 100, 100, 140, 255 },/* buttonActive       */
-    { 130, 130, 165, 255 },/* buttonHighlight    */
-    { 30, 30, 45, 255 },  /* buttonShadow        */
-    { 50, 50, 65, 255 },  /* sliderTrack         */
-    { 130, 140, 180, 255 },/* sliderThumb        */
-    { 170, 180, 215, 255 },/* sliderHighlight    */
-    { 70, 75, 100, 255 }, /* sliderShadow        */
-    { 70, 70, 95, 255 },  /* listHover           */
-    { 50, 80, 120, 255 }, /* listSelected        */
-    { 100, 140, 220, 255 },/* toggleActive       */
-    { 60, 80, 120, 255 }, /* toggleInactive      */
-    { 80, 100, 140, 255 },/* toggleHover         */
-    { 130, 170, 240, 255 },/* toggleActiveHover  */
-    { 100, 100, 100, 200 },/* separatorColor     */
-    2.0f                   /* bevel               */
-};
-
-void UI_Initialize(Drawable* drawableArray, size_t* drawableArraySize, size_t drawableArrayMaxSize)
+void UI_Initialize(UI_State* uiState, RenderStackItem* drawableArray, size_t* drawableArraySize,
+                   size_t drawableArrayMaxSize, Window* window, Camera2D* camera)
 {
     assert(drawableArray != NULL);
     assert(drawableArraySize != NULL);
-    uiState.drawableArray        = drawableArray;
-    uiState.drawableArraySize    = drawableArraySize;
-    uiState.drawableArrayMaxSize = drawableArrayMaxSize;
+    assert(drawableArrayMaxSize > 0);
+    assert(window != NULL);
+    uiState->drawableArray        = drawableArray;
+    uiState->drawableArraySize    = drawableArraySize;
+    uiState->drawableArrayMaxSize = drawableArrayMaxSize;
     for (uint16_t i = 0; i < UI_MAX_WIDGETS; i++)
-        uiState.tileGridSelected[i] = -1;
+    {
+        uiState->tileGridSelected[i] = -1;
+    }
+    uiState->window = window;
+    uiState->camera = camera;
+    uiState->theme  = {
+        { 30, 30, 45, 200 },    /* frameBg             */
+        { 80, 80, 120, 255 },   /* frameOutline        */
+        { 95, 95, 140, 255 },   /* frameHighlight      */
+        { 15, 15, 25, 255 },    /* frameShadow         */
+        { 60, 60, 80, 255 },    /* buttonBg            */
+        { 80, 80, 110, 255 },   /* buttonHover         */
+        { 100, 100, 140, 255 }, /* buttonActive       */
+        { 130, 130, 165, 255 }, /* buttonHighlight    */
+        { 30, 30, 45, 255 },    /* buttonShadow        */
+        { 50, 50, 65, 255 },    /* sliderTrack         */
+        { 130, 140, 180, 255 }, /* sliderThumb        */
+        { 170, 180, 215, 255 }, /* sliderHighlight    */
+        { 70, 75, 100, 255 },   /* sliderShadow        */
+        { 70, 70, 95, 255 },    /* listHover           */
+        { 50, 80, 120, 255 },   /* listSelected        */
+        { 100, 140, 220, 255 }, /* toggleActive       */
+        { 60, 80, 120, 255 },   /* toggleInactive      */
+        { 80, 100, 140, 255 },  /* toggleHover         */
+        { 130, 170, 240, 255 }, /* toggleActiveHover  */
+        { 100, 100, 100, 200 }, /* separatorColor     */
+        { 200, 200, 200, 255 }, /* graphLineColor     */
+        { 100, 150, 250, 255 }, /* graphBarColor      */
+        { 250, 100, 100, 255 }, /* graphPointColor    */
+        2.0f                    /* bevel               */
+    };
 }
 
-void UI_SetParentEntity(Entity2D* entity)
+void UI_SetParentEntity(UI_State* uiState, Entity2D* entity)
 {
     assert(entity != NULL);
-    uiParent = entity;
+    uiState->parentEntity = entity;
 }
 
-void UI_SetTheme(struct UI_Theme theme)
+void UI_SetTheme(UI_State* uiState, struct UI_Theme theme)
 {
-    uiTheme = theme;
+    uiState->theme = theme;
 }
 
-void UI_Begin(Vector4Float bounds)
+void UI_Begin(UI_State* uiState, Vector4Float bounds)
 {
-    uiState.bounds          = bounds;
-    uiState.itemCount       = 0;
-    uiState.widgetIdCounter = 0;
-    uiState.mouseCaptured   = false;
+    uiState->bounds          = bounds;
+    uiState->itemCount       = 0;
+    uiState->widgetIdCounter = 0;
+    uiState->mouseCaptured   = false;
 }
 
-void UI_Layout(UI_LayoutType layout)
+void UI_Layout(UI_State* uiState, UI_LayoutType layout)
 {
-    assert(uiState.itemCount < UI_MAX_STACK_DEPTH);
-    uiState.item[uiState.itemCount].layout = layout;
-    uiState.item[uiState.itemCount].type   = StackType_Layout;
-    uiState.itemCount++;
+    assert(uiState->itemCount < UI_MAX_STACK_DEPTH);
+    uiState->item[uiState->itemCount].layout = layout;
+    uiState->item[uiState->itemCount].type   = StackType_Layout;
+    uiState->itemCount++;
 }
 
-void UI_Center(UI_CenterType mode)
+void UI_Center(UI_State* uiState, UI_CenterType mode)
 {
-    assert(uiState.itemCount < UI_MAX_STACK_DEPTH);
-    uiState.item[uiState.itemCount].centeringMode = mode;
-    uiState.item[uiState.itemCount].type          = StackType_Centering;
-    uiState.itemCount++;
+    assert(uiState->itemCount < UI_MAX_STACK_DEPTH);
+    uiState->item[uiState->itemCount].centeringMode = mode;
+    uiState->item[uiState->itemCount].type          = StackType_Centering;
+    uiState->itemCount++;
 }
 
-void UI_Padding(Vector4Float padding)
+void UI_Padding(UI_State* uiState, Vector4Float padding)
 {
-    assert(uiState.itemCount < UI_MAX_STACK_DEPTH);
-    uiState.item[uiState.itemCount].padding = padding;
-    uiState.item[uiState.itemCount].type    = StackType_Padding;
-    uiState.itemCount++;
+    assert(uiState->itemCount < UI_MAX_STACK_DEPTH);
+    uiState->item[uiState->itemCount].padding = padding;
+    uiState->item[uiState->itemCount].type    = StackType_Padding;
+    uiState->itemCount++;
 }
 
-void UI_Frame()
+void UI_Frame(UI_State* uiState)
 {
-    assert(uiState.itemCount < UI_MAX_STACK_DEPTH);
-    uiState.item[uiState.itemCount].type                = StackType_Frame;
-    uiState.item[uiState.itemCount].frame.scrollable    = false;
-    uiState.item[uiState.itemCount].frame.contentHeight = 0;
-    uiState.item[uiState.itemCount].frame.widgetId      = 0;
-    uiState.item[uiState.itemCount].frame.size          = 0;
-    uiState.itemCount++;
+    assert(uiState->itemCount < UI_MAX_STACK_DEPTH);
+    uiState->item[uiState->itemCount].type                = StackType_Frame;
+    uiState->item[uiState->itemCount].frame.scrollable    = false;
+    uiState->item[uiState->itemCount].frame.contentHeight = 0;
+    uiState->item[uiState->itemCount].frame.widgetId      = 0;
+    uiState->item[uiState->itemCount].frame.size          = 0;
+    uiState->itemCount++;
 }
 
-void UI_FrameSize(float sizeRatio)
+void UI_FrameSize(UI_State* uiState, float sizeRatio)
 {
-    assert(uiState.itemCount < UI_MAX_STACK_DEPTH);
+    assert(uiState->itemCount < UI_MAX_STACK_DEPTH);
     assert(sizeRatio > 0.0f && sizeRatio <= 1.0f);
-    uiState.item[uiState.itemCount].type                = StackType_Frame;
-    uiState.item[uiState.itemCount].frame.scrollable    = false;
-    uiState.item[uiState.itemCount].frame.contentHeight = 0;
-    uiState.item[uiState.itemCount].frame.widgetId      = 0;
-    uiState.item[uiState.itemCount].frame.size          = sizeRatio;
-    uiState.itemCount++;
+    uiState->item[uiState->itemCount].type                = StackType_Frame;
+    uiState->item[uiState->itemCount].frame.scrollable    = false;
+    uiState->item[uiState->itemCount].frame.contentHeight = 0;
+    uiState->item[uiState->itemCount].frame.widgetId      = 0;
+    uiState->item[uiState->itemCount].frame.size          = sizeRatio;
+    uiState->itemCount++;
 }
 
-void UI_ScrollFrame(float contentHeight)
+void UI_ScrollFrame(UI_State* uiState, float contentHeight)
 {
-    assert(uiState.itemCount < UI_MAX_STACK_DEPTH);
-    uint16_t wid                                        = uiState.widgetIdCounter++;
-    uiState.item[uiState.itemCount].type                = StackType_Frame;
-    uiState.item[uiState.itemCount].frame.scrollable    = true;
-    uiState.item[uiState.itemCount].frame.contentHeight = contentHeight;
-    uiState.item[uiState.itemCount].frame.widgetId      = wid;
-    uiState.itemCount++;
+    assert(uiState->itemCount < UI_MAX_STACK_DEPTH);
+    uint16_t wid                                          = uiState->widgetIdCounter++;
+    uiState->item[uiState->itemCount].type                = StackType_Frame;
+    uiState->item[uiState->itemCount].frame.scrollable    = true;
+    uiState->item[uiState->itemCount].frame.contentHeight = contentHeight;
+    uiState->item[uiState->itemCount].frame.widgetId      = wid;
+    uiState->itemCount++;
 }
 
-void UI_Text(const char* text, float scale, TextureData* font)
+void UI_Text(UI_State* uiState, const char* text, float scale, TextureData* font)
 {
     assert(text != NULL);
-    assert(uiState.itemCount < UI_MAX_STACK_DEPTH);
-    uiState.item[uiState.itemCount].type          = StackType_Text;
-    uiState.item[uiState.itemCount].text.text     = (char*)text;
-    uiState.item[uiState.itemCount].text.textSize = strlen(text);
-    uiState.item[uiState.itemCount].text.scale    = scale;
-    uiState.item[uiState.itemCount].text.font     = font;
-    uiState.itemCount++;
+    assert(uiState->itemCount < UI_MAX_STACK_DEPTH);
+    uiState->item[uiState->itemCount].type          = StackType_Text;
+    uiState->item[uiState->itemCount].text.text     = (char*)text;
+    uiState->item[uiState->itemCount].text.textSize = strlen(text);
+    uiState->item[uiState->itemCount].text.scale    = scale;
+    uiState->item[uiState->itemCount].text.font     = font;
+    uiState->itemCount++;
 }
 
-void UI_Sprite(Sprite* sprite)
+void UI_Sprite(UI_State* uiState, Sprite* sprite)
 {
     assert(sprite != NULL);
-    assert(uiState.itemCount < UI_MAX_STACK_DEPTH);
-    uiState.item[uiState.itemCount].type          = StackType_Sprite;
-    uiState.item[uiState.itemCount].sprite.sprite = sprite;
-    uiState.itemCount++;
+    assert(uiState->itemCount < UI_MAX_STACK_DEPTH);
+    uiState->item[uiState->itemCount].type          = StackType_Sprite;
+    uiState->item[uiState->itemCount].sprite.sprite = sprite;
+    uiState->itemCount++;
 }
 
-bool UI_Button(const char* text, float scale, TextureData* font)
+bool UI_Button(UI_State* uiState, const char* text, float scale, TextureData* font)
 {
     assert(text != NULL);
-    assert(uiState.itemCount < UI_MAX_STACK_DEPTH);
-    uint16_t wid                                    = uiState.widgetIdCounter++;
-    uiState.item[uiState.itemCount].type            = StackType_Button;
-    uiState.item[uiState.itemCount].button.text     = text;
-    uiState.item[uiState.itemCount].button.scale    = scale;
-    uiState.item[uiState.itemCount].button.font     = font;
-    uiState.item[uiState.itemCount].button.widgetId = wid;
-    uiState.itemCount++;
+    assert(uiState->itemCount < UI_MAX_STACK_DEPTH);
+    uint16_t wid                                      = uiState->widgetIdCounter++;
+    uiState->item[uiState->itemCount].type            = StackType_Button;
+    uiState->item[uiState->itemCount].button.text     = text;
+    uiState->item[uiState->itemCount].button.scale    = scale;
+    uiState->item[uiState->itemCount].button.font     = font;
+    uiState->item[uiState->itemCount].button.widgetId = wid;
+    uiState->itemCount++;
 
-    bool result                = uiState.buttonClicked[wid];
-    uiState.buttonClicked[wid] = false;
+    bool result                 = uiState->buttonClicked[wid];
+    uiState->buttonClicked[wid] = false;
     return result;
 }
 
-float UI_Slider(float value, float min, float max)
+float UI_Slider(UI_State* uiState, float value, float min, float max)
 {
-    assert(uiState.itemCount < UI_MAX_STACK_DEPTH);
-    uint16_t wid                                    = uiState.widgetIdCounter++;
-    uiState.item[uiState.itemCount].type            = StackType_Slider;
-    uiState.item[uiState.itemCount].slider.value    = value;
-    uiState.item[uiState.itemCount].slider.min      = min;
-    uiState.item[uiState.itemCount].slider.max      = max;
-    uiState.item[uiState.itemCount].slider.widgetId = wid;
-    uiState.itemCount++;
+    assert(uiState->itemCount < UI_MAX_STACK_DEPTH);
+    uint16_t wid                                      = uiState->widgetIdCounter++;
+    uiState->item[uiState->itemCount].type            = StackType_Slider;
+    uiState->item[uiState->itemCount].slider.value    = value;
+    uiState->item[uiState->itemCount].slider.min      = min;
+    uiState->item[uiState->itemCount].slider.max      = max;
+    uiState->item[uiState->itemCount].slider.widgetId = wid;
+    uiState->itemCount++;
 
-    if (uiState.sliderDragging[wid])
-        return uiState.sliderValue[wid];
+    if (uiState->sliderDragging[wid])
+        return uiState->sliderValue[wid];
     return value;
 }
 
-int UI_List(const char** items, int itemCount, float textScale, float itemHeight, TextureData* font, bool showScroll)
+int UI_List(UI_State* uiState, const char** items, int itemCount, float textScale, float itemHeight, TextureData* font,
+            bool showScroll)
 {
     assert(items != NULL);
     assert(font != NULL);
-    assert(uiState.itemCount < UI_MAX_STACK_DEPTH);
-    uint16_t wid                                    = uiState.widgetIdCounter++;
-    uiState.item[uiState.itemCount].type            = StackType_List;
-    uiState.item[uiState.itemCount].list.items      = items;
-    uiState.item[uiState.itemCount].list.itemCount  = itemCount;
-    uiState.item[uiState.itemCount].list.textScale  = textScale;
-    uiState.item[uiState.itemCount].list.itemHeight = itemHeight;
-    uiState.item[uiState.itemCount].list.font       = font;
-    uiState.item[uiState.itemCount].list.showScroll = showScroll;
-    uiState.item[uiState.itemCount].list.widgetId   = wid;
-    uiState.itemCount++;
+    assert(uiState->itemCount < UI_MAX_STACK_DEPTH);
+    uint16_t wid                                      = uiState->widgetIdCounter++;
+    uiState->item[uiState->itemCount].type            = StackType_List;
+    uiState->item[uiState->itemCount].list.items      = items;
+    uiState->item[uiState->itemCount].list.itemCount  = itemCount;
+    uiState->item[uiState->itemCount].list.textScale  = textScale;
+    uiState->item[uiState->itemCount].list.itemHeight = itemHeight;
+    uiState->item[uiState->itemCount].list.font       = font;
+    uiState->item[uiState->itemCount].list.showScroll = showScroll;
+    uiState->item[uiState->itemCount].list.widgetId   = wid;
+    uiState->itemCount++;
 
-    return uiState.listSelected[wid];
+    return uiState->listSelected[wid];
 }
 
-bool UI_Toggle(const char* text, bool active, float scale, TextureData* font)
+bool UI_Toggle(UI_State* uiState, const char* text, bool active, float scale, TextureData* font)
 {
     assert(text != NULL);
     assert(font != NULL);
-    assert(uiState.itemCount < UI_MAX_STACK_DEPTH);
-    uint16_t wid                                    = uiState.widgetIdCounter++;
-    uiState.item[uiState.itemCount].type            = StackType_Toggle;
-    uiState.item[uiState.itemCount].button.text     = text;
-    uiState.item[uiState.itemCount].button.scale    = scale;
-    uiState.item[uiState.itemCount].button.font     = font;
-    uiState.item[uiState.itemCount].button.widgetId = wid;
-    uiState.toggleState[wid]                        = active;
-    uiState.itemCount++;
+    assert(uiState->itemCount < UI_MAX_STACK_DEPTH);
+    uint16_t wid                                      = uiState->widgetIdCounter++;
+    uiState->item[uiState->itemCount].type            = StackType_Toggle;
+    uiState->item[uiState->itemCount].button.text     = text;
+    uiState->item[uiState->itemCount].button.scale    = scale;
+    uiState->item[uiState->itemCount].button.font     = font;
+    uiState->item[uiState->itemCount].button.widgetId = wid;
+    uiState->toggleState[wid]                         = active;
+    uiState->itemCount++;
 
-    bool result                = uiState.buttonClicked[wid];
-    uiState.buttonClicked[wid] = false;
+    bool result                 = uiState->buttonClicked[wid];
+    uiState->buttonClicked[wid] = false;
     return result;
 }
 
-void UI_Separator()
+void UI_Separator(UI_State* uiState)
 {
-    assert(uiState.itemCount < UI_MAX_STACK_DEPTH);
-    uiState.item[uiState.itemCount].type = StackType_Separator;
-    uiState.itemCount++;
+    assert(uiState->itemCount < UI_MAX_STACK_DEPTH);
+    uiState->item[uiState->itemCount].type = StackType_Separator;
+    uiState->itemCount++;
 }
 
-int UI_TileGrid(TextureData* textures, int textureCount, int columns, int selectedTile)
+int UI_TileGrid(UI_State* uiState, TextureData* textures, int textureCount, int columns, int selectedTile)
 {
     assert(textures != NULL);
-    assert(uiState.itemCount < UI_MAX_STACK_DEPTH);
-    uint16_t wid = uiState.widgetIdCounter++;
+    assert(uiState->itemCount < UI_MAX_STACK_DEPTH);
+    uint16_t wid = uiState->widgetIdCounter++;
 
-    uiState.item[uiState.itemCount].type                  = StackType_TileGrid;
-    uiState.item[uiState.itemCount].tileGrid.textures     = textures;
-    uiState.item[uiState.itemCount].tileGrid.textureCount = textureCount;
-    uiState.item[uiState.itemCount].tileGrid.cols         = columns;
-    uiState.item[uiState.itemCount].tileGrid.selectedTile = selectedTile;
-    uiState.item[uiState.itemCount].tileGrid.widgetId     = wid;
-    uiState.itemCount++;
+    uiState->item[uiState->itemCount].type                  = StackType_TileGrid;
+    uiState->item[uiState->itemCount].tileGrid.textures     = textures;
+    uiState->item[uiState->itemCount].tileGrid.textureCount = textureCount;
+    uiState->item[uiState->itemCount].tileGrid.cols         = columns;
+    uiState->item[uiState->itemCount].tileGrid.selectedTile = selectedTile;
+    uiState->item[uiState->itemCount].tileGrid.widgetId     = wid;
+    uiState->itemCount++;
 
-    return uiState.tileGridSelected[wid];
+    return uiState->tileGridSelected[wid];
 }
 
-static void PushSprite(Sprite sprite)
+void UI_Graph1D(UI_State* uiState, float* values, int valueCount, UI_GraphType1d graphType)
 {
-    Drawable d;
-    d.type   = DRAWABLE_SPRITE;
+    assert(values != NULL);
+    assert(uiState->itemCount < UI_MAX_STACK_DEPTH);
+    uiState->item[uiState->itemCount].type               = StackType_Graph1D;
+    uiState->item[uiState->itemCount].graph1d.values     = values;
+    uiState->item[uiState->itemCount].graph1d.valueCount = valueCount;
+    uiState->item[uiState->itemCount].graph1d.type       = graphType;
+    uiState->itemCount++;
+}
+
+void UI_Graph2D(UI_State* uiState, Vector2Float* values, int valueCount, UI_GraphType2d graphType)
+{
+    assert(values != NULL);
+    assert(uiState->itemCount < UI_MAX_STACK_DEPTH);
+    uiState->item[uiState->itemCount].type               = StackType_Graph2D;
+    uiState->item[uiState->itemCount].graph2d.values     = values;
+    uiState->item[uiState->itemCount].graph2d.valueCount = valueCount;
+    uiState->item[uiState->itemCount].graph2d.type       = graphType;
+    uiState->itemCount++;
+}
+
+static void PushSprite(UI_State* uiState, Sprite sprite)
+{
+    RenderStackItem d;
+    d.type   = RENDERCOMMAND_DRAW_SPRITE;
     d.sprite = sprite;
-    Utils_AddToArray(uiState.drawableArray, d, *uiState.drawableArraySize, uiState.drawableArrayMaxSize);
+    Utils_AddToArray(uiState->drawableArray, d, *uiState->drawableArraySize, uiState->drawableArrayMaxSize);
 }
 
-static void PushShape(Shape2D shape)
+static void PushShape(UI_State* uiState, Shape2D shape)
 {
-    Drawable d;
-    d.type  = DRAWABLE_SHAPE;
+    RenderStackItem d;
+    d.type  = RENDERCOMMAND_DRAW_SHAPE;
     d.shape = shape;
-    Utils_AddToArray(uiState.drawableArray, d, *uiState.drawableArraySize, uiState.drawableArrayMaxSize);
+    Utils_AddToArray(uiState->drawableArray, d, *uiState->drawableArraySize, uiState->drawableArrayMaxSize);
 }
 
-static Vector2Float GetMouseWorldPos()
+static Vector2Float GetMouseWorldPos(UI_State* uiState)
 {
-    Camera2D*    cam      = Window_GetCamera();
-    Vector2Float mousePos = { (float)Input_GetMouseX(), (float)Input_GetMouseY() };
-    return Utils_ScreenToWorld2D(mousePos, *cam);
+    return Utils_ScreenToWorld2D({ (float)Input_GetMouseX(), (float)Input_GetMouseY() }, *uiState->camera);
 }
 
-static bool PointInRect(Vector2Float point, Rectangle rectangle)
+static bool PointInRect(UI_State* uiState, Vector2Float point, Rectangle rectangle)
 {
-    if (uiParent != NULL)
+    if (uiState->parentEntity != NULL)
     {
-        point.x -= uiParent->position.x;
-        point.y -= uiParent->position.y;
-        point.x /= uiParent->scale;
-        point.y /= uiParent->scale;
+        point.x -= uiState->parentEntity->position.x;
+        point.y -= uiState->parentEntity->position.y;
+        point.x /= uiState->parentEntity->scale;
+        point.y /= uiState->parentEntity->scale;
     }
     return point.x >= rectangle.x && point.x <= rectangle.x + rectangle.width && point.y >= rectangle.y
            && point.y <= rectangle.y + rectangle.height;
 }
 
-static void DrawFrameShape(Vector4Float rectangle, Color background)
+static void DrawFrameShape(UI_State* uiState, Vector4Float rectangle, Color background)
 {
     Shape2D s;
     Shape2D_Initialize(&s);
@@ -286,11 +312,11 @@ static void DrawFrameShape(Vector4Float rectangle, Color background)
     s.rectangle.width  = rectangle.w;
     s.rectangle.height = rectangle.h;
     s.color            = background;
-    s.parent           = uiParent;
-    PushShape(s);
+    s.parent           = uiState->parentEntity;
+    PushShape(uiState, s);
 }
 
-static void DrawLine(Vector2Float a, Vector2Float b, float thickness, Color color)
+static void DrawLine(UI_State* uiState, Vector2Float a, Vector2Float b, float thickness, Color color)
 {
     Shape2D s;
     Shape2D_Initialize(&s);
@@ -301,36 +327,39 @@ static void DrawLine(Vector2Float a, Vector2Float b, float thickness, Color colo
     s.line.endPosition.y = b.y;
     s.line.thickness     = thickness;
     s.color              = color;
-    s.parent             = uiParent;
-    PushShape(s);
+    s.parent             = uiState->parentEntity;
+    PushShape(uiState, s);
 }
 
 /* Draws a raised (true) or pressed/inset (false) 3D bevel around a filled rectangle. */
-static void DrawBevel(Vector4Float rect, Color base, bool raised)
+static void DrawBevel(UI_State* uiState, Vector4Float rect, Color base, bool raised)
 {
-    DrawFrameShape(rect, base);
+    DrawFrameShape(uiState, rect, base);
 
-    Color hi = raised ? uiTheme.buttonHighlight : uiTheme.buttonShadow;
-    Color lo = raised ? uiTheme.buttonShadow : uiTheme.buttonHighlight;
+    Color hi = raised ? uiState->theme.buttonHighlight : uiState->theme.buttonShadow;
+    Color lo = raised ? uiState->theme.buttonShadow : uiState->theme.buttonHighlight;
 
-    float b = uiTheme.bevel;
+    float b  = uiState->theme.bevel;
     float x0 = rect.x;
     float y0 = rect.y;
     float x1 = rect.x + rect.w;
     float y1 = rect.y + rect.h;
 
-    DrawLine((Vector2Float){ x0, y0 },           (Vector2Float){ x1, y0 },           b, hi);
-    DrawLine((Vector2Float){ x0, y0 },           (Vector2Float){ x0, y1 },           b, hi);
-    DrawLine((Vector2Float){ x0, y1 },           (Vector2Float){ x1, y1 },           b, lo);
-    DrawLine((Vector2Float){ x1, y0 },           (Vector2Float){ x1, y1 },           b, lo);
+    DrawLine(uiState, (Vector2Float){ x0, y0 }, (Vector2Float){ x1, y0 }, b, hi);
+    DrawLine(uiState, (Vector2Float){ x0, y0 }, (Vector2Float){ x0, y1 }, b, hi);
+    DrawLine(uiState, (Vector2Float){ x0, y1 }, (Vector2Float){ x1, y1 }, b, lo);
+    DrawLine(uiState, (Vector2Float){ x1, y0 }, (Vector2Float){ x1, y1 }, b, lo);
 }
 
-static void DrawTextItem(int childId, Vector4Float childBounds, UI_CenterType childCenter, float scrollY)
+static void DrawTextItem(UI_State* uiState, int childId, Vector4Float childBounds, UI_CenterType childCenter,
+                         float scrollY)
 {
-    const char*  text       = uiState.item[childId].text.text;
-    size_t       textLength = uiState.item[childId].text.textSize;
-    float        scale      = uiState.item[childId].text.scale;
-    TextureData* fontAtlas  = uiState.item[childId].text.font;
+    (void)scrollY;
+
+    const char*  text       = uiState->item[childId].text.text;
+    size_t       textLength = uiState->item[childId].text.textSize;
+    float        scale      = uiState->item[childId].text.scale;
+    TextureData* fontAtlas  = uiState->item[childId].text.font;
 
     float charWidth  = (fontAtlas ? (float)fontAtlas[0].size.x : 8.0f) * scale;
     float charHeight = (fontAtlas ? (float)fontAtlas[0].size.y : 8.0f) * scale;
@@ -353,15 +382,18 @@ static void DrawTextItem(int childId, Vector4Float childBounds, UI_CenterType ch
         s.scale      = scale;
         s.position.x = dx + charWidth * k;
         s.position.y = dy;
-        s.parent     = uiParent;
+        s.parent     = uiState->parentEntity;
         s.isVisible  = true;
-        PushSprite(s);
+        PushSprite(uiState, s);
     }
 }
 
-static void DrawSpriteItem(int childId, Vector4Float childBounds, UI_CenterType childCenter, float scrollY)
+static void DrawSpriteItem(UI_State* uiState, int childId, Vector4Float childBounds, UI_CenterType childCenter,
+                           float scrollY)
 {
-    Sprite* src = uiState.item[childId].sprite.sprite;
+    (void)scrollY;
+
+    Sprite* src = uiState->item[childId].sprite.sprite;
     if (!src || !src->currentTexture)
         return;
 
@@ -381,18 +413,22 @@ static void DrawSpriteItem(int childId, Vector4Float childBounds, UI_CenterType 
     sprite.scale          = src->scale;
     sprite.position.x     = dx;
     sprite.position.y     = dy;
-    sprite.parent         = uiParent;
+    sprite.parent         = uiState->parentEntity;
     sprite.isVisible      = true;
     sprite.tint           = src->tint;
-    PushSprite(sprite);
+    PushSprite(uiState, sprite);
 }
 
-static void DrawButtonItem(int childId, Vector4Float childBounds, UI_CenterType childCenter, float scrollY)
+static void DrawButtonItem(UI_State* uiState, int childId, Vector4Float childBounds, UI_CenterType childCenter,
+                           float scrollY)
 {
-    const char*  text      = uiState.item[childId].button.text;
-    float        scale     = uiState.item[childId].button.scale;
-    uint16_t     wid       = uiState.item[childId].button.widgetId;
-    TextureData* fontAtlas = uiState.item[childId].button.font;
+    (void)scrollY;
+    (void)childCenter;
+
+    const char*  text      = uiState->item[childId].button.text;
+    float        scale     = uiState->item[childId].button.scale;
+    uint16_t     wid       = uiState->item[childId].button.widgetId;
+    TextureData* fontAtlas = uiState->item[childId].button.font;
 
     float  charWidth  = (fontAtlas ? (float)fontAtlas[0].size.x : 8.0f) * scale;
     float  charHeight = (fontAtlas ? (float)fontAtlas[0].size.y : 8.0f) * scale;
@@ -407,14 +443,15 @@ static void DrawButtonItem(int childId, Vector4Float childBounds, UI_CenterType 
     float by = childBounds.y + (childBounds.h - btnH) * 0.5f;
 
     Rectangle    rect    = { bx, by, btnW, btnH };
-    Vector2Float mp      = GetMouseWorldPos();
-    bool         hovered = PointInRect(mp, rect);
+    Vector2Float mp      = GetMouseWorldPos(uiState);
+    bool         hovered = PointInRect(uiState, mp, rect);
     bool         pressed = Input_IsMouseButtonDown(INPUT_MOUSE_BUTTON_LEFT) && hovered;
 
-    Color col = pressed ? uiTheme.buttonActive : (hovered ? uiTheme.buttonHover : uiTheme.buttonBg);
+    Color col =
+        pressed ? uiState->theme.buttonActive : (hovered ? uiState->theme.buttonHover : uiState->theme.buttonBg);
 
     /* pressed -> inset (shadow on top/left), otherwise raised bevel */
-    DrawBevel((Vector4Float){ rect.x, rect.y, rect.width, rect.height }, col, !pressed);
+    DrawBevel(uiState, (Vector4Float){ rect.x, rect.y, rect.width, rect.height }, col, !pressed);
 
     float dx = bx + (btnW - textWidth) * 0.5f;
     float dy = by + (btnH - textHeight) * 0.5f;
@@ -429,21 +466,25 @@ static void DrawButtonItem(int childId, Vector4Float childBounds, UI_CenterType 
         s.scale      = scale;
         s.position.x = dx + charWidth * k;
         s.position.y = dy;
-        s.parent     = uiParent;
+        s.parent     = uiState->parentEntity;
         s.isVisible  = true;
-        PushSprite(s);
+        PushSprite(uiState, s);
     }
 
     if (hovered && Input_IsMouseButtonPressed(INPUT_MOUSE_BUTTON_LEFT))
-        uiState.buttonClicked[wid] = true;
+        uiState->buttonClicked[wid] = true;
 }
 
-static void DrawSliderItem(int childId, Vector4Float childBounds, UI_CenterType childCenter, float scrollY)
+static void DrawSliderItem(UI_State* uiState, int childId, Vector4Float childBounds, UI_CenterType childCenter,
+                           float scrollY)
 {
-    uint16_t wid = uiState.item[childId].slider.widgetId;
-    float    val = uiState.sliderDragging[wid] ? uiState.sliderValue[wid] : uiState.item[childId].slider.value;
-    float    min = uiState.item[childId].slider.min;
-    float    max = uiState.item[childId].slider.max;
+    (void)scrollY;
+    (void)childCenter;
+
+    uint16_t wid = uiState->item[childId].slider.widgetId;
+    float    val = uiState->sliderDragging[wid] ? uiState->sliderValue[wid] : uiState->item[childId].slider.value;
+    float    min = uiState->item[childId].slider.min;
+    float    max = uiState->item[childId].slider.max;
 
     float trackH = childBounds.h * 0.3f;
     float trackY = childBounds.y + (childBounds.h - trackH) * 0.5f;
@@ -451,8 +492,8 @@ static void DrawSliderItem(int childId, Vector4Float childBounds, UI_CenterType 
     float trackX = childBounds.x;
 
     Rectangle trackRect = { trackX, trackY, trackW, trackH };
-    DrawBevel((Vector4Float){ trackRect.x, trackRect.y, trackRect.width, trackRect.height }, uiTheme.sliderTrack,
-              false);
+    DrawBevel(uiState, (Vector4Float){ trackRect.x, trackRect.y, trackRect.width, trackRect.height },
+              uiState->theme.sliderTrack, false);
 
     float t      = (max > min) ? (val - min) / (max - min) : 0;
     float thumbW = trackH * 1.5f;
@@ -461,45 +502,49 @@ static void DrawSliderItem(int childId, Vector4Float childBounds, UI_CenterType 
     float thumbY = trackY - (thumbH - trackH) * 0.5f;
 
     Rectangle thumbRect = { thumbX, thumbY, thumbW, thumbH };
-    DrawBevel((Vector4Float){ thumbRect.x, thumbRect.y, thumbRect.width, thumbRect.height }, uiTheme.sliderThumb,
-              true);
+    DrawBevel(uiState, (Vector4Float){ thumbRect.x, thumbRect.y, thumbRect.width, thumbRect.height },
+              uiState->theme.sliderThumb, true);
 
-    Vector2Float mousePod = GetMouseWorldPos();
-    bool         hovered  = PointInRect(mousePod, trackRect) || PointInRect(mousePod, thumbRect);
+    Vector2Float mousePos = GetMouseWorldPos(uiState);
+    bool         hovered  = PointInRect(uiState, mousePos, trackRect) || PointInRect(uiState, mousePos, thumbRect);
 
     if (Input_IsMouseButtonPressed(INPUT_MOUSE_BUTTON_LEFT) && hovered)
-        uiState.sliderDragging[wid] = true;
+        uiState->sliderDragging[wid] = true;
 
-    if (uiState.sliderDragging[wid])
+    if (uiState->sliderDragging[wid])
     {
         if (Input_IsMouseButtonReleased(INPUT_MOUSE_BUTTON_LEFT))
         {
-            uiState.sliderDragging[wid] = false;
+            uiState->sliderDragging[wid] = false;
         }
         else
         {
-            float nt = (mousePod.x - trackX) / trackW;
+            float nt = (mousePos.x - trackX) / trackW;
             if (nt < 0)
                 nt = 0;
             if (nt > 1)
                 nt = 1;
-            uiState.sliderValue[wid] = min + nt * (max - min);
+            uiState->sliderValue[wid] = min + nt * (max - min);
         }
     }
 }
 
-static void DrawListItem(int childId, Vector4Float childBounds, UI_CenterType childCenter, float scrollY)
+static void DrawListItem(UI_State* uiState, int childId, Vector4Float childBounds, UI_CenterType childCenter,
+                         float scrollY)
 {
-    const char** items      = uiState.item[childId].list.items;
-    int          itemCount  = uiState.item[childId].list.itemCount;
-    float        textScale  = uiState.item[childId].list.textScale;
-    float        itemH      = uiState.item[childId].list.itemHeight;
-    uint16_t     wid        = uiState.item[childId].list.widgetId;
-    TextureData* fontAtlas  = uiState.item[childId].list.font;
-    bool         showScroll = uiState.item[childId].list.showScroll;
+    (void)scrollY;
+    (void)childCenter;
+
+    const char** items      = uiState->item[childId].list.items;
+    int          itemCount  = uiState->item[childId].list.itemCount;
+    float        textScale  = uiState->item[childId].list.textScale;
+    float        itemH      = uiState->item[childId].list.itemHeight;
+    uint16_t     wid        = uiState->item[childId].list.widgetId;
+    TextureData* fontAtlas  = uiState->item[childId].list.font;
+    bool         showScroll = uiState->item[childId].list.showScroll;
     float        charWidth  = (fontAtlas ? (float)fontAtlas[0].size.x : 8.0f) * textScale;
 
-    float listScroll  = uiState.scrollOffset[wid];
+    float listScroll  = uiState->scrollOffset[wid];
     float totalHeight = itemCount * itemH;
     float maxScroll   = totalHeight - childBounds.h;
     if (maxScroll < 0)
@@ -511,14 +556,14 @@ static void DrawListItem(int childId, Vector4Float childBounds, UI_CenterType ch
         listScroll = 0;
     if (listScroll > maxScroll)
         listScroll = maxScroll;
-    uiState.scrollOffset[wid] = listScroll;
+    uiState->scrollOffset[wid] = listScroll;
 
     float itemWidth      = childBounds.w;
     float scrollbarWidth = 8;
     if (showScroll && maxScroll > 0)
         itemWidth = childBounds.w - scrollbarWidth;
 
-    Vector2Float mousePos = GetMouseWorldPos();
+    Vector2Float mousePos = GetMouseWorldPos(uiState);
 
     for (int i = 0; i < itemCount; i++)
     {
@@ -527,14 +572,14 @@ static void DrawListItem(int childId, Vector4Float childBounds, UI_CenterType ch
             continue;
 
         Rectangle itemRect = { childBounds.x, iy, itemWidth, itemH };
-        bool      hover    = PointInRect(mousePos, itemRect);
+        bool      hover    = PointInRect(uiState, mousePos, itemRect);
 
-        Color bgCol = (i == uiState.listSelected[wid]) ? uiTheme.listSelected : (Color){ 0, 0, 0, 0 };
-        if (hover && i != uiState.listSelected[wid])
-            bgCol = uiTheme.listHover;
+        Color bgCol = (i == uiState->listSelected[wid]) ? uiState->theme.listSelected : (Color){ 0, 0, 0, 0 };
+        if (hover && i != uiState->listSelected[wid])
+            bgCol = uiState->theme.listHover;
 
         if (bgCol.a > 0)
-            DrawFrameShape((Vector4Float){ itemRect.x, itemRect.y, itemRect.width, itemRect.height }, bgCol);
+            DrawFrameShape(uiState, (Vector4Float){ itemRect.x, itemRect.y, itemRect.width, itemRect.height }, bgCol);
 
         const char* text       = items[i];
         size_t      textLength = strlen(text);
@@ -551,33 +596,37 @@ static void DrawListItem(int childId, Vector4Float childBounds, UI_CenterType ch
             s.scale      = textScale;
             s.position.x = dx + charWidth * k;
             s.position.y = dy;
-            s.parent     = uiParent;
+            s.parent     = uiState->parentEntity;
             s.isVisible  = true;
-            PushSprite(s);
+            PushSprite(uiState, s);
         }
 
         if (hover && Input_IsMouseButtonPressed(INPUT_MOUSE_BUTTON_LEFT))
-            uiState.listSelected[wid] = i;
+            uiState->listSelected[wid] = i;
     }
 
     if (showScroll && maxScroll > 0)
     {
         float sbx = childBounds.x + itemWidth;
         float sby = childBounds.y;
-        DrawFrameShape((Vector4Float){ sbx, sby, scrollbarWidth, childBounds.h }, uiTheme.sliderTrack);
+        DrawFrameShape(uiState, (Vector4Float){ sbx, sby, scrollbarWidth, childBounds.h }, uiState->theme.sliderTrack);
 
         float thumbH = (childBounds.h / totalHeight) * childBounds.h;
         float thumbY = sby + (listScroll / totalHeight) * childBounds.h;
-        DrawBevel((Vector4Float){ sbx, thumbY, scrollbarWidth, thumbH }, uiTheme.sliderThumb, true);
+        DrawBevel(uiState, (Vector4Float){ sbx, thumbY, scrollbarWidth, thumbH }, uiState->theme.sliderThumb, true);
     }
 }
 
-static void DrawToggleItem(int childId, Vector4Float childBounds, UI_CenterType childCenter, float scrollY)
+static void DrawToggleItem(UI_State* uiState, int childId, Vector4Float childBounds, UI_CenterType childCenter,
+                           float scrollY)
 {
-    const char*  text      = uiState.item[childId].button.text;
-    float        scale     = uiState.item[childId].button.scale;
-    uint16_t     wid       = uiState.item[childId].button.widgetId;
-    TextureData* fontAtlas = uiState.item[childId].button.font;
+    (void)scrollY;
+    (void)childCenter;
+
+    const char*  text      = uiState->item[childId].button.text;
+    float        scale     = uiState->item[childId].button.scale;
+    uint16_t     wid       = uiState->item[childId].button.widgetId;
+    TextureData* fontAtlas = uiState->item[childId].button.font;
 
     float  charWidth  = (fontAtlas ? (float)fontAtlas[0].size.x : 8.0f) * scale;
     float  charHeight = (fontAtlas ? (float)fontAtlas[0].size.y : 8.0f) * scale;
@@ -592,20 +641,20 @@ static void DrawToggleItem(int childId, Vector4Float childBounds, UI_CenterType 
     float by = childBounds.y + (childBounds.h - btnH) * 0.5f;
 
     Rectangle    rect     = { bx, by, btnW, btnH };
-    Vector2Float mousePos = GetMouseWorldPos();
-    bool         hovered  = PointInRect(mousePos, rect);
+    Vector2Float mousePos = GetMouseWorldPos(uiState);
+    bool         hovered  = PointInRect(uiState, mousePos, rect);
     bool         pressed  = Input_IsMouseButtonDown(INPUT_MOUSE_BUTTON_LEFT) && hovered;
 
-    bool  active = uiState.toggleState[wid];
+    bool  active = uiState->toggleState[wid];
     Color col;
     if (active)
-        col = hovered ? uiTheme.toggleActiveHover : uiTheme.toggleActive;
+        col = hovered ? uiState->theme.toggleActiveHover : uiState->theme.toggleActive;
     else
-        col = hovered ? uiTheme.toggleHover : uiTheme.toggleInactive;
+        col = hovered ? uiState->theme.toggleHover : uiState->theme.toggleInactive;
     if (pressed)
-        col = uiTheme.toggleActive;
+        col = uiState->theme.toggleActive;
 
-    DrawBevel((Vector4Float){ rect.x, rect.y, rect.width, rect.height }, col, !active);
+    DrawBevel(uiState, (Vector4Float){ rect.x, rect.y, rect.width, rect.height }, col, !active);
 
     float dx = bx + (btnW - textWidth) * 0.5f;
     float dy = by + (btnH - textHeight) * 0.5f;
@@ -620,18 +669,21 @@ static void DrawToggleItem(int childId, Vector4Float childBounds, UI_CenterType 
         s.scale      = scale;
         s.position.x = dx + charWidth * k;
         s.position.y = dy;
-        s.parent     = uiParent;
+        s.parent     = uiState->parentEntity;
         s.isVisible  = true;
-        PushSprite(s);
+        PushSprite(uiState, s);
     }
 
     if (hovered && Input_IsMouseButtonPressed(INPUT_MOUSE_BUTTON_LEFT))
-        uiState.buttonClicked[wid] = true;
+        uiState->buttonClicked[wid] = true;
 }
 
-static void DrawSeparatorItem(int childId, Vector4Float childBounds, UI_CenterType childCenter, float scrollY)
+static void DrawSeparatorItem(UI_State* uiState, int childId, Vector4Float childBounds, UI_CenterType childCenter,
+                              float scrollY)
 {
+    (void)scrollY;
     (void)childId;
+    (void)childCenter;
 
     float midY = childBounds.y + childBounds.h * 0.5f;
 
@@ -643,30 +695,32 @@ static void DrawSeparatorItem(int childId, Vector4Float childBounds, UI_CenterTy
     line.line.endPosition.x = childBounds.x + childBounds.w;
     line.line.endPosition.y = midY;
     line.line.thickness     = 1.0f;
-    line.color              = uiTheme.separatorColor;
-    line.parent             = uiParent;
-    PushShape(line);
+    line.color              = uiState->theme.separatorColor;
+    line.parent             = uiState->parentEntity;
+    PushShape(uiState, line);
 }
 
-static void DrawTileGridItem(int childId, Vector4Float childBounds, UI_CenterType childCenter, float scrollY)
+static void DrawTileGridItem(UI_State* uiState, int childId, Vector4Float childBounds, UI_CenterType childCenter,
+                             float scrollY)
 {
     (void)scrollY;
+    (void)childCenter;
 
-    TextureData* textures     = uiState.item[childId].tileGrid.textures;
-    int          textureCount = uiState.item[childId].tileGrid.textureCount;
-    int          cols         = uiState.item[childId].tileGrid.cols;
-    uint16_t     wid          = uiState.item[childId].tileGrid.widgetId;
-    int          selectedTile = uiState.tileGridSelected[wid];
+    TextureData* textures     = uiState->item[childId].tileGrid.textures;
+    int          textureCount = uiState->item[childId].tileGrid.textureCount;
+    int          cols         = uiState->item[childId].tileGrid.cols;
+    uint16_t     wid          = uiState->item[childId].tileGrid.widgetId;
+    int          selectedTile = uiState->tileGridSelected[wid];
 
     float cellSize    = childBounds.w / cols;
     int   rows        = (textureCount + cols - 1) / cols;
     float totalHeight = rows * cellSize;
 
-    float gridScroll = uiState.scrollOffset[wid];
+    float gridScroll = uiState->scrollOffset[wid];
 
-    Vector2Float mp        = GetMouseWorldPos();
+    Vector2Float mp        = GetMouseWorldPos(uiState);
     Rectangle    frameRect = { childBounds.x, childBounds.y, childBounds.w, childBounds.h };
-    bool         hovered   = PointInRect(mp, frameRect);
+    bool         hovered   = PointInRect(uiState, mp, frameRect);
 
     float wheel = Platform_GetMouseWheelMove();
     if (hovered && wheel != 0.0f)
@@ -679,7 +733,7 @@ static void DrawTileGridItem(int childId, Vector4Float childBounds, UI_CenterTyp
             gridScroll = 0;
         if (gridScroll > maxScroll)
             gridScroll = maxScroll;
-        uiState.scrollOffset[wid] = gridScroll;
+        uiState->scrollOffset[wid] = gridScroll;
     }
 
     for (int i = 0; i < textureCount; i++)
@@ -701,7 +755,7 @@ static void DrawTileGridItem(int childId, Vector4Float childBounds, UI_CenterTyp
         sprite.scale          = cellSize / sprite.currentTexture->size.x;
         sprite.position.x     = bx;
         sprite.position.y     = by;
-        sprite.parent         = uiParent;
+        sprite.parent         = uiState->parentEntity;
         sprite.isVisible      = true;
 
         if (i == selectedTile)
@@ -709,18 +763,177 @@ static void DrawTileGridItem(int childId, Vector4Float childBounds, UI_CenterTyp
             sprite.tint = (Color){ 120, 200, 255, 255 };
         }
 
-        PushSprite(sprite);
+        PushSprite(uiState, sprite);
 
         if (hovered && Input_IsMouseButtonPressed(INPUT_MOUSE_BUTTON_LEFT))
         {
             Rectangle cellRect = { bx, by, cellSize, cellSize };
-            if (PointInRect(mp, cellRect))
+            if (PointInRect(uiState, mp, cellRect))
             {
                 if (i == selectedTile)
-                    uiState.tileGridSelected[wid] = -1;
+                    uiState->tileGridSelected[wid] = -1;
                 else
-                    uiState.tileGridSelected[wid] = i;
+                    uiState->tileGridSelected[wid] = i;
             }
+        }
+    }
+}
+
+static void DrawGraph1DItem(UI_State* uiState, int childId, Vector4Float childBounds, UI_CenterType childCenter,
+                            float scrollY)
+{
+    (void)scrollY;
+    (void)childCenter;
+
+    Color colors[12] = { COLOR_GREEN,   COLOR_BLUE, COLOR_RED,   COLOR_YELLOW, COLOR_ORANGE,    COLOR_PURPLE,
+                         COLOR_SKYBLUE, COLOR_PINK, COLOR_BROWN, COLOR_GRAY,   COLOR_DARKGREEN, COLOR_DARKBLUE };
+
+    UI_Graph1DData* graph    = &uiState->item[childId].graph1d;
+    float           maxValue = graph->values[0];
+    float           minValue = graph->values[0];
+    for (int i = 0; i < graph->valueCount - 1; i++)
+    {
+        if (graph->values[i] > maxValue)
+            maxValue = graph->values[i];
+        if (graph->values[i] < minValue)
+            minValue = graph->values[i];
+    }
+
+    if (graph->type == Graph1dHorizontal)
+    {
+        // Draw horizontal bars for each value make it percent of maxValue
+        for (int i = 0; i < graph->valueCount - 1; i++)
+        {
+            float x0 = childBounds.x;
+            float y0 = childBounds.y + ((float)i / (graph->valueCount - 1)) * childBounds.h;
+            float x1 = childBounds.x + (graph->values[i] / maxValue) * childBounds.w;
+            float y1 = childBounds.y + ((float)(i + 1) / (graph->valueCount - 1)) * childBounds.h;
+            // float x0 = childBounds.x + ((float)i / (graph->valueCount - 1)) * childBounds.w;
+            // float y0 = childBounds.y + childBounds.h - (graph->values[i] / maxValue) * childBounds.h;
+            // float x1 = childBounds.x + ((float)(i + 1) / (graph->valueCount - 1)) * childBounds.w;
+            // float y1 = childBounds.y + childBounds.h - (graph->values[i + 1] / maxValue) * childBounds.h;
+
+            Shape2D rect;
+            Shape2D_Initialize(&rect);
+            rect.type             = SHAPE2D_RECTANGLE;
+            rect.position.x       = x0;
+            rect.position.y       = y0;
+            rect.rectangle.width  = x1 - x0;
+            rect.rectangle.height = y1 - y0;
+            rect.color            = colors[i % 12];
+            rect.parent           = uiState->parentEntity;
+            PushShape(uiState, rect);
+        }
+    }
+    else if (graph->type == Graph1dVertical)
+    {
+        // Draw vertical bars for each value make it percent of maxValue
+        for (int i = 0; i < graph->valueCount - 1; i++)
+        {
+            float x0 = childBounds.x + ((float)i / (graph->valueCount - 1)) * childBounds.w;
+            float y0 = childBounds.y + childBounds.h - (graph->values[i] / maxValue) * childBounds.h;
+            float x1 = childBounds.x + ((float)(i + 1) / (graph->valueCount - 1)) * childBounds.w;
+            float y1 = childBounds.y + childBounds.h;
+
+            Shape2D rect;
+            Shape2D_Initialize(&rect);
+            rect.type             = SHAPE2D_RECTANGLE;
+            rect.position.x       = x0;
+            rect.position.y       = y0;
+            rect.rectangle.width  = x1 - x0;
+            rect.rectangle.height = y1 - y0;
+            rect.color            = colors[i % 12];
+            rect.parent           = uiState->parentEntity;
+            PushShape(uiState, rect);
+        }
+    }
+}
+
+static void DrawGraph2DItem(UI_State* uiState, int childId, Vector4Float childBounds, UI_CenterType childCenter,
+                            float scrollY)
+{
+    (void)scrollY;
+    (void)childCenter;
+
+    UI_Graph2DData* graph     = &uiState->item[childId].graph2d;
+    float           minValueX = graph->values[0].x;
+    float           maxValueX = graph->values[0].x;
+    float           minValueY = graph->values[0].y;
+    float           maxValueY = graph->values[0].y;
+    for (int i = 0; i < graph->valueCount; i++)
+    {
+        if (graph->values[i].x < minValueX)
+            minValueX = graph->values[i].x;
+        if (graph->values[i].x > maxValueX)
+            maxValueX = graph->values[i].x;
+        if (graph->values[i].y < minValueY)
+            minValueY = graph->values[i].y;
+        if (graph->values[i].y > maxValueY)
+            maxValueY = graph->values[i].y;
+    }
+    if (graph->type == Graph2dBar)
+    {
+        for (int i = 0; i < graph->valueCount; i++)
+        {
+            float x0 = childBounds.x + ((graph->values[i].x - minValueX) / (maxValueX - minValueX)) * childBounds.w;
+            float y0 = childBounds.y + childBounds.h
+                       - ((graph->values[i].y - minValueY) / (maxValueY - minValueY)) * childBounds.h;
+            float x1 = childBounds.x + ((graph->values[i].x - minValueX) / (maxValueX - minValueX)) * childBounds.w;
+            float y1 = childBounds.y + childBounds.h;
+
+            Shape2D rect;
+            Shape2D_Initialize(&rect);
+            rect.type             = SHAPE2D_RECTANGLE;
+            rect.position.x       = x0;
+            rect.position.y       = y0;
+            rect.rectangle.width  = x1 - x0;
+            rect.rectangle.height = y1 - y0;
+            rect.color            = uiState->theme.graphBarColor;
+            rect.parent           = uiState->parentEntity;
+            PushShape(uiState, rect);
+        }
+    }
+    else if (graph->type == Graph2dLine)
+    {
+        for (int i = 0; i < graph->valueCount - 1; i++)
+        {
+            float x0 = childBounds.x + ((graph->values[i].x - minValueX) / (maxValueX - minValueX)) * childBounds.w;
+            float y0 = childBounds.y + childBounds.h
+                       - ((graph->values[i].y - minValueY) / (maxValueY - minValueY)) * childBounds.h;
+            float x1 = childBounds.x + ((graph->values[i + 1].x - minValueX) / (maxValueX - minValueX)) * childBounds.w;
+            float y1 = childBounds.y + childBounds.h
+                       - ((graph->values[i + 1].y - minValueY) / (maxValueY - minValueY)) * childBounds.h;
+
+            Shape2D line;
+            Shape2D_Initialize(&line);
+            line.type               = SHAPE2D_LINE;
+            line.position.x         = x0;
+            line.position.y         = y0;
+            line.line.endPosition.x = x1;
+            line.line.endPosition.y = y1;
+            line.line.thickness     = 2.0f;
+            line.color              = uiState->theme.graphLineColor;
+            line.parent             = uiState->parentEntity;
+            PushShape(uiState, line);
+        }
+    }
+    else if (graph->type == Graph2dPoint)
+    {
+        for (int i = 0; i < graph->valueCount; i++)
+        {
+            float x = childBounds.x + ((graph->values[i].x - minValueX) / (maxValueX - minValueX)) * childBounds.w;
+            float y = childBounds.y + childBounds.h
+                      - ((graph->values[i].y - minValueY) / (maxValueY - minValueY)) * childBounds.h;
+
+            Shape2D point;
+            Shape2D_Initialize(&point);
+            point.type          = SHAPE2D_CIRCLE;
+            point.position.x    = x;
+            point.position.y    = y;
+            point.circle.radius = 3.0f;
+            point.color         = uiState->theme.graphPointColor;
+            point.parent        = uiState->parentEntity;
+            PushShape(uiState, point);
         }
     }
 }
@@ -729,88 +942,93 @@ static bool IsChildRenderable(UI_StackType type)
 {
     return type == StackType_Text || type == StackType_Sprite || type == StackType_Button || type == StackType_Slider
            || type == StackType_List || type == StackType_Toggle || type == StackType_TileGrid
-           || type == StackType_Separator;
+           || type == StackType_Separator || type == StackType_Graph1D || type == StackType_Graph2D;
 }
 
-static void DispatchChild(int childId, Vector4Float childBounds, UI_CenterType childCenter, float scrollY)
+static void DispatchChild(UI_State* uiState, int childId, Vector4Float childBounds, UI_CenterType childCenter,
+                          float scrollY)
 {
-    switch (uiState.item[childId].type)
+    switch (uiState->item[childId].type)
     {
         case StackType_Text:
-            DrawTextItem(childId, childBounds, childCenter, scrollY);
+            DrawTextItem(uiState, childId, childBounds, childCenter, scrollY);
             break;
         case StackType_Sprite:
-            DrawSpriteItem(childId, childBounds, childCenter, scrollY);
+            DrawSpriteItem(uiState, childId, childBounds, childCenter, scrollY);
             break;
         case StackType_Button:
-            DrawButtonItem(childId, childBounds, childCenter, scrollY);
+            DrawButtonItem(uiState, childId, childBounds, childCenter, scrollY);
             break;
         case StackType_Slider:
-            DrawSliderItem(childId, childBounds, childCenter, scrollY);
+            DrawSliderItem(uiState, childId, childBounds, childCenter, scrollY);
             break;
         case StackType_List:
-            DrawListItem(childId, childBounds, childCenter, scrollY);
+            DrawListItem(uiState, childId, childBounds, childCenter, scrollY);
             break;
         case StackType_Toggle:
-            DrawToggleItem(childId, childBounds, childCenter, scrollY);
+            DrawToggleItem(uiState, childId, childBounds, childCenter, scrollY);
             break;
         case StackType_Separator:
-            DrawSeparatorItem(childId, childBounds, childCenter, scrollY);
+            DrawSeparatorItem(uiState, childId, childBounds, childCenter, scrollY);
             break;
         case StackType_TileGrid:
-            DrawTileGridItem(childId, childBounds, childCenter, scrollY);
+            DrawTileGridItem(uiState, childId, childBounds, childCenter, scrollY);
+            break;
+        case StackType_Graph1D:
+            DrawGraph1DItem(uiState, childId, childBounds, childCenter, scrollY);
+            break;
+        case StackType_Graph2D:
+            DrawGraph2DItem(uiState, childId, childBounds, childCenter, scrollY);
             break;
         default:
             return;
     }
 }
 
-bool UI_IsMouseOverBounds(Vector4Float bounds)
+bool UI_IsMouseOverBounds(UI_State* uiState, Vector4Float bounds)
 {
-    Vector2Float mp = GetMouseWorldPos();
-    return PointInRect(mp, (Rectangle){ bounds.x, bounds.y, bounds.w, bounds.h });
+    Vector2Float mp = GetMouseWorldPos(uiState);
+    return PointInRect(uiState, mp, (Rectangle){ bounds.x, bounds.y, bounds.w, bounds.h });
 }
 
-void UI_End()
+void UI_End(UI_State* uiState)
 {
-    if (uiState.itemCount == 0)
+    if (uiState->itemCount == 0)
         return;
 
     uint16_t containerIdx[UI_MAX_STACK_DEPTH];
     int      containerCount = 0;
-    for (uint16_t i = 0; i < uiState.itemCount; i++)
+    for (uint16_t i = 0; i < uiState->itemCount; i++)
     {
-        if (uiState.item[i].type == StackType_Frame)
+        if (uiState->item[i].type == StackType_Frame)
             containerIdx[containerCount++] = i;
     }
 
     if (containerCount == 0)
     {
-        uiState.itemCount = 0;
+        uiState->itemCount = 0;
         return;
     }
 
     UI_LayoutType rootLayout = LayoutVertical;
     for (int i = 0; i < containerIdx[0]; i++)
     {
-        if (uiState.item[i].type == StackType_Layout)
-            rootLayout = uiState.item[i].layout;
+        if (uiState->item[i].type == StackType_Layout)
+            rootLayout = uiState->item[i].layout;
     }
 
-    Vector4Float root = uiState.bounds;
+    Vector4Float root = uiState->bounds;
 
-    float totalAuto  = 0;
     int   autoCount  = 0;
     float fixedTotal = 0;
     for (int f = 0; f < containerCount; f++)
     {
         int   cur = containerIdx[f];
-        float s   = uiState.item[cur].frame.size;
+        float s   = uiState->item[cur].frame.size;
         if (s > 0)
             fixedTotal += s;
         else
         {
-            totalAuto += 1.0f;
             autoCount++;
         }
     }
@@ -821,14 +1039,14 @@ void UI_End()
     float cursor = rootLayout == LayoutVertical ? root.y : root.x;
     float span   = rootLayout == LayoutVertical ? root.h : root.w;
 
-    Vector2Float mousePos = GetMouseWorldPos();
+    Vector2Float mousePos = GetMouseWorldPos(uiState);
 
     for (int f = 0; f < containerCount; f++)
     {
         int current = containerIdx[f];
-        int next    = (f + 1 < containerCount) ? containerIdx[f + 1] : uiState.itemCount;
+        int next    = (f + 1 < containerCount) ? containerIdx[f + 1] : uiState->itemCount;
 
-        float frameSize = uiState.item[current].frame.size > 0 ? uiState.item[current].frame.size : autoUnit;
+        float frameSize = uiState->item[current].frame.size > 0 ? uiState->item[current].frame.size : autoUnit;
         float frameSpan = frameSize * span;
 
         Vector4Float frameBounds;
@@ -838,23 +1056,23 @@ void UI_End()
             frameBounds = (Vector4Float){ cursor, root.y, frameSpan, root.h };
         cursor += frameSpan;
 
-        DrawBevel(frameBounds, uiTheme.frameBg, true);
+        DrawBevel(uiState, frameBounds, uiState->theme.frameBg, true);
 
         bool mouseOverFrame =
-            PointInRect(mousePos, (Rectangle){ frameBounds.x, frameBounds.y, frameBounds.w, frameBounds.h });
-        uiState.mouseCaptured |= mouseOverFrame;
+            PointInRect(uiState, mousePos, (Rectangle){ frameBounds.x, frameBounds.y, frameBounds.w, frameBounds.h });
+        uiState->mouseCaptured |= mouseOverFrame;
 
         float scrollY = 0;
-        if (uiState.item[current].frame.scrollable)
+        if (uiState->item[current].frame.scrollable)
         {
-            uint16_t wid = uiState.item[current].frame.widgetId;
-            scrollY      = uiState.scrollOffset[wid];
+            uint16_t wid = uiState->item[current].frame.widgetId;
+            scrollY      = uiState->scrollOffset[wid];
 
             if (mouseOverFrame)
             {
                 float wheel = Platform_GetMouseWheelMove();
                 scrollY -= wheel * 30.0f;
-                float maxScroll = uiState.item[current].frame.contentHeight - frameBounds.h;
+                float maxScroll = uiState->item[current].frame.contentHeight - frameBounds.h;
                 if (maxScroll < 0)
                     maxScroll = 0;
                 if (scrollY < 0)
@@ -862,7 +1080,7 @@ void UI_End()
                 if (scrollY > maxScroll)
                     scrollY = maxScroll;
             }
-            uiState.scrollOffset[wid] = scrollY;
+            uiState->scrollOffset[wid] = scrollY;
         }
 
         int childStart = current + 1;
@@ -873,15 +1091,15 @@ void UI_End()
         int           childCount  = 0;
         for (int j = childStart; j < childEnd; j++)
         {
-            if (uiState.item[j].type == StackType_Layout)
+            if (uiState->item[j].type == StackType_Layout)
             {
-                childLayout = uiState.item[j].layout;
+                childLayout = uiState->item[j].layout;
             }
-            else if (uiState.item[j].type == StackType_Centering)
+            else if (uiState->item[j].type == StackType_Centering)
             {
-                childCenter = uiState.item[j].centeringMode;
+                childCenter = uiState->item[j].centeringMode;
             }
-            else if (uiState.item[j].type == StackType_Padding)
+            else if (uiState->item[j].type == StackType_Padding)
             {
                 continue;
             }
@@ -900,15 +1118,15 @@ void UI_End()
 
         for (int childId = childStart; childId < childEnd; childId++)
         {
-            if (!IsChildRenderable(uiState.item[childId].type))
+            if (!IsChildRenderable(uiState->item[childId].type))
                 continue;
 
             Vector4Float childPadding = { 0, 0, 0, 0 };
             for (int k = childId; k > childStart; k--)
             {
-                if (uiState.item[k].type == StackType_Padding)
+                if (uiState->item[k].type == StackType_Padding)
                 {
-                    childPadding = uiState.item[k].padding;
+                    childPadding = uiState->item[k].padding;
                     break;
                 }
             }
@@ -935,27 +1153,27 @@ void UI_End()
             childBounds.w -= childPadding.w + childPadding.x;
             childBounds.h -= childPadding.h + childPadding.h;
 
-            DispatchChild(childId, childBounds, childCenter, scrollY);
+            DispatchChild(uiState, childId, childBounds, childCenter, scrollY);
             childIndex++;
         }
     }
-    uiState.itemCount = 0;
+    uiState->itemCount = 0;
 }
 
-Vector4Float UI_GetBounds(UI_AnchorType anchor, Vector4Float position)
+Vector4Float UI_GetBounds(UI_State* uiState, UI_AnchorType anchor, Vector4Float position)
 {
-    float aspect = Window_GetHeight();
-    if (Window_GetWidth() < Window_GetHeight())
+    float aspect = uiState->window->height;
+    if (uiState->window->width < uiState->window->height)
     {
-        aspect = Window_GetWidth();
+        aspect = uiState->window->width;
     }
     switch (anchor)
     {
         case AnchorTopLeft:
         {
             Vector4Float bounds;
-            bounds.x = (Window_GetWidth() * -0.5f) + (aspect * position.x);
-            bounds.y = (Window_GetHeight() * -0.5f) + (aspect * position.y);
+            bounds.x = (uiState->window->width * -0.5f) + (aspect * position.x);
+            bounds.y = (uiState->window->height * -0.5f) + (aspect * position.y);
             bounds.w = (aspect * position.w);
             bounds.h = (aspect * position.h);
             return bounds;
@@ -964,7 +1182,7 @@ Vector4Float UI_GetBounds(UI_AnchorType anchor, Vector4Float position)
         {
             Vector4Float bounds;
             bounds.x = -(aspect * position.x);
-            bounds.y = (Window_GetHeight() * -0.5f) + (aspect * position.y);
+            bounds.y = (uiState->window->height * -0.5f) + (aspect * position.y);
             bounds.w = (aspect * position.w);
             bounds.h = (aspect * position.h);
             return bounds;
@@ -972,8 +1190,8 @@ Vector4Float UI_GetBounds(UI_AnchorType anchor, Vector4Float position)
         case AnchorTopRight:
         {
             Vector4Float bounds;
-            bounds.x = (Window_GetWidth() * 0.5f) - (aspect * position.w) - (aspect * position.x);
-            bounds.y = (Window_GetHeight() * -0.5f) + (aspect * position.y);
+            bounds.x = (uiState->window->width * 0.5f) - (aspect * position.w) - (aspect * position.x);
+            bounds.y = (uiState->window->height * -0.5f) + (aspect * position.y);
             bounds.w = (aspect * position.w);
             bounds.h = (aspect * position.h);
             return bounds;
@@ -981,7 +1199,7 @@ Vector4Float UI_GetBounds(UI_AnchorType anchor, Vector4Float position)
         case AnchorMiddleLeft:
         {
             Vector4Float bounds;
-            bounds.x = (Window_GetWidth() * -0.5f) + (aspect * position.x);
+            bounds.x = (uiState->window->width * -0.5f) + (aspect * position.x);
             bounds.y = -(aspect * position.y);
             bounds.w = (aspect * position.w);
             bounds.h = (aspect * position.h);
@@ -999,7 +1217,7 @@ Vector4Float UI_GetBounds(UI_AnchorType anchor, Vector4Float position)
         case AnchorMiddleRight:
         {
             Vector4Float bounds;
-            bounds.x = (Window_GetWidth() * 0.5f) - (aspect * position.w) - (aspect * position.x);
+            bounds.x = (uiState->window->width * 0.5f) - (aspect * position.w) - (aspect * position.x);
             bounds.y = -(aspect * position.y);
             bounds.w = (aspect * position.w);
             bounds.h = (aspect * position.h);
@@ -1008,8 +1226,8 @@ Vector4Float UI_GetBounds(UI_AnchorType anchor, Vector4Float position)
         case AnchorBottomLeft:
         {
             Vector4Float bounds;
-            bounds.x = (Window_GetWidth() * -0.5f) + (aspect * position.x);
-            bounds.y = (Window_GetHeight() * 0.5f) - (aspect * position.h) - (aspect * position.y);
+            bounds.x = (uiState->window->width * -0.5f) + (aspect * position.x);
+            bounds.y = (uiState->window->height * 0.5f) - (aspect * position.h) - (aspect * position.y);
             bounds.w = (aspect * position.w);
             bounds.h = (aspect * position.h);
             return bounds;
@@ -1018,7 +1236,7 @@ Vector4Float UI_GetBounds(UI_AnchorType anchor, Vector4Float position)
         {
             Vector4Float bounds;
             bounds.x = -(aspect * position.x);
-            bounds.y = (Window_GetHeight() * 0.5f) - (aspect * position.h) - (aspect * position.y);
+            bounds.y = (uiState->window->height * 0.5f) - (aspect * position.h) - (aspect * position.y);
             bounds.w = (aspect * position.w);
             bounds.h = (aspect * position.h);
             return bounds;
@@ -1026,8 +1244,8 @@ Vector4Float UI_GetBounds(UI_AnchorType anchor, Vector4Float position)
         case AnchorBottomRight:
         {
             Vector4Float bounds;
-            bounds.x = (Window_GetWidth() * 0.5f) - (aspect * position.w) - (aspect * position.x);
-            bounds.y = (Window_GetHeight() * 0.5f) - (aspect * position.h) - (aspect * position.y);
+            bounds.x = (uiState->window->width * 0.5f) - (aspect * position.w) - (aspect * position.x);
+            bounds.y = (uiState->window->height * 0.5f) - (aspect * position.h) - (aspect * position.y);
             bounds.w = (aspect * position.w);
             bounds.h = (aspect * position.h);
             return bounds;
@@ -1036,12 +1254,12 @@ Vector4Float UI_GetBounds(UI_AnchorType anchor, Vector4Float position)
     return (Vector4Float){ 0, 0, 0, 0 };
 }
 
-Vector4Float UI_GetSize(Vector4Float position)
+Vector4Float UI_GetSize(UI_State* uiState, Vector4Float position)
 {
-    float aspect = Window_GetHeight();
-    if (Window_GetWidth() < Window_GetHeight())
+    float aspect = uiState->window->height;
+    if (uiState->window->width < uiState->window->height)
     {
-        aspect = Window_GetWidth();
+        aspect = uiState->window->width;
     }
     Vector4Float bounds;
     bounds.x = aspect * position.x;
@@ -1050,7 +1268,7 @@ Vector4Float UI_GetSize(Vector4Float position)
     bounds.h = aspect * position.h;
     return bounds;
 }
-bool UI_GetMouseCaptured()
+bool UI_GetMouseCaptured(UI_State* uiState)
 {
-    return uiState.mouseCaptured;
+    return uiState->mouseCaptured;
 }

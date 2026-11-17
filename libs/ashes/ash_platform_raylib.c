@@ -1,9 +1,34 @@
+#include "ash_debug.h"
+#include "ash_misc.h"
 #include "ash_platform.h"
+
+#define Sound     R_Sound
+#define Texture2D R_Texture2D
+#define Camera    R_Camera
+#define Camera2D  R_Camera2D
+#define Camera3D  R_Camera3D
+#define Color     R_Color
+#define Rectangle R_Rectangle
+#define Vector2   R_Vector2
+#include "raylib.h"
+#undef Sound
+#undef Texture2D
+#undef Camera
+#undef Camera2D
+#undef Camera3D
+#undef Color
+#undef Rectangle
+#undef Vector2
+
+#define Texture2D R_Texture2D
+#define Vector2   R_Vector2
 #include "rlImGui.h"
+#undef Texture2D
 
 #include <cstdarg>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 
 void Platform_InitWindow(uint16_t width, uint16_t height, const char* title)
 {
@@ -47,12 +72,15 @@ void Platform_EndDrawing()
 
 void Platform_ClearBackground(Color color)
 {
-    ClearBackground(color);
+    ClearBackground({ color.r, color.g, color.b, color.a });
 }
 
 void Platform_BeginMode2D(Camera2D camera)
 {
-    BeginMode2D(camera);
+    BeginMode2D({ { camera.offset.x, camera.offset.y },
+                  { camera.position.x, camera.position.y },
+                  camera.rotation,
+                  camera.zoom });
 }
 
 void Platform_EndMode2D()
@@ -60,51 +88,77 @@ void Platform_EndMode2D()
     EndMode2D();
 }
 
-void Platform_DrawRectangleRec(Rectangle rect, Color color)
+void Platform_DrawRectangle(Rectangle rect, Color color)
 {
-    DrawRectangleRec(rect, color);
+    DrawRectangleRec({ rect.x, rect.y, rect.width, rect.height }, { color.r, color.g, color.b, color.a });
 }
 
-void Platform_DrawRectangleLinesEx(Rectangle rect, float thickness, Color color)
+void Platform_DrawRectangleLines(Rectangle rect, float thickness, Color color)
 {
-    DrawRectangleLinesEx(rect, thickness, color);
+    DrawRectangleLinesEx({ rect.x, rect.y, rect.width, rect.height }, thickness,
+                         { color.r, color.g, color.b, color.a });
 }
 
-void Platform_DrawRectangleLines(int x, int y, int w, int h, Color color)
+void Platform_DrawLine(Vector2Float start, Vector2Float end, float thickness, Color color)
 {
-    DrawRectangleLines(x, y, w, h, color);
+    DrawLineEx({ start.x, start.y }, { end.x, end.y }, thickness, { color.r, color.g, color.b, color.a });
 }
 
-void Platform_DrawLineEx(Vector2 start, Vector2 end, float thickness, Color color)
+void Platform_DrawCircle(Vector2Float center, float radius, Color color)
 {
-    DrawLineEx(start, end, thickness, color);
+    DrawCircleV({ center.x, center.y }, radius, { color.r, color.g, color.b, color.a });
 }
 
-void Platform_DrawCircleV(Vector2 center, float radius, Color color)
-{
-    DrawCircleV(center, radius, color);
-}
-
-void Platform_DrawRing(Vector2 center, float innerRadius, float outerRadius, float startAngle, float endAngle,
+void Platform_DrawRing(Vector2Float center, float innerRadius, float outerRadius, float startAngle, float endAngle,
                        int segments, Color color)
 {
-    DrawRing(center, innerRadius, outerRadius, startAngle, endAngle, segments, color);
+    DrawRing({ center.x, center.y }, innerRadius, outerRadius, startAngle, endAngle, segments,
+             { color.r, color.g, color.b, color.a });
+}
+void Platform_SetClipRectangle(Rectangle rect, Camera2D camera)
+{
+    // convert from local coordinates to screen coordinates
+    Vector2Float startPos = Utils_WorldToScreen2D({ rect.x, rect.y }, camera);
+    Vector2Float endPos   = Utils_WorldToScreen2D({ rect.x + rect.width, rect.y + rect.height }, camera);
+
+    BeginScissorMode(startPos.x, startPos.y, endPos.x, endPos.y);
 }
 
-Texture2D Platform_LoadTexture(const char* fileName)
+void Platform_ClearClipRectangle()
 {
-    return LoadTexture(fileName);
+    EndScissorMode();
+}
+
+Texture2D Platform_LoadTexture(const char* fileName, Arena* arena)
+{
+    (void)arena;  // Unused parameter
+    R_Texture2D temp = LoadTexture(fileName);
+    Texture2D   texture;
+    texture.id      = temp.id;
+    texture.width   = temp.width;
+    texture.height  = temp.height;
+    texture.mipmaps = temp.mipmaps;
+    texture.format  = temp.format;
+    return texture;
 }
 
 void Platform_UnloadTexture(Texture2D texture)
 {
-    UnloadTexture(texture);
+    R_Texture2D temp;
+    temp.id      = texture.id;
+    temp.width   = texture.width;
+    temp.height  = texture.height;
+    temp.mipmaps = texture.mipmaps;
+    temp.format  = texture.format;
+    UnloadTexture(temp);
 }
 
-void Platform_DrawTexturePro(Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, float rotation,
-                             Color tint)
+void Platform_DrawTexture(Texture2D texture, Rectangle source, Rectangle dest, Vector2Float origin, float rotation,
+                          Color tint)
 {
-    DrawTexturePro(texture, source, dest, origin, rotation, tint);
+    DrawTexturePro({ texture.id, texture.width, texture.height, texture.mipmaps, texture.format },
+                   { source.x, source.y, source.width, source.height }, { dest.x, dest.y, dest.width, dest.height },
+                   { origin.x, origin.y }, rotation, { tint.r, tint.g, tint.b, tint.a });
 }
 
 bool Platform_InitAudioDevice()
@@ -118,24 +172,50 @@ void Platform_CloseAudioDevice()
     CloseAudioDevice();
 }
 
-Sound Platform_LoadSound(const char* fileName)
+Sound Platform_LoadSound(const char* fileName, Arena* arena)
 {
-    return LoadSound(fileName);
+    (void)arena;  // Unused parameter
+    R_Sound temp = LoadSound(fileName);
+    Sound   sound;
+    sound.data        = temp.stream.buffer;
+    sound.sampleCount = temp.stream.sampleSize;
+    sound.channels    = temp.stream.channels;
+    sound.sampleRate  = temp.stream.sampleRate;
+    return sound;
 }
 
 void Platform_UnloadSound(Sound sound)
 {
-    UnloadSound(sound);
+    R_Sound temp;
+    temp.stream.buffer     = (rAudioBuffer*)sound.data;
+    temp.stream.sampleSize = sound.sampleCount;
+    temp.stream.channels   = sound.channels;
+    temp.stream.sampleRate = sound.sampleRate;
+    temp.frameCount        = sound.sampleCount / sound.channels;
+    (void)sound;
+    UnloadSound(temp);
 }
 
 void Platform_PlaySound(Sound sound)
 {
-    PlaySound(sound);
+    R_Sound temp;
+    temp.stream.buffer     = (rAudioBuffer*)sound.data;
+    temp.stream.sampleSize = sound.sampleCount;
+    temp.stream.channels   = sound.channels;
+    temp.stream.sampleRate = sound.sampleRate;
+    temp.frameCount        = sound.sampleCount / sound.channels;
+    PlaySound(temp);
 }
 
 void Platform_StopSound(Sound sound)
 {
-    StopSound(sound);
+    R_Sound temp;
+    temp.stream.buffer     = (rAudioBuffer*)sound.data;
+    temp.stream.sampleSize = sound.sampleCount;
+    temp.stream.channels   = sound.channels;
+    temp.stream.sampleRate = sound.sampleRate;
+    temp.frameCount        = sound.sampleCount / sound.channels;
+    PlaySound(temp);
 }
 
 bool Platform_IsKeyPressed(uint16_t key)
@@ -178,24 +258,24 @@ bool Platform_IsMouseButtonUp(uint16_t button)
     return IsMouseButtonUp(button);
 }
 
-int16_t Platform_GetMouseX()
+int32_t Platform_GetMouseX()
 {
-    return (int16_t)GetMouseX();
+    return (int32_t)GetMouseX();
 }
 
-int16_t Platform_GetMouseY()
+int32_t Platform_GetMouseY()
 {
-    return (int16_t)GetMouseY();
+    return (int32_t)GetMouseY();
 }
 
-int16_t Platform_GetMouseDeltaX()
+int32_t Platform_GetMouseDeltaX()
 {
-    return (int16_t)GetMouseDelta().x;
+    return (int32_t)GetMouseDelta().x;
 }
 
-int16_t Platform_GetMouseDeltaY()
+int32_t Platform_GetMouseDeltaY()
 {
-    return (int16_t)GetMouseDelta().y;
+    return (int32_t)GetMouseDelta().y;
 }
 
 float Platform_GetMouseWheelMove()
@@ -203,26 +283,51 @@ float Platform_GetMouseWheelMove()
     return GetMouseWheelMove();
 }
 
-Vector2 Platform_GetWorldToScreen2D(Vector2 position, Camera2D camera)
+Vector2Float Platform_GetWorldToScreen2D(Vector2Float position, Camera2D camera)
 {
-    return GetWorldToScreen2D(position, camera);
+    R_Vector2 temp = GetWorldToScreen2D({ position.x, position.y }, { { camera.offset.x, camera.offset.y },
+                                                                      { camera.position.x, camera.position.y },
+                                                                      camera.rotation,
+                                                                      camera.zoom });
+    return { temp.x, temp.y };
 }
 
-Vector2 Platform_GetScreenToWorld2D(Vector2 position, Camera2D camera)
+Vector2Float Platform_GetScreenToWorld2D(Vector2Float position, Camera2D camera)
 {
-    return GetScreenToWorld2D(position, camera);
+    R_Vector2 temp = GetScreenToWorld2D({ position.x, position.y }, { { camera.offset.x, camera.offset.y },
+                                                                      { camera.position.x, camera.position.y },
+                                                                      camera.rotation,
+                                                                      camera.zoom });
+    return { temp.x, temp.y };
 }
 
 void Platform_TraceLog(int logType, const char* text, ...)
 {
     va_list args;
     va_start(args, text);
-    /* Raylib has no public TraceLogVa, so use the callback-style function via SetTraceLogCallback would be complex.
-       Instead we format into a buffer and forward through TraceLog. */
+    char textBuffer[2048];
     char buffer[2048];
-    vsnprintf(buffer, sizeof(buffer), text, args);
+    switch (logType)
+    {
+        case LOG_LEVEL_INFO:
+            snprintf(textBuffer, sizeof(textBuffer), "ASH_INFO: %s", text);
+            break;
+        case LOG_LEVEL_WARNING:
+            snprintf(textBuffer, sizeof(textBuffer), "ASH_WARNING: %s", text);
+            break;
+        case LOG_LEVEL_ERROR:
+            snprintf(textBuffer, sizeof(textBuffer), "ASH_ERROR: %s", text);
+            break;
+        case LOG_LEVEL_DEBUG:
+            snprintf(textBuffer, sizeof(textBuffer), "ASH_DEBUG: %s", text);
+            break;
+        default:
+            break;
+    }
+    vsnprintf(buffer, sizeof(buffer), textBuffer, args);
     va_end(args);
-    TraceLog(logType, "%s", buffer);
+    // TraceLog(logType, "%s", buffer);
+    printf("%s\n", buffer);
 }
 
 void Platform_SetTraceLogLevel(int logType)
@@ -248,4 +353,14 @@ void Platform_ImGuiBegin()
 void Platform_ImGuiEnd()
 {
     rlImGuiEnd();
+}
+
+uint32_t Platform_GetRandom()
+{
+    return rand();
+}
+
+uint32_t Platform_GetRandomMax()
+{
+    return RAND_MAX;
 }
