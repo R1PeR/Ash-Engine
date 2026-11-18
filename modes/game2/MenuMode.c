@@ -7,7 +7,6 @@
 #include "ashes/ash_debug.h"
 #include "ashes/ash_io.h"
 #include "ashes/ash_misc.h"
-#include "utils/ArenaDebugFrame.h"
 
 #include <stdio.h>
 
@@ -36,6 +35,8 @@ void MenuMode_OnStart(Context* context, void* data)
     UI_SetParentEntity(&state->uiState, &state->cameraEntity);
 
     RenderStack_Initialize(&state->renderStack, state->renderStackItems, STACKITEM_MAX);
+
+    ArenaDebugFrame_Init(&state->debugArena, 32);
 }
 
 void MenuMode_OnPause(Context* context, void* data)
@@ -92,7 +93,7 @@ void MenuMode_Update(Context* context, void* data)
     }
     UI_End(&state->uiState);
 
-    ArenaDebugFrame_DisplayFrame(&state->uiState, state->fontTextures, state->arena);
+    ArenaDebugFrame_DisplayFrame(&state->debugArena, &state->uiState, state->fontTextures, state->arena);
 
     RenderStack_PopMode2d(&state->renderStack);
     RenderStack_PopCamera2d(&state->renderStack);
@@ -109,6 +110,7 @@ void MenuMode_OnStop(Context* context, void* data)
 {
     (void)context;
     (void)data;
+    ArenaDebugFrame_Destroy(&((MenuMode*)data)->debugArena);
 }
 
 void MenuMode_OnResume(Context* context, void* data)

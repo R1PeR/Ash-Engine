@@ -278,7 +278,7 @@ void UpdateGame(MainMode* state)
             float platformPos  = state->gameData.map.platforms[i].entity.position.x;
             float platformSize = state->gameData.map.platforms[i].collider.size.x;
             float overlapX     = Utils_MinFloat(playerPos + playerSize, platformPos + platformSize)
-                                 - Utils_MaxFloat(playerPos, platformPos);
+                             - Utils_MaxFloat(playerPos, platformPos);
 
             state->gameData.player.velocityBeforeCollision.x = state->gameData.player.velocity.x;
 
@@ -308,7 +308,7 @@ void UpdateGame(MainMode* state)
             float platformPos  = state->gameData.map.platforms[i].entity.position.y;
             float platformSize = state->gameData.map.platforms[i].collider.size.y;
             float overlapY     = Utils_MinFloat(playerPos + playerSize, platformPos + platformSize)
-                                 - Utils_MaxFloat(playerPos, platformPos);
+                             - Utils_MaxFloat(playerPos, platformPos);
 
             state->gameData.player.velocityBeforeCollision.y = state->gameData.player.velocity.y;
 
@@ -354,6 +354,12 @@ void UpdateGame(MainMode* state)
         RenderStack_PushShape(&state->renderStack, shape);
     }
     AnimatedSprite_Update(&state->gameData.player.sprite);
+
+    state->camera.position.x       = state->gameData.player.entity.position.x;
+    state->camera.position.y       = state->gameData.player.entity.position.y;
+    state->cameraEntity.position.x = state->camera.position.x;
+    state->cameraEntity.position.y = state->camera.position.y;
+    state->cameraEntity.scale      = 1.0f / state->camera.zoom;
 }
 
 void MainMode_OnStart(Context* context, void* data)
@@ -484,13 +490,6 @@ void MainMode_Update(Context* context, void* data)
     UpdateGame(state);
     UpdateEditorTiles(state);
     UpdateDebug(state);
-
-    Camera2D* camera               = &state->camera;
-    camera->position.x             = state->gameData.player.entity.position.x;
-    camera->position.y             = state->gameData.player.entity.position.y;
-    state->cameraEntity.position.x = state->camera.position.x;
-    state->cameraEntity.position.y = state->camera.position.y;
-    state->cameraEntity.scale      = 1.0f / state->camera.zoom;
 
     RenderStack_PopCamera2d(&state->renderStack);
     RenderStack_PopMode2d(&state->renderStack);

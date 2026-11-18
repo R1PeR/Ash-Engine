@@ -121,7 +121,7 @@ void Platform_SetClipRectangle(Rectangle rect, Camera2D camera)
     Vector2Float startPos = Utils_WorldToScreen2D({ rect.x, rect.y }, camera);
     Vector2Float endPos   = Utils_WorldToScreen2D({ rect.x + rect.width, rect.y + rect.height }, camera);
 
-    BeginScissorMode(startPos.x, startPos.y, endPos.x, endPos.y);
+    BeginScissorMode(startPos.x, startPos.y, endPos.x - startPos.x, endPos.y - startPos.y);
 }
 
 void Platform_ClearClipRectangle()

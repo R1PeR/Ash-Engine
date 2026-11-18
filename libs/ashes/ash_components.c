@@ -808,9 +808,9 @@ void RenderStack_Draw(RenderStack* state)
                     LOG_ERR("RenderState: Draw() failed, clip begin called before camera begin");
                     return;
                 }
-                Platform_SetClipRectangle(clipStack[clipCurrentDepth - 1].rect,
-                                          *cameraStack[cameraCurrentDepth - 1].camera2D);
+                clipStack[clipCurrentDepth] = item->clip;
                 clipCurrentDepth++;
+                Platform_SetClipRectangle(item->clip.rect, *cameraStack[cameraCurrentDepth - 1].camera2D);
             }
             break;
             case RENDERCOMMAND_END_RECTANGLE_CLIP:
@@ -820,8 +820,12 @@ void RenderStack_Draw(RenderStack* state)
                     LOG_ERR("RenderState: Draw() failed, clip end called before clip begin");
                     return;
                 }
-                Platform_ClearClipRectangle();
                 clipCurrentDepth--;
+                if (clipCurrentDepth > 0)
+                    Platform_SetClipRectangle(clipStack[clipCurrentDepth - 1].rect,
+                                              *cameraStack[cameraCurrentDepth - 1].camera2D);
+                else
+                    Platform_ClearClipRectangle();
             }
             break;
             case RENDERCOMMAND_BEGIN2D:

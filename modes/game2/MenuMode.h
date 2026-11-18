@@ -4,6 +4,7 @@
 #include "ashes/ash_components.h"
 #include "ashes/ash_context.h"
 #include "utils/UI.h"
+#include "utils/ArenaDebugFrame.h"
 
 #define STACKITEM_MAX    4096
 #define FONT_ATLAS_COLS  16
@@ -23,6 +24,7 @@ struct MenuMode
     Arena*          arena;
     DeltaTime       deltaTime;
     Camera2D        camera;
+    ArenaDebug      debugArena;
 };
 
 void MenuMode_OnStart(Context* context, void* data);

@@ -23,6 +23,8 @@ Arena* Arena_Create(size_t size)
     LOG_DBG("Arena created: Allocated %zu bytes for arena at %p.", size, (void*)arena);
     arena->size = size;
     arena->used = 0;
+    arena->debug = NULL;
+    arena->isScratch = false;
     return arena;
 }
 

@@ -297,6 +297,19 @@ static bool PointInRect(UI_State* uiState, Vector2Float point, Rectangle rectang
            && point.y <= rectangle.y + rectangle.height;
 }
 
+static void PushLocalClip(UI_State* uiState, Vector4Float localBounds)
+{
+    Rectangle worldRect = { localBounds.x, localBounds.y, localBounds.w, localBounds.h };
+    if (uiState->parentEntity != NULL)
+    {
+        worldRect.x = uiState->parentEntity->position.x + localBounds.x * uiState->parentEntity->scale;
+        worldRect.y = uiState->parentEntity->position.y + localBounds.y * uiState->parentEntity->scale;
+        worldRect.width *= uiState->parentEntity->scale;
+        worldRect.height *= uiState->parentEntity->scale;
+    }
+    RenderStack_PushClip(uiState->renderStack, worldRect);
+}
+
 static void DrawFrameShape(UI_State* uiState, Vector4Float rectangle, Color background)
 {
     Shape2D s;
@@ -538,6 +551,11 @@ static void DrawListItem(UI_State* uiState, int childId, Vector4Float childBound
     TextureData* fontAtlas  = uiState->item[childId].list.font;
     bool         showScroll = uiState->item[childId].list.showScroll;
     float        charWidth  = (fontAtlas ? (float)fontAtlas[0].size.x : 8.0f) * textScale;
+    float        charHeight = (fontAtlas ? (float)fontAtlas[0].size.y : 8.0f) * textScale;
+
+    Vector2Float mousePos = GetMouseWorldPos(uiState);
+    bool mouseOverList =
+        PointInRect(uiState, mousePos, (Rectangle){ childBounds.x, childBounds.y, childBounds.w, childBounds.h });
 
     float listScroll  = uiState->scrollOffset[wid];
     float totalHeight = itemCount * itemH;
@@ -545,8 +563,8 @@ static void DrawListItem(UI_State* uiState, int childId, Vector4Float childBound
     if (maxScroll < 0)
         maxScroll = 0;
 
-    float wheel = Platform_GetMouseWheelMove();
-    listScroll -= wheel * 30.0f;
+    if (mouseOverList)
+        listScroll -= Platform_GetMouseWheelMove() * 30.0f;
     if (listScroll < 0)
         listScroll = 0;
     if (listScroll > maxScroll)
@@ -558,16 +576,14 @@ static void DrawListItem(UI_State* uiState, int childId, Vector4Float childBound
     if (showScroll && maxScroll > 0)
         itemWidth = childBounds.w - scrollbarWidth;
 
-    Vector2Float mousePos = GetMouseWorldPos(uiState);
-
     for (int i = 0; i < itemCount; i++)
     {
         float iy = childBounds.y + i * itemH - listScroll;
-        if (iy + itemH < childBounds.y || iy > childBounds.y + childBounds.h)
+        if (iy + itemH <= childBounds.y || iy >= childBounds.y + childBounds.h)
             continue;
 
         Rectangle itemRect = { childBounds.x, iy, itemWidth, itemH };
-        bool      hover    = PointInRect(uiState, mousePos, itemRect);
+        bool      hover    = mouseOverList && PointInRect(uiState, mousePos, itemRect);
 
         Color bgCol = (i == uiState->listSelected[wid]) ? uiState->theme.listSelected : (Color){ 0, 0, 0, 0 };
         if (hover && i != uiState->listSelected[wid])
@@ -579,7 +595,7 @@ static void DrawListItem(UI_State* uiState, int childId, Vector4Float childBound
         const char* text       = items[i];
         size_t      textLength = strlen(text);
         float       dx         = childBounds.x + 4;
-        float       dy         = iy + (itemH - charWidth) * 0.5f;
+        float       dy         = iy + (itemH - charHeight) * 0.5f;
 
         for (size_t k = 0; k < textLength; k++)
         {
@@ -941,7 +957,7 @@ static bool IsChildRenderable(UI_StackType type)
 }
 
 static void DispatchChild(UI_State* uiState, int childId, Vector4Float childBounds, UI_CenterType childCenter,
-                          float scrollY)
+                          float scrollY, Vector4Float frameBounds)
 {
     switch (uiState->item[childId].type)
     {
@@ -958,8 +974,19 @@ static void DispatchChild(UI_State* uiState, int childId, Vector4Float childBoun
             DrawSliderItem(uiState, childId, childBounds, childCenter, scrollY);
             break;
         case StackType_List:
+        {
+            float right = Utils_MinFloat(childBounds.x + childBounds.w, frameBounds.x + frameBounds.w);
+            float bottom = Utils_MinFloat(childBounds.y + childBounds.h, frameBounds.y + frameBounds.h);
+            Vector4Float clipBounds;
+            clipBounds.x = Utils_MaxFloat(childBounds.x, frameBounds.x);
+            clipBounds.y = Utils_MaxFloat(childBounds.y, frameBounds.y);
+            clipBounds.w = Utils_MaxFloat(0.0f, right - clipBounds.x);
+            clipBounds.h = Utils_MaxFloat(0.0f, bottom - clipBounds.y);
+            PushLocalClip(uiState, clipBounds);
             DrawListItem(uiState, childId, childBounds, childCenter, scrollY);
+            RenderStack_PopClip(uiState->renderStack);
             break;
+        }
         case StackType_Toggle:
             DrawToggleItem(uiState, childId, childBounds, childCenter, scrollY);
             break;
@@ -1051,6 +1078,7 @@ void UI_End(UI_State* uiState)
             frameBounds = (Vector4Float){ cursor, root.y, frameSpan, root.h };
         cursor += frameSpan;
 
+        PushLocalClip(uiState, frameBounds);
         DrawBevel(uiState, frameBounds, uiState->theme.frameBg, true);
 
         bool mouseOverFrame =
@@ -1105,7 +1133,10 @@ void UI_End(UI_State* uiState)
         }
 
         if (childCount == 0)
+        {
+            RenderStack_PopClip(uiState->renderStack);
             continue;
+        }
 
         float slotW      = (childLayout == LayoutHorizontal) ? frameBounds.w / childCount : frameBounds.w;
         float slotH      = (childLayout == LayoutVertical) ? frameBounds.h / childCount : frameBounds.h;
@@ -1148,9 +1179,10 @@ void UI_End(UI_State* uiState)
             childBounds.w -= childPadding.w + childPadding.x;
             childBounds.h -= childPadding.h + childPadding.h;
 
-            DispatchChild(uiState, childId, childBounds, childCenter, scrollY);
+            DispatchChild(uiState, childId, childBounds, childCenter, scrollY, frameBounds);
             childIndex++;
         }
+        RenderStack_PopClip(uiState->renderStack);
     }
     uiState->itemCount = 0;
 }
