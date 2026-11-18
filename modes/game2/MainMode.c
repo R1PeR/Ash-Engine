@@ -78,9 +78,7 @@ void UpdateEditorTiles(MainMode* state)
     //         sprite.position.x                             = (float)(tile->position.x * TILE_SIZE);
     //         sprite.position.y                             = (float)(tile->position.y * TILE_SIZE);
     //         sprite.scale                                  = 2.0f;
-    //         state->renderStackItems[state->renderStackItemCount].sprite = sprite;
-    //         state->renderStackItems[state->renderStackItemCount].type   = renderStackItem_SPRITE;
-    //         state->renderStackItemCount++;
+    //         RenderStack_PushSprite(&state->renderStack, sprite);
     //     }
     // }
 }
@@ -280,7 +278,7 @@ void UpdateGame(MainMode* state)
             float platformPos  = state->gameData.map.platforms[i].entity.position.x;
             float platformSize = state->gameData.map.platforms[i].collider.size.x;
             float overlapX     = Utils_MinFloat(playerPos + playerSize, platformPos + platformSize)
-                             - Utils_MaxFloat(playerPos, platformPos);
+                                 - Utils_MaxFloat(playerPos, platformPos);
 
             state->gameData.player.velocityBeforeCollision.x = state->gameData.player.velocity.x;
 
@@ -310,7 +308,7 @@ void UpdateGame(MainMode* state)
             float platformPos  = state->gameData.map.platforms[i].entity.position.y;
             float platformSize = state->gameData.map.platforms[i].collider.size.y;
             float overlapY     = Utils_MinFloat(playerPos + playerSize, platformPos + platformSize)
-                             - Utils_MaxFloat(playerPos, platformPos);
+                                 - Utils_MaxFloat(playerPos, platformPos);
 
             state->gameData.player.velocityBeforeCollision.y = state->gameData.player.velocity.y;
 
@@ -332,32 +330,28 @@ void UpdateGame(MainMode* state)
     // Draw debug
     Shape2D shape;
     Shape2D_Initialize(&shape);
-    shape.type                                                 = SHAPE2D_RECTANGLE_LINES;
-    shape.parent                                               = &state->gameData.player.entity;
-    shape.position.x                                           = state->gameData.player.collider.position.x;
-    shape.position.y                                           = state->gameData.player.collider.position.y;
-    shape.rectangle.width                                      = state->gameData.player.collider.size.x;
-    shape.rectangle.height                                     = state->gameData.player.collider.size.y;
-    shape.color                                                = (Color){ 255, 0, 0, 255 };
-    shape.rectangle.outlineThickness                           = 1.0f;
-    state->renderStackItems[state->renderStackItemCount].shape = shape;
-    state->renderStackItems[state->renderStackItemCount].type  = RENDERCOMMAND_DRAW_SHAPE;
-    state->renderStackItemCount++;
+    shape.type                       = SHAPE2D_RECTANGLE_LINES;
+    shape.parent                     = &state->gameData.player.entity;
+    shape.position.x                 = state->gameData.player.collider.position.x;
+    shape.position.y                 = state->gameData.player.collider.position.y;
+    shape.rectangle.width            = state->gameData.player.collider.size.x;
+    shape.rectangle.height           = state->gameData.player.collider.size.y;
+    shape.color                      = (Color){ 255, 0, 0, 255 };
+    shape.rectangle.outlineThickness = 1.0f;
+    RenderStack_PushShape(&state->renderStack, shape);
 
     for (uint32_t i = 0; i < state->gameData.map.platformCount; i++)
     {
         Platform* platform = &state->gameData.map.platforms[i];
         Shape2D_Initialize(&shape);
-        shape.type                                                 = SHAPE2D_RECTANGLE_LINES;
-        shape.parent                                               = &platform->entity;
-        shape.position.x                                           = platform->collider.position.x;
-        shape.position.y                                           = platform->collider.position.y;
-        shape.rectangle.width                                      = platform->collider.size.x;
-        shape.rectangle.height                                     = platform->collider.size.y;
-        shape.color                                                = (Color){ 0, 255, 0, 255 };
-        state->renderStackItems[state->renderStackItemCount].shape = shape;
-        state->renderStackItems[state->renderStackItemCount].type  = RENDERCOMMAND_DRAW_SHAPE;
-        state->renderStackItemCount++;
+        shape.type             = SHAPE2D_RECTANGLE_LINES;
+        shape.parent           = &platform->entity;
+        shape.position.x       = platform->collider.position.x;
+        shape.position.y       = platform->collider.position.y;
+        shape.rectangle.width  = platform->collider.size.x;
+        shape.rectangle.height = platform->collider.size.y;
+        shape.color            = (Color){ 0, 255, 0, 255 };
+        RenderStack_PushShape(&state->renderStack, shape);
     }
     AnimatedSprite_Update(&state->gameData.player.sprite);
 }
@@ -449,19 +443,20 @@ void MainMode_OnStart(Context* context, void* data)
 
     Entity2D_Initialize(&state->cameraEntity);
 
-    Camera2D* camera = &state->camera;
-    camera->zoom     = 1.0f;
-    camera->position = (Vector2Float){ 0.0f, 0.0f };
+    Camera2D* camera       = &state->camera;
+    camera->zoom           = 1.0f;
+    camera->position       = (Vector2Float){ 0.0f, 0.0f };
     state->camera.rotation = 0.0f;
-    state->camera.offset   = (Vector2Float){ state->window->width/2.0f, state->window->height/2.0f };
+    state->camera.offset   = (Vector2Float){ state->window->width / 2.0f, state->window->height / 2.0f };
 
     state->cameraEntity.position.x = camera->position.x;
     state->cameraEntity.position.y = camera->position.y;
     state->cameraEntity.scale      = 1.0f / camera->zoom;
 
-    UI_Initialize(&state->uiState, state->renderStackItems, (size_t*)&state->renderStackItemCount, RENDERSTACKITEM_MAX,
-                  state->window, &state->camera);
+    UI_Initialize(&state->uiState, &state->renderStack, state->window, &state->camera);
     UI_SetParentEntity(&state->uiState, &state->cameraEntity);
+
+    RenderStack_Initialize(&state->renderStack, state->renderStackItems, RENDERSTACKITEM_MAX);
 }
 
 void MainMode_OnPause(Context* context, void* data)
@@ -473,21 +468,14 @@ void MainMode_OnPause(Context* context, void* data)
 void MainMode_Update(Context* context, void* data)
 {
     (void)context;
-    MainMode* state             = (MainMode*)data;
-    state->renderStackItemCount = 0;
+    MainMode* state = (MainMode*)data;
     DeltaTime_Update(&state->deltaTime);
     state->gameData.dt = DeltaTime_GetDeltaTime(&state->deltaTime);
 
-    state->renderStackItems[state->renderStackItemCount].type              = RENDERCOMMAND_CLEAR_SCREEN;
-    state->renderStackItems[state->renderStackItemCount].clearScreen.color = (Color){ 0, 0, 0, 255 };
-    state->renderStackItemCount++;
-
-    state->renderStackItems[state->renderStackItemCount].type            = RENDERCOMMAND_BEGIN_CAMERA2D;
-    state->renderStackItems[state->renderStackItemCount].camera.camera2D = &state->camera;
-    state->renderStackItemCount++;
-
-    state->renderStackItems[state->renderStackItemCount].type = RENDERCOMMAND_BEGIN2D;
-    state->renderStackItemCount++;
+    RenderStack_Clear(&state->renderStack);
+    RenderStack_PushClearScreen(&state->renderStack, (Color){ 0, 0, 0, 255 });
+    RenderStack_PushCamera2d(&state->renderStack, &state->camera);
+    RenderStack_PushMode2d(&state->renderStack);
 
     if (Input_IsKeyPressed(INPUT_KEYCODE_ESCAPE))
         Context_FinishMode(context);
@@ -504,18 +492,14 @@ void MainMode_Update(Context* context, void* data)
     state->cameraEntity.position.y = state->camera.position.y;
     state->cameraEntity.scale      = 1.0f / state->camera.zoom;
 
-    state->renderStackItems[state->renderStackItemCount].type = RENDERCOMMAND_END_CAMERA2D;
-    state->renderStackItemCount++;
-    state->renderStackItems[state->renderStackItemCount].type = RENDERCOMMAND_END2D;
-    state->renderStackItemCount++;
+    RenderStack_PopCamera2d(&state->renderStack);
+    RenderStack_PopMode2d(&state->renderStack);
 }
 
 void MainMode_Draw(Context* context, void* data)
 {
     (void)context;
-    MainMode* state              = (MainMode*)data;
-    state->renderStack.stack     = state->renderStackItems;
-    state->renderStack.stackSize = state->renderStackItemCount;
+    MainMode* state = (MainMode*)data;
     RenderStack_Draw(&state->renderStack);
 }
 

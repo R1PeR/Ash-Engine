@@ -8,16 +8,11 @@
 #include <assert.h>
 #include <string.h>
 
-void UI_Initialize(UI_State* uiState, RenderStackItem* drawableArray, size_t* drawableArraySize,
-                   size_t drawableArrayMaxSize, Window* window, Camera2D* camera)
+void UI_Initialize(UI_State* uiState, RenderStack* renderStack, Window* window, Camera2D* camera)
 {
-    assert(drawableArray != NULL);
-    assert(drawableArraySize != NULL);
-    assert(drawableArrayMaxSize > 0);
+    assert(renderStack != NULL);
     assert(window != NULL);
-    uiState->drawableArray        = drawableArray;
-    uiState->drawableArraySize    = drawableArraySize;
-    uiState->drawableArrayMaxSize = drawableArrayMaxSize;
+    uiState->renderStack = renderStack;
     for (uint16_t i = 0; i < UI_MAX_WIDGETS; i++)
     {
         uiState->tileGridSelected[i] = -1;
@@ -273,7 +268,7 @@ static void PushSprite(UI_State* uiState, Sprite sprite)
     RenderStackItem d;
     d.type   = RENDERCOMMAND_DRAW_SPRITE;
     d.sprite = sprite;
-    Utils_AddToArray(uiState->drawableArray, d, *uiState->drawableArraySize, uiState->drawableArrayMaxSize);
+    RenderStack_PushSprite(uiState->renderStack, sprite);
 }
 
 static void PushShape(UI_State* uiState, Shape2D shape)
@@ -281,7 +276,7 @@ static void PushShape(UI_State* uiState, Shape2D shape)
     RenderStackItem d;
     d.type  = RENDERCOMMAND_DRAW_SHAPE;
     d.shape = shape;
-    Utils_AddToArray(uiState->drawableArray, d, *uiState->drawableArraySize, uiState->drawableArrayMaxSize);
+    RenderStack_PushShape(uiState->renderStack, shape);
 }
 
 static Vector2Float GetMouseWorldPos(UI_State* uiState)

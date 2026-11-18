@@ -202,9 +202,7 @@ struct UI_State
     int   tileGridSelected[UI_MAX_WIDGETS];
     float scrollOffset[UI_MAX_WIDGETS];
 
-    RenderStackItem* drawableArray;
-    size_t*          drawableArraySize;
-    size_t           drawableArrayMaxSize;
+    RenderStack* renderStack;
 
     Vector4Float bounds;
 
@@ -215,8 +213,8 @@ struct UI_State
     UI_Theme  theme;
 };
 
-void UI_Initialize(UI_State* uiState, RenderStackItem* drawableArray, size_t* drawableArraySize,
-                   size_t drawableArrayMaxSize, Window* window, Camera2D* camera);
+void UI_Initialize(UI_State* uiState, RenderStack* renderStack, Window* window,
+                   Camera2D* camera);
 void UI_SetParentEntity(UI_State* uiState, Entity2D* entity);
 void UI_SetTheme(UI_State* uiState, struct UI_Theme theme);
 

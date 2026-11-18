@@ -88,8 +88,7 @@ void UITestMode_OnStart(Context* context, void* data)
     state->cameraEntity.position.y = state->camera.position.y;
     state->cameraEntity.scale      = 1.0f / state->camera.zoom;
 
-    UI_Initialize(&state->uiState, state->renderStackItems, (size_t*)&state->renderStackItemCount, RENDERSTACKITEM_MAX,
-                  state->window, &state->camera);
+    UI_Initialize(&state->uiState, &state->renderStack, state->window, &state->camera);
 
     Sprite_Initialize(&state->testSprite);
     state->testSprite.currentTexture = &state->tileTextures[0];
@@ -110,18 +109,23 @@ void UITestMode_Update(Context* context, void* data)
     state->cameraEntity.position.y = state->camera.position.y;
     state->cameraEntity.scale      = 1.0f / state->camera.zoom;
 
-    state->renderStackItemCount = 0;
     DeltaTime_Update(&state->deltaTime);
 
+    RenderStack_Clear(&state->renderStack);
+    RenderStack_PushClearScreen(&state->renderStack, (Color){ 0, 0, 0, 255 });
+    RenderStack_PushCamera2d(&state->renderStack, &state->camera);
+    RenderStack_PushMode2d(&state->renderStack);
+
     UITestExampleGUI(context, state);
+
+    RenderStack_PopMode2d(&state->renderStack);
+    RenderStack_PopCamera2d(&state->renderStack);
 }
 
 void UITestMode_Draw(Context* context, void* data)
 {
     (void)context;
-    UITestMode* state            = (UITestMode*)data;
-    state->renderStack.stack     = state->renderStackItems;
-    state->renderStack.stackSize = state->renderStackItemCount;
+    UITestMode* state = (UITestMode*)data;
     RenderStack_Draw(&state->renderStack);
 }
 

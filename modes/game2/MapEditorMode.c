@@ -78,15 +78,15 @@ void HandleCameraInput(MapEditorMode* state)
 
     if (wheel != 0.0f)
     {
-        Vector2Float mw = Utils_ScreenToWorld2D((Vector2Float){ (float)Input_GetMouseX(), (float)Input_GetMouseY() },
-                                                state->camera);
-        float        oldZoom = state->camera.zoom;
+        Vector2Float mw =
+            Utils_ScreenToWorld2D((Vector2Float){ (float)Input_GetMouseX(), (float)Input_GetMouseY() }, state->camera);
+        float oldZoom = state->camera.zoom;
         state->camera.zoom += wheel * ZOOM_STEP;
         if (state->camera.zoom < ZOOM_MIN)
             state->camera.zoom = ZOOM_MIN;
         if (state->camera.zoom > ZOOM_MAX)
             state->camera.zoom = ZOOM_MAX;
-        float ratio                      = state->camera.zoom / oldZoom;
+        float ratio              = state->camera.zoom / oldZoom;
         state->camera.position.x = mw.x - (mw.x - state->camera.position.x) / ratio;
         state->camera.position.y = mw.y - (mw.y - state->camera.position.y) / ratio;
     }
@@ -117,31 +117,27 @@ void UpdateGrid(MapEditorMode* state)
     {
         Shape2D line;
         Shape2D_Initialize(&line);
-        line.type                                                  = SHAPE2D_LINE;
-        line.position.x                                            = x;
-        line.position.y                                            = startY;
-        line.line.endPosition.x                                    = x;
-        line.line.endPosition.y                                    = endY;
-        line.line.thickness                                        = thickness;
-        line.color                                                 = GRID_COLOR;
-        state->renderStackItems[state->renderStackItemCount].type  = RENDERCOMMAND_DRAW_SHAPE;
-        state->renderStackItems[state->renderStackItemCount].shape = line;
-        state->renderStackItemCount++;
+        line.type               = SHAPE2D_LINE;
+        line.position.x         = x;
+        line.position.y         = startY;
+        line.line.endPosition.x = x;
+        line.line.endPosition.y = endY;
+        line.line.thickness     = thickness;
+        line.color              = GRID_COLOR;
+        RenderStack_PushShape(&state->renderStack, line);
     }
     for (int y = startY; y <= endY; y += TILE_SIZE)
     {
         Shape2D line;
         Shape2D_Initialize(&line);
-        line.type                                                  = SHAPE2D_LINE;
-        line.position.x                                            = startX;
-        line.position.y                                            = y;
-        line.line.endPosition.x                                    = endX;
-        line.line.endPosition.y                                    = y;
-        line.line.thickness                                        = thickness;
-        line.color                                                 = GRID_COLOR;
-        state->renderStackItems[state->renderStackItemCount].type  = RENDERCOMMAND_DRAW_SHAPE;
-        state->renderStackItems[state->renderStackItemCount].shape = line;
-        state->renderStackItemCount++;
+        line.type               = SHAPE2D_LINE;
+        line.position.x         = startX;
+        line.position.y         = y;
+        line.line.endPosition.x = endX;
+        line.line.endPosition.y = y;
+        line.line.thickness     = thickness;
+        line.color              = GRID_COLOR;
+        RenderStack_PushShape(&state->renderStack, line);
     }
 }
 
@@ -152,39 +148,38 @@ void UpdateWorldTiles(MapEditorMode* state)
         TileLayer* layer = &state->data.mapData.layers[l];
         for (uint16_t i = 0; i < layer->tileCount; i++)
         {
-            Tile*   tile   = &layer->tiles[i];
-            Sprite* sprite = &state->renderStackItems[state->renderStackItemCount].sprite;
-            state->renderStackItems[state->renderStackItemCount].type = RENDERCOMMAND_DRAW_SPRITE;
-            state->renderStackItemCount++;
-            Sprite_Initialize(sprite);
-            sprite->scale          = TILE_DRAW_SCALE;
-            sprite->position.x     = (float)(tile->position.x * TILE_SIZE);
-            sprite->position.y     = (float)(tile->position.y * TILE_SIZE);
-            sprite->currentTexture = &state->tileTextures[tile->textureId];
+            Tile*  tile = &layer->tiles[i];
+            Sprite sprite;
+            Sprite_Initialize(&sprite);
+            sprite.scale          = TILE_DRAW_SCALE;
+            sprite.position.x     = (float)(tile->position.x * TILE_SIZE);
+            sprite.position.y     = (float)(tile->position.y * TILE_SIZE);
+            sprite.currentTexture = &state->tileTextures[tile->textureId];
 
             if (l != state->data.activeLayer)
-                sprite->tint.a = 80;
+                sprite.tint.a = 80;
 
             if (state->data.showTypes && l == state->data.activeLayer)
             {
                 switch (tile->type)
                 {
                     case TILE_TYPE_SOLID:
-                        sprite->tint = (Color){ 255, 150, 150, 255 };
+                        sprite.tint = (Color){ 255, 150, 150, 255 };
                         break;
                     case TILE_TYPE_JUMP_PLATFORM:
-                        sprite->tint = (Color){ 150, 255, 150, 255 };
+                        sprite.tint = (Color){ 150, 255, 150, 255 };
                         break;
                     case TILE_TYPE_PLAYER_SPAWN:
-                        sprite->tint = (Color){ 150, 150, 255, 255 };
+                        sprite.tint = (Color){ 150, 150, 255, 255 };
                         break;
                     case TILE_TYPE_ENEMY_SPAWN:
-                        sprite->tint = (Color){ 255, 255, 150, 255 };
+                        sprite.tint = (Color){ 255, 255, 150, 255 };
                         break;
                     default:
                         break;
                 }
             }
+            RenderStack_PushSprite(&state->renderStack, sprite);
         }
     }
 }
@@ -194,22 +189,21 @@ void HandleTilePlacement(MapEditorMode* state)
     if (state->data.uiInputHandled)
         return;
 
-    Vector2Float mouseWorldPos = Utils_ScreenToWorld2D(
-        (Vector2Float){ (float)Input_GetMouseX(), (float)Input_GetMouseY() }, state->camera);
+    Vector2Float mouseWorldPos =
+        Utils_ScreenToWorld2D((Vector2Float){ (float)Input_GetMouseX(), (float)Input_GetMouseY() }, state->camera);
     Vector3Int gridPos = Utils_WorldToGrid(mouseWorldPos, TILE_SIZE);
 
     /* Ghost preview */
     if (state->data.selectedTile >= 0 && !state->data.isErasing)
     {
-        Sprite* ghost = &state->renderStackItems[state->renderStackItemCount].sprite;
-        state->renderStackItems[state->renderStackItemCount].type = RENDERCOMMAND_DRAW_SPRITE;
-        state->renderStackItemCount++;
-        Sprite_Initialize(ghost);
-        ghost->scale          = TILE_DRAW_SCALE;
-        ghost->position.x     = (float)(gridPos.x * TILE_SIZE);
-        ghost->position.y     = (float)(gridPos.y * TILE_SIZE);
-        ghost->currentTexture = &state->tileTextures[state->data.selectedTile];
-        ghost->tint           = (Color){ 255, 255, 255, 130 };
+        Sprite ghost;
+        Sprite_Initialize(&ghost);
+        ghost.scale          = TILE_DRAW_SCALE;
+        ghost.position.x     = (float)(gridPos.x * TILE_SIZE);
+        ghost.position.y     = (float)(gridPos.y * TILE_SIZE);
+        ghost.currentTexture = &state->tileTextures[state->data.selectedTile];
+        ghost.tint           = (Color){ 255, 255, 255, 130 };
+        RenderStack_PushSprite(&state->renderStack, ghost);
     }
 
     if (Input_IsMouseButtonDown(INPUT_MOUSE_BUTTON_LEFT))
@@ -542,14 +536,13 @@ void MapEditorMode_OnStart(Context* context, void* data)
     state->camera.zoom     = 1.0f;
     state->camera.position = (Vector2Float){ 0.0f, 0.0f };
     state->camera.rotation = 0.0f;
-    state->camera.offset   = (Vector2Float){ state->window->width/2.0f, state->window->height/2.0f };
+    state->camera.offset   = (Vector2Float){ state->window->width / 2.0f, state->window->height / 2.0f };
 
     state->cameraEntity.position.x = state->camera.position.x;
     state->cameraEntity.position.y = state->camera.position.y;
     state->cameraEntity.scale      = 1.0f / state->camera.zoom;
 
-    UI_Initialize(&state->uiState, state->renderStackItems, (size_t*)&state->renderStackItemCount, RENDERSTACKITEM_MAX,
-                  state->window, &state->camera);
+    UI_Initialize(&state->uiState, &state->renderStack, state->window, &state->camera);
     UI_SetParentEntity(&state->uiState, &state->cameraEntity);
 }
 
@@ -567,6 +560,11 @@ void MapEditorMode_Update(Context* context, void* data)
     state->data.uiInputHandled  = false;
     DeltaTime_Update(&state->deltaTime);
 
+    RenderStack_Clear(&state->renderStack);
+    RenderStack_PushClearScreen(&state->renderStack, (Color){ 0, 0, 0, 255 });
+    RenderStack_PushCamera2d(&state->renderStack, &state->camera);
+    RenderStack_PushMode2d(&state->renderStack);
+
     UpdateGrid(state);
     UpdateWorldTiles(state);
     UpdateTexturePane(state);
@@ -580,14 +578,15 @@ void MapEditorMode_Update(Context* context, void* data)
     state->cameraEntity.position.x = state->camera.position.x;
     state->cameraEntity.position.y = state->camera.position.y;
     state->cameraEntity.scale      = 1.0f / state->camera.zoom;
+
+    RenderStack_PopMode2d(&state->renderStack);
+    RenderStack_PopCamera2d(&state->renderStack);
 }
 
 void MapEditorMode_Draw(Context* context, void* data)
 {
     (void)context;
-    MapEditorMode* state         = (MapEditorMode*)data;
-    state->renderStack.stack     = state->renderStackItems;
-    state->renderStack.stackSize = state->renderStackItemCount;
+    MapEditorMode* state = (MapEditorMode*)data;
     RenderStack_Draw(&state->renderStack);
 }
 

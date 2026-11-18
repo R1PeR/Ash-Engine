@@ -88,7 +88,7 @@ typedef struct Clip
 
 typedef struct Camera
 {
-    Camera2D * camera2D;
+    Camera2D* camera2D;
 } Camera;
 
 typedef struct ClearScreen
@@ -126,6 +126,7 @@ typedef struct RenderStack
 {
     RenderStackItem* stack;
     uint32_t         stackSize;
+    uint32_t         maxStackSize;
 } RenderStack;
 
 typedef struct AnimationData
@@ -262,6 +263,19 @@ void Sprite_Update(Sprite* spr);
 void Sprite_Draw(Sprite* spr, Camera2D camera);
 
 void RenderStack_Draw(RenderStack* drawable);
+
+void RenderStack_Clear(RenderStack* stack);
+void RenderStack_Initialize(RenderStack* stack, RenderStackItem* items, uint32_t maxItems);
+
+void RenderStack_PushMode2d(RenderStack* stack);
+void RenderStack_PopMode2d(RenderStack* stack);
+void RenderStack_PushCamera2d(RenderStack* stack, Camera2D* camera);
+void RenderStack_PopCamera2d(RenderStack* stack);
+void RenderStack_PushClearScreen(RenderStack* stack, Color color);
+void RenderStack_PushSprite(RenderStack* stack, Sprite sprite);
+void RenderStack_PushShape(RenderStack* stack, Shape2D shape);
+void RenderStack_PushClip(RenderStack* stack, Rectangle rect);
+void RenderStack_PopClip(RenderStack* stack);
 
 TextureData Texture_LoadTexture(const char* fileName, Arena* arena);
 bool        Texture_CreateTextureAtlas(TextureData texture, uint32_t columns, uint32_t rows, TextureData* output);

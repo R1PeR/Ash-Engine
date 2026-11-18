@@ -26,15 +26,16 @@ void MenuMode_OnStart(Context* context, void* data)
     state->camera.zoom     = 1.0f;
     state->camera.position = (Vector2Float){ 0.0f, 0.0f };
     state->camera.rotation = 0.0f;
-    state->camera.offset   = (Vector2Float){ state->window->width/2.0f, state->window->height/2.0f };
+    state->camera.offset   = (Vector2Float){ state->window->width / 2.0f, state->window->height / 2.0f };
 
     state->cameraEntity.position.x = state->camera.position.x;
     state->cameraEntity.position.y = state->camera.position.y;
     state->cameraEntity.scale      = 1.0f / state->camera.zoom;
 
-    UI_Initialize(&state->uiState, state->renderStackItems, &state->renderStackItemCount, STACKITEM_MAX, state->window,
-                  &state->camera);
+    UI_Initialize(&state->uiState, &state->renderStack, state->window, &state->camera);
     UI_SetParentEntity(&state->uiState, &state->cameraEntity);
+
+    RenderStack_Initialize(&state->renderStack, state->renderStackItems, STACKITEM_MAX);
 }
 
 void MenuMode_OnPause(Context* context, void* data)
@@ -49,17 +50,10 @@ void MenuMode_Update(Context* context, void* data)
     state->renderStackItemCount = 0;
     DeltaTime_Update(&state->deltaTime);
 
-    state->renderStackItems[state->renderStackItemCount].type              = RENDERCOMMAND_CLEAR_SCREEN;
-    state->renderStackItems[state->renderStackItemCount].clearScreen.color = (Color){ 0, 0, 0, 255 };
-    state->renderStackItemCount++;
-
-
-    state->renderStackItems[state->renderStackItemCount].type            = RENDERCOMMAND_BEGIN_CAMERA2D;
-    state->renderStackItems[state->renderStackItemCount].camera.camera2D = &state->camera;
-    state->renderStackItemCount++;
-
-    state->renderStackItems[state->renderStackItemCount].type = RENDERCOMMAND_BEGIN2D;
-    state->renderStackItemCount++;
+    RenderStack_Clear(&state->renderStack);
+    RenderStack_PushClearScreen(&state->renderStack, (Color){ 0, 0, 0, 255 });
+    RenderStack_PushCamera2d(&state->renderStack, &state->camera);
+    RenderStack_PushMode2d(&state->renderStack);
 
     UI_Begin(&state->uiState, UI_GetBounds(&state->uiState, AnchorTopCenter, { 0.5, 0.0, 1.0, 1.0 }));
     {
@@ -100,19 +94,14 @@ void MenuMode_Update(Context* context, void* data)
 
     ArenaDebugFrame_DisplayFrame(&state->uiState, state->fontTextures, state->arena);
 
-
-    state->renderStackItems[state->renderStackItemCount].type = RENDERCOMMAND_END_CAMERA2D;
-    state->renderStackItemCount++;
-    state->renderStackItems[state->renderStackItemCount].type = RENDERCOMMAND_END2D;
-    state->renderStackItemCount++;
+    RenderStack_PopMode2d(&state->renderStack);
+    RenderStack_PopCamera2d(&state->renderStack);
 }
 
 void MenuMode_Draw(Context* context, void* data)
 {
     (void)context;
-    MenuMode* state              = (MenuMode*)data;
-    state->renderStack.stack     = state->renderStackItems;
-    state->renderStack.stackSize = state->renderStackItemCount;
+    MenuMode* state = (MenuMode*)data;
     RenderStack_Draw(&state->renderStack);
 }
 
@@ -129,12 +118,11 @@ void MenuMode_OnResume(Context* context, void* data)
     state->camera.zoom     = 1.0f;
     state->camera.position = (Vector2Float){ 0.0f, 0.0f };
     state->camera.rotation = 0.0f;
-    state->camera.offset   = (Vector2Float){ state->window->width/2.0f, state->window->height/2.0f };
+    state->camera.offset   = (Vector2Float){ state->window->width / 2.0f, state->window->height / 2.0f };
 
     state->cameraEntity.position.x = state->camera.position.x;
     state->cameraEntity.position.y = state->camera.position.y;
     state->cameraEntity.scale      = 1.0f / state->camera.zoom;
 
-    UI_Initialize(&state->uiState, state->renderStackItems, (size_t*)&state->renderStackItemCount, STACKITEM_MAX,
-                  state->window, &state->camera);
+    UI_Initialize(&state->uiState, &state->renderStack, state->window, &state->camera);
 }

@@ -524,6 +524,186 @@ void Sprite_Draw(Sprite* spr)
     Platform_DrawTexture(spr->currentTexture->texture, sourceRect, destRect, { 0, 0 }, rotation, spr->tint);
 }
 
+void RenderStack_Clear(RenderStack* stack)
+{
+    if (stack == NULL)
+    {
+        LOG_ERR("RenderStack: Clear() failed, stack is nullptr");
+        return;
+    }
+    stack->stackSize = 0;
+}
+
+void RenderStack_Initialize(RenderStack* stack, RenderStackItem* items, uint32_t maxItems)
+{
+    if (stack == NULL)
+    {
+        LOG_ERR("RenderStack: Initialize() failed, stack is nullptr");
+        return;
+    }
+    if (items == NULL)
+    {
+        LOG_ERR("RenderStack: Initialize() failed, items is nullptr");
+        return;
+    }
+    stack->stack        = items;
+    stack->stackSize    = 0;
+    stack->maxStackSize = maxItems;
+}
+
+void RenderStack_PushMode2d(RenderStack* stack)
+{
+    if (stack == NULL)
+    {
+        LOG_ERR("RenderStack: PushMode2d() failed, stack is nullptr");
+        return;
+    }
+    if (stack->stackSize >= stack->maxStackSize)
+    {
+        LOG_ERR("RenderStack: PushMode2d() failed, stack overflow");
+        return;
+    }
+    stack->stack[stack->stackSize].type = RENDERCOMMAND_BEGIN2D;
+    stack->stackSize++;
+}
+
+void RenderStack_PopMode2d(RenderStack* stack)
+{
+    if (stack == NULL)
+    {
+        LOG_ERR("RenderStack: PopMode2d() failed, stack is nullptr");
+        return;
+    }
+    if (stack->stackSize >= stack->maxStackSize)
+    {
+        LOG_ERR("RenderStack: PopMode2d() failed, stack overflow");
+        return;
+    }
+    stack->stack[stack->stackSize].type = RENDERCOMMAND_END2D;
+    stack->stackSize++;
+}
+
+void RenderStack_PushCamera2d(RenderStack* stack, Camera2D* camera)
+{
+    if (stack == NULL)
+    {
+        LOG_ERR("RenderStack: PushCamera() failed, stack is nullptr");
+        return;
+    }
+    if (camera == NULL)
+    {
+        LOG_ERR("RenderStack: PushCamera() failed, camera is nullptr");
+        return;
+    }
+    if (stack->stackSize >= stack->maxStackSize)
+    {
+        LOG_ERR("RenderStack: PushCamera() failed, stack overflow");
+        return;
+    }
+    stack->stack[stack->stackSize].type            = RENDERCOMMAND_BEGIN_CAMERA2D;
+    stack->stack[stack->stackSize].camera.camera2D = camera;
+    stack->stackSize++;
+}
+
+void RenderStack_PopCamera2d(RenderStack* stack)
+{
+    if (stack == NULL)
+    {
+        LOG_ERR("RenderStack: PopCamera() failed, stack is nullptr");
+        return;
+    }
+    if (stack->stackSize >= stack->maxStackSize)
+    {
+        LOG_ERR("RenderStack: PopCamera() failed, stack overflow");
+        return;
+    }
+    stack->stack[stack->stackSize].type = RENDERCOMMAND_END_CAMERA2D;
+    stack->stackSize++;
+}
+
+void RenderStack_PushClearScreen(RenderStack* stack, Color color)
+{
+    if (stack == NULL)
+    {
+        LOG_ERR("RenderStack: PushClearScreen() failed, stack is nullptr");
+        return;
+    }
+    if (stack->stackSize >= stack->maxStackSize)
+    {
+        LOG_ERR("RenderStack: PushClearScreen() failed, stack overflow");
+        return;
+    }
+    stack->stack[stack->stackSize].type              = RENDERCOMMAND_CLEAR_SCREEN;
+    stack->stack[stack->stackSize].clearScreen.color = color;
+    stack->stackSize++;
+}
+
+void RenderStack_PushSprite(RenderStack* stack, Sprite sprite)
+{
+    if (stack == NULL)
+    {
+        LOG_ERR("RenderStack: PushSprite() failed, stack is nullptr");
+        return;
+    }
+    if (stack->stackSize >= stack->maxStackSize)
+    {
+        LOG_ERR("RenderStack: PushSprite() failed, stack overflow");
+        return;
+    }
+    stack->stack[stack->stackSize].type   = RENDERCOMMAND_DRAW_SPRITE;
+    stack->stack[stack->stackSize].sprite = sprite;
+    stack->stackSize++;
+}
+
+void RenderStack_PushShape(RenderStack* stack, Shape2D shape)
+{
+    if (stack == NULL)
+    {
+        LOG_ERR("RenderStack: PushShape() failed, stack is nullptr");
+        return;
+    }
+    if (stack->stackSize >= stack->maxStackSize)
+    {
+        LOG_ERR("RenderStack: PushShape() failed, stack overflow");
+        return;
+    }
+    stack->stack[stack->stackSize].type  = RENDERCOMMAND_DRAW_SHAPE;
+    stack->stack[stack->stackSize].shape = shape;
+    stack->stackSize++;
+}
+
+void RenderStack_PushClip(RenderStack* stack, Rectangle rect)
+{
+    if (stack == NULL)
+    {
+        LOG_ERR("RenderStack: PushClip() failed, stack is nullptr");
+        return;
+    }
+    if (stack->stackSize >= stack->maxStackSize)
+    {
+        LOG_ERR("RenderStack: PushClip() failed, stack overflow");
+        return;
+    }
+    stack->stack[stack->stackSize].type      = RENDERCOMMAND_BEGIN_RECTANGLE_CLIP;
+    stack->stack[stack->stackSize].clip.rect = rect;
+    stack->stackSize++;
+}
+void RenderStack_PopClip(RenderStack* stack)
+{
+    if (stack == NULL)
+    {
+        LOG_ERR("RenderStack: PopClip() failed, stack is nullptr");
+        return;
+    }
+    if (stack->stackSize >= stack->maxStackSize)
+    {
+        LOG_ERR("RenderStack: PopClip() failed, stack overflow");
+        return;
+    }
+    stack->stack[stack->stackSize].type = RENDERCOMMAND_END_RECTANGLE_CLIP;
+    stack->stackSize++;
+}
+
 TextureData Texture_LoadTexture(const char* fileName, Arena* arena)
 {
     if (fileName == NULL)
