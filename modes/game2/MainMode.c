@@ -44,7 +44,7 @@ void UpdateDebug(MainMode* state)
     {
         UI_Layout(&state->uiState, LayoutVertical);
         // UI_Center(Center);
-        UI_Padding(&state->uiState, UI_GetSize(&state->uiState, { 0.01, 0.01, 0.01, 0.01 }));
+        UI_Padding(&state->uiState, UI_GetSize(&state->uiState, { 0.005, 0.005, 0.005, 0.005 }));
         UI_Text(&state->uiState, "DEBUG INFO", 2.0f, state->fontTextures);
         UI_Text(&state->uiState, fps, 1.0f, state->fontTextures);
         UI_Text(&state->uiState, deltaTime, 1.0f, state->fontTextures);

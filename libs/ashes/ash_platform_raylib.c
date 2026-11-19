@@ -20,14 +20,8 @@
 #undef Rectangle
 #undef Vector2
 
-#define Texture2D R_Texture2D
-#define Vector2   R_Vector2
-#include "rlImGui.h"
-#undef Texture2D
-
-#include <cstdarg>
-#include <cstdint>
-#include <cstdio>
+#include <stdio.h>
+#include <stdarg.h>
 #include <cstdlib>
 
 void Platform_InitWindow(uint16_t width, uint16_t height, const char* title)
@@ -117,7 +111,6 @@ void Platform_DrawRing(Vector2Float center, float innerRadius, float outerRadius
 }
 void Platform_SetClipRectangle(Rectangle rect, Camera2D camera)
 {
-    // convert from local coordinates to screen coordinates
     Vector2Float startPos = Utils_WorldToScreen2D({ rect.x, rect.y }, camera);
     Vector2Float endPos   = Utils_WorldToScreen2D({ rect.x + rect.width, rect.y + rect.height }, camera);
 
@@ -340,20 +333,20 @@ int Platform_GetFPS()
     return GetFPS();
 }
 
-void Platform_ImGuiSetup(bool dark)
-{
-    rlImGuiSetup(dark);
-}
-
-void Platform_ImGuiBegin()
-{
-    rlImGuiBegin();
-}
-
-void Platform_ImGuiEnd()
-{
-    rlImGuiEnd();
-}
+// void Platform_ImGuiSetup(bool dark)
+// {
+//     rlImGuiSetup(dark);
+// }
+//
+// void Platform_ImGuiBegin()
+// {
+//     rlImGuiBegin();
+// }
+//
+// void Platform_ImGuiEnd()
+// {
+//     rlImGuiEnd();
+// }
 
 uint32_t Platform_GetRandom()
 {

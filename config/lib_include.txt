@@ -1,5 +1,3 @@
 libs/raylib/include
-libs/imgui
-libs/rlImGui
 libs
 .

@@ -49,6 +49,7 @@ enum UI_GraphType2d
 };
 
 typedef Vector4Float UI_PaddingData;
+typedef float        UI_SizeData;
 
 struct UI_Theme
 {
@@ -96,7 +97,7 @@ struct UI_FrameData
     bool     scrollable;
     float    contentHeight;
     uint16_t widgetId;
-    float    size;
+    // float    size;
 };
 
 struct UI_TileGridData
@@ -154,6 +155,7 @@ enum UI_StackType
     StackType_Layout,
     StackType_Centering,
     StackType_Padding,
+    StackType_Size,
     StackType_Frame,
     StackType_Text,
     StackType_Sprite,
@@ -175,6 +177,7 @@ struct UI_Stack
         UI_LayoutType   layout;
         UI_CenterType   centeringMode;
         UI_PaddingData  padding;
+        UI_SizeData     size;
         UI_FrameData    frame;
         UI_TextData     text;
         UI_SpriteData   sprite;
@@ -213,8 +216,7 @@ struct UI_State
     UI_Theme  theme;
 };
 
-void UI_Initialize(UI_State* uiState, RenderStack* renderStack, Window* window,
-                   Camera2D* camera);
+void UI_Initialize(UI_State* uiState, RenderStack* renderStack, Window* window, Camera2D* camera);
 void UI_SetParentEntity(UI_State* uiState, Entity2D* entity);
 void UI_SetTheme(UI_State* uiState, struct UI_Theme theme);
 
@@ -223,6 +225,7 @@ void UI_Begin(UI_State* uiState, Vector4Float bounds);
 void UI_Layout(UI_State* uiState, UI_LayoutType layout);
 void UI_Center(UI_State* uiState, UI_CenterType mode);
 void UI_Padding(UI_State* uiState, Vector4Float padding);
+void UI_Size(UI_State* uiState, float sizeRatio);
 
 void UI_Frame(UI_State* uiState);
 void UI_ScrollFrame(UI_State* uiState, float contentHeight);
@@ -234,7 +237,6 @@ float UI_Slider(UI_State* uiState, float value, float min, float max);
 int UI_List(UI_State* uiState, const char** items, int itemCount, float textScale, float itemHeight, TextureData* font,
             bool showScroll);
 
-void UI_FrameSize(UI_State* uiState, float sizeRatio);
 bool UI_Toggle(UI_State* uiState, const char* text, bool active, float scale, TextureData* font);
 void UI_Separator(UI_State* uiState);
 int  UI_TileGrid(UI_State* uiState, TextureData* textures, int textureCount, int cols, int selectedTile);

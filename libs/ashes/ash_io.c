@@ -70,7 +70,7 @@ void Window_Init(Window* window, uint16_t width, uint16_t height, const char* ti
     window->height          = height;
 
     Platform_SetTargetFPS(60);
-    Platform_ImGuiSetup(true);
+    // Platform_ImGuiSetup(true);
 }
 
 void Window_Deinit()

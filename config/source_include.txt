@@ -1,6 +1,4 @@
 ./
 modes/game2/
 libs/ashes/
-libs/rlImGui/
-libs/imgui/
 utils/

@@ -222,7 +222,8 @@ void UpdateTexturePane(MapEditorMode* state)
 
     UI_Begin(&state->uiState, UI_GetBounds(&state->uiState, AnchorTopRight, { 0.0, 0.0, 0.5, 1.0 }));
     {
-        UI_FrameSize(&state->uiState, 0.2f);
+        UI_Frame(&state->uiState);
+        UI_Size(&state->uiState, 0.2f);
         UI_Layout(&state->uiState, LayoutHorizontal);
         UI_Center(&state->uiState, CenterBoth);
         UI_Padding(&state->uiState, UI_GetSize(&state->uiState, { 0.01, 0.01, 0.01, 0.01 }));
@@ -235,11 +236,13 @@ void UpdateTexturePane(MapEditorMode* state)
             }
         }
 
-        UI_FrameSize(&state->uiState, 0.05f);
+        UI_Frame(&state->uiState);
+        UI_Size(&state->uiState, 0.05f);
         UI_Layout(&state->uiState, LayoutVertical);
         UI_Separator(&state->uiState);
 
-        UI_FrameSize(&state->uiState, 0.2f);
+        UI_Frame(&state->uiState);
+        UI_Size(&state->uiState, 0.2f);
         UI_Layout(&state->uiState, LayoutHorizontal);
         UI_Center(&state->uiState, CenterBoth);
         UI_Padding(&state->uiState, UI_GetSize(&state->uiState, { 0.01, 0.01, 0.01, 0.01 }));

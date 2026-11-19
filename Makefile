@@ -6,7 +6,7 @@ EXECUTABLE = $(PROJECT_NAME).exe
 MAKEFLAGS := -j 8
 
 # --- Compiler Setup ---
-CC = g++ -pipe
+CC = clang++ -pipe
 
 # --- Directories ---
 # Create a dedicated directory for object files

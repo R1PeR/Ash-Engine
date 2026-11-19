@@ -12,7 +12,7 @@
             "environment": [
                 {
                     "name": "PATH",
-                    "value": "C:\\msys64\\mingw64\\bin;C:\\msys64\\usr\\bin;${env:PATH}"
+                    "value": "C:\\msys64\\clang64\\bin;C:\\msys64\\usr\\bin;${env:PATH}"
                 },
                 {
                     "name": "MSYSTEM",
@@ -21,7 +21,7 @@
             ],
             "externalConsole": false,
             "MIMode": "gdb",
-            "miDebuggerPath": "C:\\msys64\\mingw64\\bin\\gdb.exe"
+            "miDebuggerPath": "C:\\msys64\\clang64\\bin\\gdb.exe"
         }
     ]
 }

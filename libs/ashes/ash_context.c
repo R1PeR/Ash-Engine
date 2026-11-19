@@ -4,9 +4,6 @@
 #include "ash_io.h"
 #include "ash_platform.h"
 
-#include <cstddef>
-#include <stdint.h>
-
 void Context_Init(Context* context, uint8_t maxModes, uint8_t maxUpdatables, Arena* arena)
 {
     if (context == NULL)

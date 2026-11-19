@@ -822,10 +822,14 @@ void RenderStack_Draw(RenderStack* state)
                 }
                 clipCurrentDepth--;
                 if (clipCurrentDepth > 0)
+                {
                     Platform_SetClipRectangle(clipStack[clipCurrentDepth - 1].rect,
                                               *cameraStack[cameraCurrentDepth - 1].camera2D);
+                }
                 else
+                {
                     Platform_ClearClipRectangle();
+                }
             }
             break;
             case RENDERCOMMAND_BEGIN2D:

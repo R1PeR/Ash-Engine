@@ -62,9 +62,9 @@ void Platform_SetTraceLogLevel(int logType);
 
 int Platform_GetFPS();
 
-void Platform_ImGuiSetup(bool dark);
-void Platform_ImGuiBegin();
-void Platform_ImGuiEnd();
+// void Platform_ImGuiSetup(bool dark);
+// void Platform_ImGuiBegin();
+// void Platform_ImGuiEnd();
 
 uint32_t Platform_GetRandom();
 uint32_t Platform_GetRandomMax();

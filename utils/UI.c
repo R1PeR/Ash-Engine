@@ -97,19 +97,16 @@ void UI_Frame(UI_State* uiState)
     uiState->item[uiState->itemCount].frame.scrollable    = false;
     uiState->item[uiState->itemCount].frame.contentHeight = 0;
     uiState->item[uiState->itemCount].frame.widgetId      = 0;
-    uiState->item[uiState->itemCount].frame.size          = 0;
+    // uiState->item[uiState->itemCount].frame.size          = 0;
     uiState->itemCount++;
 }
 
-void UI_FrameSize(UI_State* uiState, float sizeRatio)
+void UI_Size(UI_State* uiState, float sizeRatio)
 {
     assert(uiState->itemCount < UI_MAX_STACK_DEPTH);
     assert(sizeRatio > 0.0f && sizeRatio <= 1.0f);
-    uiState->item[uiState->itemCount].type                = StackType_Frame;
-    uiState->item[uiState->itemCount].frame.scrollable    = false;
-    uiState->item[uiState->itemCount].frame.contentHeight = 0;
-    uiState->item[uiState->itemCount].frame.widgetId      = 0;
-    uiState->item[uiState->itemCount].frame.size          = sizeRatio;
+    uiState->item[uiState->itemCount].type = StackType_Size;
+    uiState->item[uiState->itemCount].size = sizeRatio;
     uiState->itemCount++;
 }
 
@@ -297,19 +294,6 @@ static bool PointInRect(UI_State* uiState, Vector2Float point, Rectangle rectang
            && point.y <= rectangle.y + rectangle.height;
 }
 
-static void PushLocalClip(UI_State* uiState, Vector4Float localBounds)
-{
-    Rectangle worldRect = { localBounds.x, localBounds.y, localBounds.w, localBounds.h };
-    if (uiState->parentEntity != NULL)
-    {
-        worldRect.x = uiState->parentEntity->position.x + localBounds.x * uiState->parentEntity->scale;
-        worldRect.y = uiState->parentEntity->position.y + localBounds.y * uiState->parentEntity->scale;
-        worldRect.width *= uiState->parentEntity->scale;
-        worldRect.height *= uiState->parentEntity->scale;
-    }
-    RenderStack_PushClip(uiState->renderStack, worldRect);
-}
-
 static void DrawFrameShape(UI_State* uiState, Vector4Float rectangle, Color background)
 {
     Shape2D s;
@@ -359,11 +343,8 @@ static void DrawBevel(UI_State* uiState, Vector4Float rect, Color base, bool rai
     DrawLine(uiState, (Vector2Float){ x1, y0 }, (Vector2Float){ x1, y1 }, b, lo);
 }
 
-static void DrawTextItem(UI_State* uiState, int childId, Vector4Float childBounds, UI_CenterType childCenter,
-                         float scrollY)
+static void DrawTextItem(UI_State* uiState, int childId, Vector4Float childBounds, UI_CenterType childCenter)
 {
-    (void)scrollY;
-
     const char*  text       = uiState->item[childId].text.text;
     size_t       textLength = uiState->item[childId].text.textSize;
     float        scale      = uiState->item[childId].text.scale;
@@ -396,11 +377,8 @@ static void DrawTextItem(UI_State* uiState, int childId, Vector4Float childBound
     }
 }
 
-static void DrawSpriteItem(UI_State* uiState, int childId, Vector4Float childBounds, UI_CenterType childCenter,
-                           float scrollY)
+static void DrawSpriteItem(UI_State* uiState, int childId, Vector4Float childBounds, UI_CenterType childCenter)
 {
-    (void)scrollY;
-
     Sprite* src = uiState->item[childId].sprite.sprite;
     if (!src || !src->currentTexture)
         return;
@@ -427,10 +405,8 @@ static void DrawSpriteItem(UI_State* uiState, int childId, Vector4Float childBou
     PushSprite(uiState, sprite);
 }
 
-static void DrawButtonItem(UI_State* uiState, int childId, Vector4Float childBounds, UI_CenterType childCenter,
-                           float scrollY)
+static void DrawButtonItem(UI_State* uiState, int childId, Vector4Float childBounds, UI_CenterType childCenter)
 {
-    (void)scrollY;
     (void)childCenter;
 
     const char*  text      = uiState->item[childId].button.text;
@@ -483,10 +459,8 @@ static void DrawButtonItem(UI_State* uiState, int childId, Vector4Float childBou
         uiState->buttonClicked[wid] = true;
 }
 
-static void DrawSliderItem(UI_State* uiState, int childId, Vector4Float childBounds, UI_CenterType childCenter,
-                           float scrollY)
+static void DrawSliderItem(UI_State* uiState, int childId, Vector4Float childBounds, UI_CenterType childCenter)
 {
-    (void)scrollY;
     (void)childCenter;
 
     uint16_t wid = uiState->item[childId].slider.widgetId;
@@ -537,10 +511,8 @@ static void DrawSliderItem(UI_State* uiState, int childId, Vector4Float childBou
     }
 }
 
-static void DrawListItem(UI_State* uiState, int childId, Vector4Float childBounds, UI_CenterType childCenter,
-                         float scrollY)
+static void DrawListItem(UI_State* uiState, int childId, Vector4Float childBounds, UI_CenterType childCenter)
 {
-    (void)scrollY;
     (void)childCenter;
 
     const char** items      = uiState->item[childId].list.items;
@@ -554,7 +526,7 @@ static void DrawListItem(UI_State* uiState, int childId, Vector4Float childBound
     float        charHeight = (fontAtlas ? (float)fontAtlas[0].size.y : 8.0f) * textScale;
 
     Vector2Float mousePos = GetMouseWorldPos(uiState);
-    bool mouseOverList =
+    bool         mouseOverList =
         PointInRect(uiState, mousePos, (Rectangle){ childBounds.x, childBounds.y, childBounds.w, childBounds.h });
 
     float listScroll  = uiState->scrollOffset[wid];
@@ -628,10 +600,8 @@ static void DrawListItem(UI_State* uiState, int childId, Vector4Float childBound
     }
 }
 
-static void DrawToggleItem(UI_State* uiState, int childId, Vector4Float childBounds, UI_CenterType childCenter,
-                           float scrollY)
+static void DrawToggleItem(UI_State* uiState, int childId, Vector4Float childBounds, UI_CenterType childCenter)
 {
-    (void)scrollY;
     (void)childCenter;
 
     const char*  text      = uiState->item[childId].button.text;
@@ -689,10 +659,8 @@ static void DrawToggleItem(UI_State* uiState, int childId, Vector4Float childBou
         uiState->buttonClicked[wid] = true;
 }
 
-static void DrawSeparatorItem(UI_State* uiState, int childId, Vector4Float childBounds, UI_CenterType childCenter,
-                              float scrollY)
+static void DrawSeparatorItem(UI_State* uiState, int childId, Vector4Float childBounds, UI_CenterType childCenter)
 {
-    (void)scrollY;
     (void)childId;
     (void)childCenter;
 
@@ -711,10 +679,8 @@ static void DrawSeparatorItem(UI_State* uiState, int childId, Vector4Float child
     PushShape(uiState, line);
 }
 
-static void DrawTileGridItem(UI_State* uiState, int childId, Vector4Float childBounds, UI_CenterType childCenter,
-                             float scrollY)
+static void DrawTileGridItem(UI_State* uiState, int childId, Vector4Float childBounds, UI_CenterType childCenter)
 {
-    (void)scrollY;
     (void)childCenter;
 
     TextureData* textures     = uiState->item[childId].tileGrid.textures;
@@ -790,10 +756,8 @@ static void DrawTileGridItem(UI_State* uiState, int childId, Vector4Float childB
     }
 }
 
-static void DrawGraph1DItem(UI_State* uiState, int childId, Vector4Float childBounds, UI_CenterType childCenter,
-                            float scrollY)
+static void DrawGraph1DItem(UI_State* uiState, int childId, Vector4Float childBounds, UI_CenterType childCenter)
 {
-    (void)scrollY;
     (void)childCenter;
 
     Color colors[12] = { COLOR_GREEN,   COLOR_BLUE, COLOR_RED,   COLOR_YELLOW, COLOR_ORANGE,    COLOR_PURPLE,
@@ -802,7 +766,7 @@ static void DrawGraph1DItem(UI_State* uiState, int childId, Vector4Float childBo
     UI_Graph1DData* graph    = &uiState->item[childId].graph1d;
     float           maxValue = graph->values[0];
     float           minValue = graph->values[0];
-    for (int i = 0; i < graph->valueCount - 1; i++)
+    for (int i = 0; i < graph->valueCount; i++)
     {
         if (graph->values[i] > maxValue)
             maxValue = graph->values[i];
@@ -816,13 +780,9 @@ static void DrawGraph1DItem(UI_State* uiState, int childId, Vector4Float childBo
         for (int i = 0; i < graph->valueCount - 1; i++)
         {
             float x0 = childBounds.x;
-            float y0 = childBounds.y + ((float)i / (graph->valueCount - 1)) * childBounds.h;
+            float y0 = childBounds.y + ((float)i / (graph->valueCount)) * childBounds.h;
             float x1 = childBounds.x + (graph->values[i] / maxValue) * childBounds.w;
-            float y1 = childBounds.y + ((float)(i + 1) / (graph->valueCount - 1)) * childBounds.h;
-            // float x0 = childBounds.x + ((float)i / (graph->valueCount - 1)) * childBounds.w;
-            // float y0 = childBounds.y + childBounds.h - (graph->values[i] / maxValue) * childBounds.h;
-            // float x1 = childBounds.x + ((float)(i + 1) / (graph->valueCount - 1)) * childBounds.w;
-            // float y1 = childBounds.y + childBounds.h - (graph->values[i + 1] / maxValue) * childBounds.h;
+            float y1 = childBounds.y + ((float)(i + 1) / (graph->valueCount)) * childBounds.h;
 
             Shape2D rect;
             Shape2D_Initialize(&rect);
@@ -841,9 +801,9 @@ static void DrawGraph1DItem(UI_State* uiState, int childId, Vector4Float childBo
         // Draw vertical bars for each value make it percent of maxValue
         for (int i = 0; i < graph->valueCount - 1; i++)
         {
-            float x0 = childBounds.x + ((float)i / (graph->valueCount - 1)) * childBounds.w;
+            float x0 = childBounds.x + ((float)i / (graph->valueCount)) * childBounds.w;
             float y0 = childBounds.y + childBounds.h - (graph->values[i] / maxValue) * childBounds.h;
-            float x1 = childBounds.x + ((float)(i + 1) / (graph->valueCount - 1)) * childBounds.w;
+            float x1 = childBounds.x + ((float)(i + 1) / (graph->valueCount)) * childBounds.w;
             float y1 = childBounds.y + childBounds.h;
 
             Shape2D rect;
@@ -860,10 +820,8 @@ static void DrawGraph1DItem(UI_State* uiState, int childId, Vector4Float childBo
     }
 }
 
-static void DrawGraph2DItem(UI_State* uiState, int childId, Vector4Float childBounds, UI_CenterType childCenter,
-                            float scrollY)
+static void DrawGraph2DItem(UI_State* uiState, int childId, Vector4Float childBounds, UI_CenterType childCenter)
 {
-    (void)scrollY;
     (void)childCenter;
 
     UI_Graph2DData* graph     = &uiState->item[childId].graph2d;
@@ -956,51 +914,39 @@ static bool IsChildRenderable(UI_StackType type)
            || type == StackType_Separator || type == StackType_Graph1D || type == StackType_Graph2D;
 }
 
-static void DispatchChild(UI_State* uiState, int childId, Vector4Float childBounds, UI_CenterType childCenter,
-                          float scrollY, Vector4Float frameBounds)
+static void DispatchChild(UI_State* uiState, int childId, Vector4Float childBounds, UI_CenterType childCenter)
 {
     switch (uiState->item[childId].type)
     {
         case StackType_Text:
-            DrawTextItem(uiState, childId, childBounds, childCenter, scrollY);
+            DrawTextItem(uiState, childId, childBounds, childCenter);
             break;
         case StackType_Sprite:
-            DrawSpriteItem(uiState, childId, childBounds, childCenter, scrollY);
+            DrawSpriteItem(uiState, childId, childBounds, childCenter);
             break;
         case StackType_Button:
-            DrawButtonItem(uiState, childId, childBounds, childCenter, scrollY);
+            DrawButtonItem(uiState, childId, childBounds, childCenter);
             break;
         case StackType_Slider:
-            DrawSliderItem(uiState, childId, childBounds, childCenter, scrollY);
+            DrawSliderItem(uiState, childId, childBounds, childCenter);
             break;
         case StackType_List:
-        {
-            float right = Utils_MinFloat(childBounds.x + childBounds.w, frameBounds.x + frameBounds.w);
-            float bottom = Utils_MinFloat(childBounds.y + childBounds.h, frameBounds.y + frameBounds.h);
-            Vector4Float clipBounds;
-            clipBounds.x = Utils_MaxFloat(childBounds.x, frameBounds.x);
-            clipBounds.y = Utils_MaxFloat(childBounds.y, frameBounds.y);
-            clipBounds.w = Utils_MaxFloat(0.0f, right - clipBounds.x);
-            clipBounds.h = Utils_MaxFloat(0.0f, bottom - clipBounds.y);
-            PushLocalClip(uiState, clipBounds);
-            DrawListItem(uiState, childId, childBounds, childCenter, scrollY);
-            RenderStack_PopClip(uiState->renderStack);
+            DrawListItem(uiState, childId, childBounds, childCenter);
             break;
-        }
         case StackType_Toggle:
-            DrawToggleItem(uiState, childId, childBounds, childCenter, scrollY);
+            DrawToggleItem(uiState, childId, childBounds, childCenter);
             break;
         case StackType_Separator:
-            DrawSeparatorItem(uiState, childId, childBounds, childCenter, scrollY);
+            DrawSeparatorItem(uiState, childId, childBounds, childCenter);
             break;
         case StackType_TileGrid:
-            DrawTileGridItem(uiState, childId, childBounds, childCenter, scrollY);
+            DrawTileGridItem(uiState, childId, childBounds, childCenter);
             break;
         case StackType_Graph1D:
-            DrawGraph1DItem(uiState, childId, childBounds, childCenter, scrollY);
+            DrawGraph1DItem(uiState, childId, childBounds, childCenter);
             break;
         case StackType_Graph2D:
-            DrawGraph2DItem(uiState, childId, childBounds, childCenter, scrollY);
+            DrawGraph2DItem(uiState, childId, childBounds, childCenter);
             break;
         default:
             return;
@@ -1015,176 +961,151 @@ bool UI_IsMouseOverBounds(UI_State* uiState, Vector4Float bounds)
 
 void UI_End(UI_State* uiState)
 {
-    if (uiState->itemCount == 0)
-        return;
-
-    uint16_t containerIdx[UI_MAX_STACK_DEPTH];
-    int      containerCount = 0;
-    for (uint16_t i = 0; i < uiState->itemCount; i++)
+    UI_LayoutType uiLayout = LayoutVertical;
+    struct FrameData
     {
-        if (uiState->item[i].type == StackType_Frame)
-            containerIdx[containerCount++] = i;
+        Vector4Float   bounds     = { 0, 0, 0, 0 };
+        int            childStart = 0;
+        int            childEnd   = 0;
+        uint16_t       childCount = 0;
+        UI_LayoutType  layout     = LayoutVertical;
+        UI_CenterType  center     = CenterNone;
+        UI_PaddingData padding    = { 0, 0, 0, 0 };
+        UI_SizeData    size       = 0.0f;
+    } frameData[UI_MAX_STACK_DEPTH];
+
+    uint16_t frameCount = 0;
+    for (int i = 0; i < uiState->itemCount; i++)
+    {
+        if (frameCount > 0)
+            frameData[frameCount - 1].childEnd = i;
+        switch (uiState->item[i].type)
+        {
+            case StackType_Frame:
+                frameCount++;
+                frameData[frameCount - 1].childStart = i + 1;
+                break;
+            case StackType_Layout:
+                if (frameCount == 0)
+                    uiLayout = uiState->item[i].layout;
+                else
+                    frameData[frameCount - 1].layout = uiState->item[i].layout;
+                break;
+            case StackType_Centering:
+                frameData[frameCount - 1].center = uiState->item[i].centeringMode;
+                break;
+            case StackType_Padding:
+                frameData[frameCount - 1].padding = uiState->item[i].padding;
+                break;
+            case StackType_Size:
+                frameData[frameCount - 1].size = uiState->item[i].size;
+                break;
+            default:
+                frameData[frameCount - 1].childCount++;
+                break;
+        }
     }
 
-    if (containerCount == 0)
-    {
-        uiState->itemCount = 0;
-        return;
-    }
+    assert(frameCount > 0);
 
-    UI_LayoutType rootLayout = LayoutVertical;
-    for (int i = 0; i < containerIdx[0]; i++)
+    float    declaredSize = 0.0f;
+    uint16_t autoCount    = 0;
+    for (int i = 0; i < frameCount; i++)
     {
-        if (uiState->item[i].type == StackType_Layout)
-            rootLayout = uiState->item[i].layout;
-    }
-
-    Vector4Float root = uiState->bounds;
-
-    int   autoCount  = 0;
-    float fixedTotal = 0;
-    for (int f = 0; f < containerCount; f++)
-    {
-        int   cur = containerIdx[f];
-        float s   = uiState->item[cur].frame.size;
-        if (s > 0)
-            fixedTotal += s;
+        if (frameData[i].size > 0)
+        {
+            declaredSize += frameData[i].size;
+        }
         else
         {
             autoCount++;
         }
     }
 
-    float remainingRatio = 1.0f - fixedTotal;
-    float autoUnit       = autoCount > 0 ? remainingRatio / autoCount : 0;
+    float        autoUnit     = (autoCount > 0) ? (1.0f - declaredSize) / autoCount : 0;
+    Vector2Float rootPosition = { uiState->bounds.x, uiState->bounds.y };
 
-    float cursor = rootLayout == LayoutVertical ? root.y : root.x;
-    float span   = rootLayout == LayoutVertical ? root.h : root.w;
+    for (int i = 0; i < frameCount; i++)
+    {
+        if (frameData[i].size <= 0)
+        {
+            frameData[i].size = autoUnit;
+        }
+        switch (uiLayout)
+        {
+            case LayoutVertical:
+                frameData[i].bounds.x = rootPosition.x;
+                frameData[i].bounds.y = rootPosition.y;
+                frameData[i].bounds.w = uiState->bounds.w;
+                frameData[i].bounds.h = frameData[i].size * uiState->bounds.h;
+                rootPosition.y += frameData[i].bounds.h;
+                break;
+            case LayoutHorizontal:
+                frameData[i].bounds.x = rootPosition.x;
+                frameData[i].bounds.y = rootPosition.y;
+                frameData[i].bounds.w = frameData[i].size * uiState->bounds.w;
+                frameData[i].bounds.h = uiState->bounds.h;
+                rootPosition.x += frameData[i].bounds.w;
+                break;
+        }
+    }
 
     Vector2Float mousePos = GetMouseWorldPos(uiState);
 
-    for (int f = 0; f < containerCount; f++)
+    for (int i = 0; i < frameCount; i++)
     {
-        int current = containerIdx[f];
-        int next    = (f + 1 < containerCount) ? containerIdx[f + 1] : uiState->itemCount;
-
-        float frameSize = uiState->item[current].frame.size > 0 ? uiState->item[current].frame.size : autoUnit;
-        float frameSpan = frameSize * span;
-
-        Vector4Float frameBounds;
-        if (rootLayout == LayoutVertical)
-            frameBounds = (Vector4Float){ root.x, cursor, root.w, frameSpan };
-        else
-            frameBounds = (Vector4Float){ cursor, root.y, frameSpan, root.h };
-        cursor += frameSpan;
-
-        PushLocalClip(uiState, frameBounds);
-        DrawBevel(uiState, frameBounds, uiState->theme.frameBg, true);
+        DrawBevel(uiState, frameData[i].bounds, uiState->theme.frameBg, true);
 
         bool mouseOverFrame =
-            PointInRect(uiState, mousePos, (Rectangle){ frameBounds.x, frameBounds.y, frameBounds.w, frameBounds.h });
+            PointInRect(uiState, mousePos, (Rectangle){ frameData[i].bounds.x, frameData[i].bounds.y, frameData[i].bounds.w, frameData[i].bounds.h });
         uiState->mouseCaptured |= mouseOverFrame;
 
-        float scrollY = 0;
-        if (uiState->item[current].frame.scrollable)
+        uint16_t childIndex = 0;
+        for (int j = frameData[i].childStart; j < frameData[i].childEnd + 1; j++)
         {
-            uint16_t wid = uiState->item[current].frame.widgetId;
-            scrollY      = uiState->scrollOffset[wid];
-
-            if (mouseOverFrame)
-            {
-                float wheel = Platform_GetMouseWheelMove();
-                scrollY -= wheel * 30.0f;
-                float maxScroll = uiState->item[current].frame.contentHeight - frameBounds.h;
-                if (maxScroll < 0)
-                    maxScroll = 0;
-                if (scrollY < 0)
-                    scrollY = 0;
-                if (scrollY > maxScroll)
-                    scrollY = maxScroll;
-            }
-            uiState->scrollOffset[wid] = scrollY;
-        }
-
-        int childStart = current + 1;
-        int childEnd   = next;
-
-        UI_LayoutType childLayout = LayoutVertical;
-        UI_CenterType childCenter = CenterNone;
-        int           childCount  = 0;
-        for (int j = childStart; j < childEnd; j++)
-        {
-            if (uiState->item[j].type == StackType_Layout)
-            {
-                childLayout = uiState->item[j].layout;
-            }
-            else if (uiState->item[j].type == StackType_Centering)
-            {
-                childCenter = uiState->item[j].centeringMode;
-            }
-            else if (uiState->item[j].type == StackType_Padding)
-            {
+            if (!IsChildRenderable(uiState->item[j].type))
                 continue;
+            uint16_t childId = j;
+            UI_CenterType childCenter = frameData[i].center;
+            Vector4Float  childBounds = frameData[i].bounds;
+            float slotH = (frameData[i].layout == LayoutVertical) ? frameData[i].bounds.h / frameData[i].childCount :
+                                                                    frameData[i].bounds.h;
+            float slotW = (frameData[i].layout == LayoutHorizontal) ? frameData[i].bounds.w / frameData[i].childCount :
+                                                                      frameData[i].bounds.w;
+
+            if (frameData[i].layout == LayoutVertical)
+            {
+                childBounds.x = frameData[i].bounds.x;
+                childBounds.y = frameData[i].bounds.y + (childIndex * slotH);
+                childBounds.w = slotW;
+                childBounds.h = slotH;
             }
             else
             {
-                childCount++;
+                childBounds.x = frameData[i].bounds.x + (childIndex * slotW);
+                childBounds.y = frameData[i].bounds.y;
+                childBounds.w = slotW;
+                childBounds.h = slotH;
             }
-        }
 
-        if (childCount == 0)
-        {
+            childBounds.x += frameData[i].padding.x;
+            childBounds.y += frameData[i].padding.y;
+            childBounds.w -= frameData[i].padding.w + frameData[i].padding.x;
+            childBounds.h -= frameData[i].padding.h + frameData[i].padding.y;
+
+            Rectangle worldRectBounds;
+            worldRectBounds.x      = childBounds.x * uiState->camera->zoom + uiState->camera->position.x;
+            worldRectBounds.y      = childBounds.y * uiState->camera->zoom + uiState->camera->position.y;
+            worldRectBounds.width  = childBounds.w * uiState->camera->zoom;
+            worldRectBounds.height = childBounds.h * uiState->camera->zoom;
+
+            RenderStack_PushClip(uiState->renderStack, worldRectBounds);
+            DispatchChild(uiState, childId, childBounds, childCenter);
             RenderStack_PopClip(uiState->renderStack);
-            continue;
-        }
 
-        float slotW      = (childLayout == LayoutHorizontal) ? frameBounds.w / childCount : frameBounds.w;
-        float slotH      = (childLayout == LayoutVertical) ? frameBounds.h / childCount : frameBounds.h;
-        int   childIndex = 0;
-
-        for (int childId = childStart; childId < childEnd; childId++)
-        {
-            if (!IsChildRenderable(uiState->item[childId].type))
-                continue;
-
-            Vector4Float childPadding = { 0, 0, 0, 0 };
-            for (int k = childId; k > childStart; k--)
-            {
-                if (uiState->item[k].type == StackType_Padding)
-                {
-                    childPadding = uiState->item[k].padding;
-                    break;
-                }
-            }
-
-            Vector4Float childBounds = { frameBounds.x, frameBounds.y, frameBounds.w, frameBounds.h };
-
-            if (childLayout == LayoutVertical)
-            {
-                childBounds.x = frameBounds.x;
-                childBounds.y = frameBounds.y + (childIndex * slotH);
-                childBounds.w = slotW;
-                childBounds.h = slotH;
-            }
-            else
-            {
-                childBounds.x = frameBounds.x + (childIndex * slotW);
-                childBounds.y = frameBounds.y;
-                childBounds.w = slotW;
-                childBounds.h = slotH;
-            }
-
-            childBounds.x += childPadding.x;
-            childBounds.y += childPadding.y;
-            childBounds.w -= childPadding.w + childPadding.x;
-            childBounds.h -= childPadding.h + childPadding.h;
-
-            DispatchChild(uiState, childId, childBounds, childCenter, scrollY, frameBounds);
             childIndex++;
         }
-        RenderStack_PopClip(uiState->renderStack);
     }
-    uiState->itemCount = 0;
 }
 
 Vector4Float UI_GetBounds(UI_State* uiState, UI_AnchorType anchor, Vector4Float position)
