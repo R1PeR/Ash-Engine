@@ -82,11 +82,12 @@ void UI_Center(UI_State* uiState, UI_CenterType mode)
     uiState->itemCount++;
 }
 
-void UI_Padding(UI_State* uiState, Vector4Float padding)
+void UI_Padding(UI_State* uiState, Vector4Float padding, UI_PaddingType type)
 {
     assert(uiState->itemCount < UI_MAX_STACK_DEPTH);
-    uiState->item[uiState->itemCount].padding = padding;
-    uiState->item[uiState->itemCount].type    = StackType_Padding;
+    uiState->item[uiState->itemCount].padding.value = padding;
+    uiState->item[uiState->itemCount].padding.type  = type;
+    uiState->item[uiState->itemCount].type          = StackType_Padding;
     uiState->itemCount++;
 }
 
@@ -97,7 +98,6 @@ void UI_Frame(UI_State* uiState)
     uiState->item[uiState->itemCount].frame.scrollable    = false;
     uiState->item[uiState->itemCount].frame.contentHeight = 0;
     uiState->item[uiState->itemCount].frame.widgetId      = 0;
-    // uiState->item[uiState->itemCount].frame.size          = 0;
     uiState->itemCount++;
 }
 
@@ -699,19 +699,13 @@ static void DrawTileGridItem(UI_State* uiState, int childId, Vector4Float childB
     Rectangle    frameRect = { childBounds.x, childBounds.y, childBounds.w, childBounds.h };
     bool         hovered   = PointInRect(uiState, mp, frameRect);
 
-    float wheel = Platform_GetMouseWheelMove();
-    if (hovered && wheel != 0.0f)
-    {
-        gridScroll -= wheel * cellSize;
-        float maxScroll = totalHeight - childBounds.h;
-        if (maxScroll < 0)
-            maxScroll = 0;
-        if (gridScroll < 0)
-            gridScroll = 0;
-        if (gridScroll > maxScroll)
-            gridScroll = maxScroll;
-        uiState->scrollOffset[wid] = gridScroll;
-    }
+    float maxScroll = totalHeight - childBounds.h;
+    if (maxScroll < 0)
+        maxScroll = 0;
+    if (hovered)
+        gridScroll -= Platform_GetMouseWheelMove() * 30.0f;
+    gridScroll                 = Utils_ClampFloat(gridScroll, 0.0f, maxScroll);
+    uiState->scrollOffset[wid] = gridScroll;
 
     for (int i = 0; i < textureCount; i++)
     {
@@ -721,7 +715,7 @@ static void DrawTileGridItem(UI_State* uiState, int childId, Vector4Float childB
         float bx = childBounds.x + col * cellSize;
         float by = childBounds.y + row * cellSize - gridScroll;
 
-        if (by < childBounds.y || by > childBounds.y + childBounds.h)
+        if (by + cellSize <= childBounds.y || by >= childBounds.y + childBounds.h)
         {
             continue;
         }
@@ -964,14 +958,15 @@ void UI_End(UI_State* uiState)
     UI_LayoutType uiLayout = LayoutVertical;
     struct FrameData
     {
-        Vector4Float   bounds     = { 0, 0, 0, 0 };
-        int            childStart = 0;
-        int            childEnd   = 0;
-        uint16_t       childCount = 0;
-        UI_LayoutType  layout     = LayoutVertical;
-        UI_CenterType  center     = CenterNone;
-        UI_PaddingData padding    = { 0, 0, 0, 0 };
-        UI_SizeData    size       = 0.0f;
+        Vector4Float  bounds         = { 0, 0, 0, 0 };
+        int           childStart     = 0;
+        int           childEnd       = 0;
+        uint16_t      childCount     = 0;
+        UI_LayoutType layout         = LayoutVertical;
+        UI_CenterType center         = CenterNone;
+        Vector4Float  framePadding   = { 0, 0, 0, 0 };
+        Vector4Float  contentPadding = { 0, 0, 0, 0 };
+        UI_SizeData   size           = 0.0f;
     } frameData[UI_MAX_STACK_DEPTH];
 
     uint16_t frameCount = 0;
@@ -995,7 +990,14 @@ void UI_End(UI_State* uiState)
                 frameData[frameCount - 1].center = uiState->item[i].centeringMode;
                 break;
             case StackType_Padding:
-                frameData[frameCount - 1].padding = uiState->item[i].padding;
+                if (uiState->item[i].padding.type == PaddingType_Frame)
+                {
+                    frameData[frameCount - 1].framePadding = uiState->item[i].padding.value;
+                }
+                else if (uiState->item[i].padding.type == PaddingType_Content)
+                {
+                    frameData[frameCount - 1].contentPadding = uiState->item[i].padding.value;
+                }
                 break;
             case StackType_Size:
                 frameData[frameCount - 1].size = uiState->item[i].size;
@@ -1056,16 +1058,22 @@ void UI_End(UI_State* uiState)
     {
         DrawBevel(uiState, frameData[i].bounds, uiState->theme.frameBg, true);
 
-        bool mouseOverFrame =
-            PointInRect(uiState, mousePos, (Rectangle){ frameData[i].bounds.x, frameData[i].bounds.y, frameData[i].bounds.w, frameData[i].bounds.h });
+        bool mouseOverFrame = PointInRect(
+            uiState, mousePos,
+            (Rectangle){ frameData[i].bounds.x, frameData[i].bounds.y, frameData[i].bounds.w, frameData[i].bounds.h });
         uiState->mouseCaptured |= mouseOverFrame;
+
+        frameData[i].bounds.x += frameData[i].framePadding.x;
+        frameData[i].bounds.y += frameData[i].framePadding.y;
+        frameData[i].bounds.w -= frameData[i].framePadding.x + frameData[i].framePadding.w;
+        frameData[i].bounds.h -= frameData[i].framePadding.y + frameData[i].framePadding.h;
 
         uint16_t childIndex = 0;
         for (int j = frameData[i].childStart; j < frameData[i].childEnd + 1; j++)
         {
             if (!IsChildRenderable(uiState->item[j].type))
                 continue;
-            uint16_t childId = j;
+            uint16_t      childId     = j;
             UI_CenterType childCenter = frameData[i].center;
             Vector4Float  childBounds = frameData[i].bounds;
             float slotH = (frameData[i].layout == LayoutVertical) ? frameData[i].bounds.h / frameData[i].childCount :
@@ -1088,16 +1096,16 @@ void UI_End(UI_State* uiState)
                 childBounds.h = slotH;
             }
 
-            childBounds.x += frameData[i].padding.x;
-            childBounds.y += frameData[i].padding.y;
-            childBounds.w -= frameData[i].padding.w + frameData[i].padding.x;
-            childBounds.h -= frameData[i].padding.h + frameData[i].padding.y;
+            childBounds.x += frameData[i].contentPadding.x;
+            childBounds.y += frameData[i].contentPadding.y;
+            childBounds.w -= frameData[i].contentPadding.x + frameData[i].contentPadding.w;
+            childBounds.h -= frameData[i].contentPadding.y + frameData[i].contentPadding.h;
 
             Rectangle worldRectBounds;
-            worldRectBounds.x      = childBounds.x * uiState->camera->zoom + uiState->camera->position.x;
-            worldRectBounds.y      = childBounds.y * uiState->camera->zoom + uiState->camera->position.y;
-            worldRectBounds.width  = childBounds.w * uiState->camera->zoom;
-            worldRectBounds.height = childBounds.h * uiState->camera->zoom;
+            worldRectBounds.x      = childBounds.x / uiState->camera->zoom + uiState->camera->position.x;
+            worldRectBounds.y      = childBounds.y / uiState->camera->zoom + uiState->camera->position.y;
+            worldRectBounds.width  = childBounds.w / uiState->camera->zoom;
+            worldRectBounds.height = childBounds.h / uiState->camera->zoom;
 
             RenderStack_PushClip(uiState->renderStack, worldRectBounds);
             DispatchChild(uiState, childId, childBounds, childCenter);

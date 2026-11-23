@@ -19,8 +19,8 @@ void UpdateGrid(MapEditorMode* state);
 void UpdateWorldTiles(MapEditorMode* state);
 void HandleTilePlacement(MapEditorMode* state);
 void HandleKeyboardShortcuts(MapEditorMode* state);
-void UpdateTexturePane(MapEditorMode* state);
-void UpdateInfoPane(MapEditorMode* state);
+void UpdateTexturePane(MapEditorMode* state, Vector4Float bounds);
+void UpdateInfoPane(MapEditorMode* state, Vector4Float bounds);
 void EraseTileAt(Vector3Int gridPos);
 void PlaceTileAt(Vector3Int gridPos);
 void SaveMap(MapEditorMode* state, const char* filename);
@@ -71,6 +71,7 @@ void PlaceTileAt(MapEditorMode* state, Vector3Int gridPos)
 
 void HandleCameraInput(MapEditorMode* state)
 {
+    
     if (state->data.uiInputHandled)
         return;
 
@@ -215,56 +216,65 @@ void HandleTilePlacement(MapEditorMode* state)
     }
 }
 
-void UpdateTexturePane(MapEditorMode* state)
+void UpdateTexturePane(MapEditorMode* state, Vector4Float bounds)
 {
     static const char* typeLabels[] = { "EMPT", "SOLI", "JUMP", "PLYR", "ENMY" };
     char               label[MAP_MAX_LAYERS][8];
 
-    UI_Begin(&state->uiState, UI_GetBounds(&state->uiState, AnchorTopRight, { 0.0, 0.0, 0.5, 1.0 }));
+    UI_Begin(&state->uiState, bounds);
     {
         UI_Frame(&state->uiState);
-        UI_Size(&state->uiState, 0.2f);
-        UI_Layout(&state->uiState, LayoutHorizontal);
-        UI_Center(&state->uiState, CenterBoth);
-        UI_Padding(&state->uiState, UI_GetSize(&state->uiState, { 0.01, 0.01, 0.01, 0.01 }));
-        for (int l = 0; l < MAP_MAX_LAYERS; l++)
         {
-            snprintf(label[l], sizeof(label), "L%d", l);
-            if (UI_Toggle(&state->uiState, label[l], l == state->data.activeLayer, 1.0, state->fontTextures))
+            UI_Size(&state->uiState, 0.2f);
+            UI_Layout(&state->uiState, LayoutHorizontal);
+            UI_Center(&state->uiState, CenterBoth);
+            UI_Padding(&state->uiState, UI_GetSize(&state->uiState, { 0.01, 0.01, 0.00, 0.00 }), PaddingType_Frame);
+            UI_Padding(&state->uiState, UI_GetSize(&state->uiState, { 0.00, 0.00, 0.01, 0.01 }), PaddingType_Content);
+            for (int l = 0; l < MAP_MAX_LAYERS; l++)
             {
-                state->data.activeLayer = (uint8_t)l;
+                snprintf(label[l], sizeof(label), "L%d", l);
+                if (UI_Toggle(&state->uiState, label[l], l == state->data.activeLayer, 1.0, state->fontTextures))
+                {
+                    state->data.activeLayer = (uint8_t)l;
+                }
+            }
+        }
+        UI_Frame(&state->uiState);
+        {
+            UI_Size(&state->uiState, 0.05f);
+            UI_Layout(&state->uiState, LayoutVertical);
+            UI_Separator(&state->uiState);
+        }
+        UI_Frame(&state->uiState);
+        {
+            UI_Size(&state->uiState, 0.2f);
+            UI_Layout(&state->uiState, LayoutHorizontal);
+            UI_Center(&state->uiState, CenterBoth);
+            UI_Padding(&state->uiState, UI_GetSize(&state->uiState, { 0.01, 0.01, 0.00, 0.00 }), PaddingType_Frame);
+            UI_Padding(&state->uiState, UI_GetSize(&state->uiState, { 0.00, 0.00, 0.01, 0.01 }), PaddingType_Content);
+            for (int t = 0; t < 5; t++)
+            {
+                if (UI_Toggle(&state->uiState, typeLabels[t], state->data.tileType == (TileType)t, 1.0,
+                              state->fontTextures))
+                {
+                    state->data.tileType = (TileType)t;
+                }
             }
         }
 
         UI_Frame(&state->uiState);
-        UI_Size(&state->uiState, 0.05f);
-        UI_Layout(&state->uiState, LayoutVertical);
-        UI_Separator(&state->uiState);
-
-        UI_Frame(&state->uiState);
-        UI_Size(&state->uiState, 0.2f);
-        UI_Layout(&state->uiState, LayoutHorizontal);
-        UI_Center(&state->uiState, CenterBoth);
-        UI_Padding(&state->uiState, UI_GetSize(&state->uiState, { 0.01, 0.01, 0.01, 0.01 }));
-        for (int t = 0; t < 5; t++)
         {
-            if (UI_Toggle(&state->uiState, typeLabels[t], state->data.tileType == (TileType)t, 1.0,
-                          state->fontTextures))
-            {
-                state->data.tileType = (TileType)t;
-            }
+            UI_Padding(&state->uiState, UI_GetSize(&state->uiState, { 0.01, 0.01, 0.01, 0.01 }), PaddingType_Frame);
+            state->data.selectedTile = UI_TileGrid(&state->uiState, state->tileTextures, TILESET_COUNT, PANE_TILE_COLS,
+                                                   state->data.selectedTile);
         }
-
-        UI_Frame(&state->uiState);
-        state->data.selectedTile =
-            UI_TileGrid(&state->uiState, state->tileTextures, TILESET_COUNT, PANE_TILE_COLS, state->data.selectedTile);
     }
     UI_End(&state->uiState);
 
     state->data.uiInputHandled |= UI_GetMouseCaptured(&state->uiState);
 }
 
-void UpdateInfoPane(MapEditorMode* state)
+void UpdateInfoPane(MapEditorMode* state, Vector4Float bounds)
 {
     Camera2D*          camera      = &state->camera;
     static const char* typeNames[] = { "EMPTY", "SOLID", "JUMP", "PSPAWN", "ESPAWN" };
@@ -278,12 +288,13 @@ void UpdateInfoPane(MapEditorMode* state)
     char zoom[32];
     snprintf(zoom, sizeof(zoom), "ZOOM:  %2.2fx  (WHEEL)", camera->zoom);
 
-    UI_Begin(&state->uiState, UI_GetBounds(&state->uiState, AnchorTopLeft, { 0.0, 0.0, 0.3, 0.3 }));
+    UI_Begin(&state->uiState, bounds);
     {
         UI_Frame(&state->uiState);
         UI_Layout(&state->uiState, LayoutVertical);
         UI_Center(&state->uiState, CenterVertical);
-        UI_Padding(&state->uiState, { 5, 5, 5, 5 });
+        UI_Padding(&state->uiState, { 5, 5, 0, 0 }, PaddingType_Frame);
+        UI_Padding(&state->uiState, { 0, 0, 5, 5 }, PaddingType_Content);
         UI_Text(&state->uiState, layer, 1.0, state->fontTextures);
         UI_Text(&state->uiState, type, 1.0, state->fontTextures);
         UI_Text(&state->uiState, tile, 1.0, state->fontTextures);
@@ -545,6 +556,8 @@ void MapEditorMode_OnStart(Context* context, void* data)
     state->cameraEntity.position.y = state->camera.position.y;
     state->cameraEntity.scale      = 1.0f / state->camera.zoom;
 
+    RenderStack_Initialize(&state->renderStack, state->renderStackItems, RENDERSTACKITEM_MAX);
+
     UI_Initialize(&state->uiState, &state->renderStack, state->window, &state->camera);
     UI_SetParentEntity(&state->uiState, &state->cameraEntity);
 }
@@ -560,23 +573,31 @@ void MapEditorMode_Update(Context* context, void* data)
     (void)context;
     MapEditorMode* state        = (MapEditorMode*)data;
     state->renderStackItemCount = 0;
-    state->data.uiInputHandled  = false;
     DeltaTime_Update(&state->deltaTime);
+
+    state->cameraEntity.position.x = state->camera.position.x;
+    state->cameraEntity.position.y = state->camera.position.y;
+    state->cameraEntity.scale      = 1.0f / state->camera.zoom;
+
+    Vector4Float texturePaneBounds = UI_GetBounds(&state->uiState, AnchorTopRight, { 0.0, 0.0, 0.5, 1.0 });
+    Vector4Float infoPaneBounds    = UI_GetBounds(&state->uiState, AnchorTopLeft, { 0.0, 0.0, 0.3, 0.3 });
+    state->data.uiInputHandled     = UI_IsMouseOverBounds(&state->uiState, texturePaneBounds)
+                                 || UI_IsMouseOverBounds(&state->uiState, infoPaneBounds);
 
     RenderStack_Clear(&state->renderStack);
     RenderStack_PushClearScreen(&state->renderStack, (Color){ 0, 0, 0, 255 });
     RenderStack_PushCamera2d(&state->renderStack, &state->camera);
     RenderStack_PushMode2d(&state->renderStack);
 
-    UpdateGrid(state);
-    UpdateWorldTiles(state);
-    UpdateTexturePane(state);
-    UpdateInfoPane(state);
-    // DrawTest();
-
     HandleTilePlacement(state);
     HandleKeyboardShortcuts(state);
     HandleCameraInput(state);
+
+    UpdateGrid(state);
+    UpdateWorldTiles(state);
+    UpdateTexturePane(state, texturePaneBounds);
+    UpdateInfoPane(state, infoPaneBounds);
+    // DrawTest();
 
     state->cameraEntity.position.x = state->camera.position.x;
     state->cameraEntity.position.y = state->camera.position.y;

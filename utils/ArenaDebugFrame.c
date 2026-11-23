@@ -87,7 +87,7 @@ void ArenaDebugFrame_DisplayFrame(ArenaDebug* debug, UI_State* ui, TextureData* 
         }
         UI_Frame(ui);
         {
-            UI_Padding(ui, UI_GetSize(ui, { 0.01f, 0.01f, 0.01f, 0.01f }));
+            UI_Padding(ui, UI_GetSize(ui, { 0.01f, 0.01f, 0.01f, 0.01f }), PaddingType_Frame);
             UI_Size(ui, 0.4f);
             UI_List(ui, (const char**)debug->buffer, n, 1.0f, 20.0f, font, false);
         }

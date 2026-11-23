@@ -30,7 +30,7 @@
 #define ZOOM_MIN           0.1f
 #define ZOOM_MAX           10.0f
 #define ZOOM_STEP          0.15f
-#define MAP_SAVE_FILE      "map.txt"
+#define MAP_SAVE_FILE      "maps\\map.txt"
 #define GRID_COLOR         ((Color){ 45, 45, 45, 255 })
 
 enum TileType

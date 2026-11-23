@@ -34,7 +34,7 @@ void MenuMode_OnStart(Context* context, void* data)
     UI_Initialize(&state->uiState, &state->renderStack, state->window, &state->camera);
     UI_SetParentEntity(&state->uiState, &state->cameraEntity);
 
-    RenderStack_Initialize(&state->renderStack, state->renderStackItems, STACKITEM_MAX);
+    RenderStack_Initialize(&state->renderStack, state->renderStackItems, RENDERSTACKITEM_MAX);
 
     ArenaDebugFrame_Init(&state->debugArena, 32);
 }
@@ -68,7 +68,8 @@ void MenuMode_Update(Context* context, void* data)
         {
             UI_Layout(&state->uiState, LayoutVertical);
             UI_Center(&state->uiState, CenterBoth);
-            UI_Padding(&state->uiState, UI_GetSize(&state->uiState, { 0.01, 0.01, 0.01, 0.01 }));
+            UI_Padding(&state->uiState, UI_GetSize(&state->uiState, { 0.01, 0.01, 0.00, 0.00 }), PaddingType_Frame);
+            UI_Padding(&state->uiState, UI_GetSize(&state->uiState, { 0.00, 0.00, 0.01, 0.01 }), PaddingType_Content);
             if (UI_Button(&state->uiState, "Start Game", 2.0f, state->fontTextures))
             {
                 Arena     arena    = Arena_ScratchCreate(state->arena);

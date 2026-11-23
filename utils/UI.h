@@ -48,8 +48,19 @@ enum UI_GraphType2d
     Graph2dPoint
 };
 
-typedef Vector4Float UI_PaddingData;
-typedef float        UI_SizeData;
+enum UI_PaddingType
+{
+    PaddingType_Frame,
+    PaddingType_Content
+};
+
+struct UI_PaddingData
+{
+    Vector4Float   value;
+    UI_PaddingType type;
+};
+
+typedef float UI_SizeData;
 
 struct UI_Theme
 {
@@ -177,6 +188,7 @@ struct UI_Stack
         UI_LayoutType   layout;
         UI_CenterType   centeringMode;
         UI_PaddingData  padding;
+        UI_PaddingData  contentPadding;
         UI_SizeData     size;
         UI_FrameData    frame;
         UI_TextData     text;
@@ -224,7 +236,7 @@ void UI_Begin(UI_State* uiState, Vector4Float bounds);
 
 void UI_Layout(UI_State* uiState, UI_LayoutType layout);
 void UI_Center(UI_State* uiState, UI_CenterType mode);
-void UI_Padding(UI_State* uiState, Vector4Float padding);
+void UI_Padding(UI_State* uiState, Vector4Float padding, UI_PaddingType type);
 void UI_Size(UI_State* uiState, float sizeRatio);
 
 void UI_Frame(UI_State* uiState);
